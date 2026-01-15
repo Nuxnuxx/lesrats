@@ -49,10 +49,23 @@
                     </dl>
 
                     @can('update', $shop)
-                        <div class="mt-6">
+                        <div class="mt-6 flex gap-3">
                             <a href="{{ route('shops.edit', $shop) }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
                                 Modifier la boutique
                             </a>
+
+                            @if($shop->etsy_shop_id)
+                                <form action="{{ route('etsy.disconnect', $shop) }}" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir déconnecter cette boutique d\'Etsy ?');">
+                                    @csrf
+                                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700">
+                                        Déconnecter d'Etsy
+                                    </button>
+                                </form>
+                            @else
+                                <a href="{{ route('etsy.connect', $shop) }}" class="inline-flex items-center px-4 py-2 bg-orange-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-600">
+                                    Connecter à Etsy
+                                </a>
+                            @endif
                         </div>
                     @endcan
                 </div>
