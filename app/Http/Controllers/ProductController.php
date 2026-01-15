@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Shop;
+use App\Services\AliExpressScraperService;
+use App\Services\ContentOptimizerService;
 use App\Services\EtsyApiClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -220,6 +222,64 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Erreur lors de l\'importation depuis Etsy : ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Analyze AliExpress product URL and return optimized data.
+     */
+    public function analyzeAliExpress(Request $request)
+    {
+        $request->validate([
+            'aliexpress_url' => 'required|url',
+        ]);
+
+        try {
+            $scraper = new AliExpressScraperService();
+            $optimizer = new ContentOptimizerService();
+
+            // Validate URL
+            if (!$scraper->isValidAliExpressUrl($request->aliexpress_url)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid AliExpress URL. Please provide a valid product link.',
+                ], 400);
+            }
+
+            // Scrape product data
+            $productData = $scraper->scrapeProduct($request->aliexpress_url);
+
+            // Optimize content for Etsy
+            $optimizedTitle = $optimizer->optimizeTitle($productData['title'] ?? 'Untitled Product');
+            $optimizedDescription = $optimizer->optimizeDescription(
+                $productData['title'] ?? 'Untitled Product',
+                $productData['description'],
+                $productData['specs']
+            );
+
+            // Calculate suggested price with markup
+            $suggestedPrice = $productData['price']
+                ? $optimizer->calculatePrice($productData['price'], 150)
+                : null;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'title' => $optimizedTitle,
+                    'description' => $optimizedDescription,
+                    'price' => $suggestedPrice,
+                    'images' => $productData['images'],
+                    'original_price' => $productData['price'],
+                    'specs' => $productData['specs'],
+                ],
+                'message' => 'Product analyzed successfully! Data has been optimized for Etsy.',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 }
