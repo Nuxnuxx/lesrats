@@ -17,7 +17,21 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $shop = Shop::findOrFail(session('active_shop_id'));
+        $activeShopId = session('active_shop_id');
+
+        if (!$activeShopId) {
+            return redirect()->route('shops.index')
+                ->with('error', 'Veuillez d\'abord sélectionner une boutique.');
+        }
+
+        $shop = Shop::find($activeShopId);
+
+        if (!$shop) {
+            session()->forget('active_shop_id');
+            return redirect()->route('shops.index')
+                ->with('error', 'Boutique introuvable. Veuillez en sélectionner une autre.');
+        }
+
         Gate::authorize('view', $shop);
 
         $products = $shop->products()->latest()->paginate(20);
@@ -249,17 +263,29 @@ class ProductController extends Controller
             // Scrape product data
             $productData = $scraper->scrapeProduct($request->aliexpress_url);
 
+            // Check if scraping got any useful data
+            if (empty($productData['title'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Impossible d\'extraire les données du produit AliExpress (page JavaScript). Veuillez copier le titre du produit depuis AliExpress et utiliser le bouton "Optimiser avec l\'IA" à la place.',
+                    'use_manual' => true,
+                ], 422);
+            }
+
             // Optimize content for Etsy
-            $optimizedTitle = $optimizer->optimizeTitle($productData['title'] ?? 'Untitled Product');
+            $optimizedTitle = $optimizer->optimizeTitle($productData['title']);
             $optimizedDescription = $optimizer->optimizeDescription(
-                $productData['title'] ?? 'Untitled Product',
+                $productData['title'],
                 $productData['description'],
                 $productData['specs']
             );
 
+            // Generate 13 SEO tags for Etsy
+            $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription);
+
             // Calculate suggested price with markup
             $suggestedPrice = $productData['price']
-                ? $optimizer->calculatePrice($productData['price'], 150)
+                ? $optimizer->calculatePrice($productData['price'], 3)
                 : null;
 
             return response()->json([
@@ -267,12 +293,64 @@ class ProductController extends Controller
                 'data' => [
                     'title' => $optimizedTitle,
                     'description' => $optimizedDescription,
+                    'tags' => $tags,
+                    'tags_string' => implode(', ', $tags),
                     'price' => $suggestedPrice,
                     'images' => $productData['images'],
                     'original_price' => $productData['price'],
                     'specs' => $productData['specs'],
                 ],
                 'message' => 'Product analyzed successfully! Data has been optimized for Etsy.',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Optimize product content manually (without scraping).
+     */
+    public function optimizeContent(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|min:3',
+            'description' => 'nullable|string',
+            'price' => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            $optimizer = new ContentOptimizerService();
+
+            // Optimize content for Etsy
+            $optimizedTitle = $optimizer->optimizeTitle($request->title);
+            $optimizedDescription = $optimizer->optimizeDescription(
+                $request->title,
+                $request->description
+            );
+
+            // Generate 13 SEO tags for Etsy
+            $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription);
+
+            // Calculate suggested price with markup if price provided
+            $suggestedPrice = $request->price
+                ? $optimizer->calculatePrice(floatval($request->price), 3)
+                : null;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'title' => $optimizedTitle,
+                    'description' => $optimizedDescription,
+                    'tags' => $tags,
+                    'tags_string' => implode(', ', $tags),
+                    'price' => $suggestedPrice,
+                    'original_price' => $request->price,
+                ],
+                'message' => 'Content optimized successfully for Etsy!',
             ]);
 
         } catch (\Exception $e) {
