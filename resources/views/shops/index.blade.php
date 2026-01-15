@@ -51,7 +51,7 @@
                                 </div>
 
                                 <div class="flex gap-2">
-                                    <a href="{{ route('shops.show', $shop) }}" class="flex-1 text-center px-3 py-2 bg-blue-500 text-white text-xs font-semibold rounded hover:bg-blue-600">
+                                    <a href="{{ route('shops.show', $shop) }}" class="flex-1 text-center px-3 py-2 bg-gray-800 text-white text-xs font-semibold rounded hover:bg-gray-700">
                                         Voir
                                     </a>
 
