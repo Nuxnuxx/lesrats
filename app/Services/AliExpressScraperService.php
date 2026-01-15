@@ -8,36 +8,145 @@ use Illuminate\Support\Facades\Log;
 class AliExpressScraperService
 {
     /**
-     * Extract product data from AliExpress URL.
+     * Extract product data from AliExpress URL using Firecrawl.
      */
     public function scrapeProduct(string $url): array
     {
         try {
-            // Fetch the page
-            $response = Http::timeout(30)
+            $response = Http::timeout(120)
                 ->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                    'Accept-Language' => 'en-US,en;q=0.9',
+                    'Authorization' => 'Bearer ' . config('services.firecrawl.api_key'),
                 ])
-                ->get($url);
+                ->post(config('services.firecrawl.base_url') . '/scrape', [
+                    'url' => $this->normalizeUrl($url),
+                    'formats' => ['markdown', 'extract'],
+                    'waitFor' => 5000, // Wait 5 seconds for JS to render
+                    'extract' => [
+                        'prompt' => 'Extract the product title and price from this AliExpress product page. The title is usually in the h1 tag. The price is the current/discounted price shown on the page.',
+                        'schema' => [
+                            'type' => 'object',
+                            'properties' => [
+                                'title' => [
+                                    'type' => 'string',
+                                    'description' => 'The full product title/name from the page',
+                                ],
+                                'price' => [
+                                    'type' => 'number',
+                                    'description' => 'Current sale price as a number (without currency symbol)',
+                                ],
+                                'currency' => [
+                                    'type' => 'string',
+                                    'description' => 'Currency code (EUR, USD, GBP, etc)',
+                                ],
+                                'images' => [
+                                    'type' => 'array',
+                                    'items' => ['type' => 'string'],
+                                    'description' => 'Product image URLs',
+                                ],
+                                'description' => [
+                                    'type' => 'string',
+                                    'description' => 'Product description if available',
+                                ],
+                            ],
+                            'required' => ['title', 'price'],
+                        ],
+                    ],
+                ]);
 
             if ($response->failed()) {
-                throw new \Exception('Failed to fetch AliExpress page');
+                Log::error('Firecrawl scraping failed', [
+                    'url' => $url,
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                throw new \Exception('Failed to scrape AliExpress page. Please try again or enter details manually.');
             }
 
-            $html = $response->body();
+            $data = $response->json();
 
-            // Extract product data using regex patterns
-            $data = [
-                'title' => $this->extractTitle($html),
-                'price' => $this->extractPrice($html),
-                'description' => $this->extractDescription($html),
-                'images' => $this->extractImages($html),
-                'specs' => $this->extractSpecs($html),
+            Log::info('Firecrawl raw response', [
+                'url' => $url,
+                'response' => $data,
+            ]);
+
+            // Handle different response structures
+            $extract = null;
+
+            if (isset($data['data']['extract'])) {
+                $extract = $data['data']['extract'];
+            } elseif (isset($data['extract'])) {
+                $extract = $data['extract'];
+            } elseif (isset($data['data']['llm_extraction'])) {
+                $extract = $data['data']['llm_extraction'];
+            } elseif (isset($data['data'])) {
+                // Maybe the data is directly in data
+                $extract = $data['data'];
+            }
+
+            // Get markdown content for fallback extraction
+            $markdown = $data['data']['markdown'] ?? '';
+
+            // Check if title looks like a placeholder
+            $title = $extract['title'] ?? null;
+            $isPlaceholder = !$title ||
+                stripos($title, 'placeholder') !== false ||
+                stripos($title, 'loading') !== false ||
+                strlen($title) < 10;
+
+            // Fallback: extract title from markdown
+            if ($isPlaceholder && $markdown) {
+                Log::info('Attempting markdown fallback extraction');
+
+                // Try to find first h1 heading
+                if (preg_match('/^#\s+(.+)$/m', $markdown, $matches)) {
+                    $title = trim($matches[1]);
+                }
+
+                // Or find a line that looks like a product title (long text early in document)
+                if (!$title || strlen($title) < 10) {
+                    $lines = explode("\n", $markdown);
+                    foreach ($lines as $line) {
+                        $line = trim($line);
+                        // Skip short lines, links, prices, navigation
+                        if (strlen($line) > 30 && strlen($line) < 300 &&
+                            !preg_match('/^[\[\(#*€$\d]/', $line) &&
+                            !preg_match('/aliexpress|sign in|cart|ship to/i', $line)) {
+                            $title = $line;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: extract price from markdown
+            $price = $extract['price'] ?? null;
+            if (!$price && $markdown) {
+                // Look for price patterns: €12.99, $12.99, 12,99€
+                if (preg_match('/[€$]\s*(\d+[.,]\d{2})/', $markdown, $matches)) {
+                    $price = (float) str_replace(',', '.', $matches[1]);
+                } elseif (preg_match('/(\d+[.,]\d{2})\s*[€$]/', $markdown, $matches)) {
+                    $price = (float) str_replace(',', '.', $matches[1]);
+                }
+            }
+
+            if (!$title || strlen($title) < 10) {
+                Log::error('Could not extract title from page', [
+                    'url' => $url,
+                    'extract' => $extract,
+                    'markdown_preview' => substr($markdown, 0, 500),
+                ]);
+
+                throw new \Exception('No data extracted from page');
+            }
+
+            return [
+                'title' => $title,
+                'price' => $price,
+                'description' => $extract['description'] ?? null,
+                'images' => $extract['images'] ?? [],
+                'specs' => [],
             ];
-
-            return $data;
 
         } catch (\Exception $e) {
             Log::error('AliExpress scraping failed', [
@@ -45,138 +154,8 @@ class AliExpressScraperService
                 'error' => $e->getMessage(),
             ]);
 
-            throw new \Exception('Unable to extract product data from AliExpress. Please enter the details manually.');
+            throw new \Exception('Unable to extract product data from AliExpress: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Extract product title.
-     */
-    protected function extractTitle(string $html): ?string
-    {
-        // Try multiple patterns for title extraction
-        $patterns = [
-            '/<h1[^>]*class="[^"]*product-title[^"]*"[^>]*>(.*?)<\/h1>/is',
-            '/<h1[^>]*>(.*?)<\/h1>/is',
-            '/"subject":"([^"]+)"/i',
-            '/"title":"([^"]+)"/i',
-        ];
-
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $html, $matches)) {
-                $title = strip_tags($matches[1]);
-                $title = html_entity_decode($title, ENT_QUOTES, 'UTF-8');
-                $title = trim($title);
-
-                if (!empty($title) && strlen($title) > 5) {
-                    return $title;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract product price.
-     */
-    protected function extractPrice(string $html): ?float
-    {
-        $patterns = [
-            '/"price":"([0-9.]+)"/i',
-            '/"minPrice":"([0-9.]+)"/i',
-            '/data-spm-anchor-id="[^"]*"[^>]*>[$€£¥]?([0-9.]+)/i',
-        ];
-
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $html, $matches)) {
-                $price = floatval($matches[1]);
-                if ($price > 0) {
-                    return $price;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract product description.
-     */
-    protected function extractDescription(string $html): ?string
-    {
-        $patterns = [
-            '/<div[^>]*class="[^"]*product-description[^"]*"[^>]*>(.*?)<\/div>/is',
-            '/"description":"([^"]+)"/i',
-        ];
-
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $html, $matches)) {
-                $description = strip_tags($matches[1]);
-                $description = html_entity_decode($description, ENT_QUOTES, 'UTF-8');
-                $description = trim($description);
-
-                if (!empty($description) && strlen($description) > 20) {
-                    return $description;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract product images.
-     */
-    protected function extractImages(string $html): array
-    {
-        $images = [];
-
-        // Try to extract images from JSON data
-        if (preg_match('/"imageModule":\{[^}]*"imagePathList":\[(.*?)\]/is', $html, $matches)) {
-            preg_match_all('/"([^"]+\.jpg[^"]*)"/i', $matches[1], $imageMatches);
-            foreach ($imageMatches[1] as $image) {
-                // Make sure URL is complete
-                if (!str_starts_with($image, 'http')) {
-                    $image = 'https:' . $image;
-                }
-                $images[] = $image;
-            }
-        }
-
-        // Fallback: extract from img tags
-        if (empty($images)) {
-            preg_match_all('/<img[^>]+src="([^"]+ae01\.alicdn\.com[^"]+)"/i', $html, $imgMatches);
-            foreach ($imgMatches[1] as $image) {
-                if (!str_starts_with($image, 'http')) {
-                    $image = 'https:' . $image;
-                }
-                $images[] = $image;
-            }
-        }
-
-        // Remove duplicates and limit to 10 images
-        $images = array_unique($images);
-        return array_slice($images, 0, 10);
-    }
-
-    /**
-     * Extract product specifications.
-     */
-    protected function extractSpecs(string $html): array
-    {
-        $specs = [];
-
-        // Try to extract specs from JSON data
-        if (preg_match('/"productProp":\[(.*?)\]/is', $html, $matches)) {
-            preg_match_all('/\{"attrName":"([^"]+)","attrValue":"([^"]+)"/i', $matches[1], $specMatches, PREG_SET_ORDER);
-
-            foreach ($specMatches as $match) {
-                $specs[$match[1]] = $match[2];
-            }
-        }
-
-        return $specs;
     }
 
     /**
@@ -185,5 +164,13 @@ class AliExpressScraperService
     public function isValidAliExpressUrl(string $url): bool
     {
         return preg_match('/aliexpress\.(com|us|ru)\/item\//i', $url) === 1;
+    }
+
+    /**
+     * Normalize URL to use www subdomain for consistency.
+     */
+    private function normalizeUrl(string $url): string
+    {
+        return preg_replace('/\/\/(fr|de|es|it|ru|nl|pl)\./i', '//www.', $url);
     }
 }
