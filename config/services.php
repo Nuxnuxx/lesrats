@@ -42,7 +42,7 @@ return [
 
     'firecrawl' => [
         'api_key' => env('FIRECRAWL_API_KEY'),
-        'base_url' => 'https://api.firecrawl.dev/v1',
+        'base_url' => 'https://api.firecrawl.dev/v2',
     ],
 
 ];

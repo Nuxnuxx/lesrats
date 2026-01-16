@@ -16,39 +16,38 @@ class AliExpressScraperService
             $response = Http::timeout(120)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . config('services.firecrawl.api_key'),
+                    'Content-Type' => 'application/json',
                 ])
                 ->post(config('services.firecrawl.base_url') . '/scrape', [
                     'url' => $this->normalizeUrl($url),
-                    'formats' => ['markdown', 'extract'],
-                    'waitFor' => 5000, // Wait 5 seconds for JS to render
-                    'extract' => [
-                        'prompt' => 'Extract the product title and price from this AliExpress product page. The title is usually in the h1 tag. The price is the current/discounted price shown on the page.',
-                        'schema' => [
-                            'type' => 'object',
-                            'properties' => [
-                                'title' => [
-                                    'type' => 'string',
-                                    'description' => 'The full product title/name from the page',
-                                ],
-                                'price' => [
-                                    'type' => 'number',
-                                    'description' => 'Current sale price as a number (without currency symbol)',
-                                ],
-                                'currency' => [
-                                    'type' => 'string',
-                                    'description' => 'Currency code (EUR, USD, GBP, etc)',
-                                ],
-                                'images' => [
-                                    'type' => 'array',
-                                    'items' => ['type' => 'string'],
-                                    'description' => 'Product image URLs',
-                                ],
-                                'description' => [
-                                    'type' => 'string',
-                                    'description' => 'Product description if available',
+                    'onlyMainContent' => false,
+                    'maxAge' => 172800000, // Cache for 48 hours
+                    'parsers' => ['pdf'],
+                    'formats' => [
+                        [
+                            'type' => 'json',
+                            'schema' => [
+                                'type' => 'object',
+                                'required' => [],
+                                'properties' => [
+                                    'title' => [
+                                        'type' => 'string',
+                                    ],
+                                    'price' => [
+                                        'type' => 'number',
+                                    ],
+                                    'currency' => [
+                                        'type' => 'string',
+                                    ],
+                                    'images' => [
+                                        'type' => 'array',
+                                        'items' => ['type' => 'string'],
+                                    ],
+                                    'description' => [
+                                        'type' => 'string',
+                                    ],
                                 ],
                             ],
-                            'required' => ['title', 'price'],
                         ],
                     ],
                 ]);
@@ -70,22 +69,25 @@ class AliExpressScraperService
                 'response' => $data,
             ]);
 
-            // Handle different response structures
+            // Handle v2 API response structure
             $extract = null;
 
-            if (isset($data['data']['extract'])) {
+            // V2 format: data.json contains the extracted data
+            if (isset($data['data']['json'])) {
+                $extract = $data['data']['json'];
+            } elseif (isset($data['data']['extract'])) {
                 $extract = $data['data']['extract'];
             } elseif (isset($data['extract'])) {
                 $extract = $data['extract'];
             } elseif (isset($data['data']['llm_extraction'])) {
                 $extract = $data['data']['llm_extraction'];
-            } elseif (isset($data['data'])) {
+            } elseif (isset($data['data']) && is_array($data['data'])) {
                 // Maybe the data is directly in data
                 $extract = $data['data'];
             }
 
             // Get markdown content for fallback extraction
-            $markdown = $data['data']['markdown'] ?? '';
+            $markdown = $data['data']['markdown'] ?? $data['data']['content'] ?? '';
 
             // Check if title looks like a placeholder
             $title = $extract['title'] ?? null;
@@ -163,7 +165,7 @@ class AliExpressScraperService
      */
     public function isValidAliExpressUrl(string $url): bool
     {
-        return preg_match('/aliexpress\.(com|us|ru)\/item\//i', $url) === 1;
+        return preg_match('/(fr\.|de\.|es\.|it\.|nl\.|pl\.|www\.)?aliexpress\.(com|us|ru)\/item\//i', $url) === 1;
     }
 
     /**
