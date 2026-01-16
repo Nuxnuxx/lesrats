@@ -13,17 +13,50 @@
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
 
-            <!-- Step 1: AliExpress Import -->
-            <div class="bg-gradient-to-r from-blue-500 to-blue-600 overflow-hidden shadow-sm sm:rounded-lg mb-6">
+            <!-- Step 1: Choose Product Type -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6">
-                    <h3 class="text-lg font-bold text-white mb-2">📦 Étape 1 : Importer depuis AliExpress</h3>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🎯 Étape 1 : Type de produit</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- AliExpress Option -->
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="product_type" value="aliexpress" class="peer sr-only" checked>
+                            <div class="p-4 border-2 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50 transition-all">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="text-2xl">📦</span>
+                                    <span class="font-semibold text-gray-800">Dropshipping AliExpress</span>
+                                </div>
+                                <p class="text-sm text-gray-600">Importer un produit depuis AliExpress pour le revendre sur Etsy.</p>
+                            </div>
+                        </label>
+
+                        <!-- Printables Option -->
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="product_type" value="printables" class="peer sr-only">
+                            <div class="p-4 border-2 rounded-lg peer-checked:border-green-500 peer-checked:bg-green-50 hover:bg-gray-50 transition-all">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="text-2xl">🖨️</span>
+                                    <span class="font-semibold text-gray-800">Impression 3D (Printables)</span>
+                                </div>
+                                <p class="text-sm text-gray-600">Importer un STL depuis Printables pour vendre des impressions 3D.</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AliExpress Import Section -->
+            <div id="aliexpress-section" class="bg-gradient-to-r from-blue-500 to-blue-600 overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                <div class="p-6">
+                    <h3 class="text-lg font-bold text-white mb-2">📦 Importer depuis AliExpress</h3>
                     <p class="text-blue-100 text-sm mb-4">Collez le lien du produit AliExpress pour remplir automatiquement le formulaire avec un contenu optimisé pour Etsy.</p>
 
                     <div class="flex gap-2 mb-3">
                         <input type="url" id="aliexpress_url" name="aliexpress_url" value="{{ old('aliexpress_url') }}"
                             placeholder="https://fr.aliexpress.com/item/123456789.html"
                             class="block w-full rounded-md border-0 shadow-sm focus:ring-2 focus:ring-white text-gray-900 placeholder-gray-400">
-                        <button type="button" id="analyze-btn" class="inline-flex items-center px-6 py-2 bg-white border border-transparent rounded-md font-semibold text-sm text-blue-600 uppercase tracking-widest hover:bg-blue-50 disabled:opacity-50 whitespace-nowrap">
+                        <button type="button" id="analyze-aliexpress-btn" class="inline-flex items-center px-6 py-2 bg-white border border-transparent rounded-md font-semibold text-sm text-blue-600 uppercase tracking-widest hover:bg-blue-50 disabled:opacity-50 whitespace-nowrap">
                             🔍 Analyser
                         </button>
                     </div>
@@ -36,7 +69,47 @@
                         <span class="text-blue-100 text-xs">→ Prix Etsy = x3</span>
                     </div>
 
-                    <div id="analyze-status" class="mt-3 hidden"></div>
+                    <div id="aliexpress-status" class="mt-3 hidden"></div>
+                </div>
+            </div>
+
+            <!-- Printables Import Section -->
+            <div id="printables-section" class="bg-gradient-to-r from-green-500 to-green-600 overflow-hidden shadow-sm sm:rounded-lg mb-6 hidden">
+                <div class="p-6">
+                    <h3 class="text-lg font-bold text-white mb-2">🖨️ Importer depuis Printables</h3>
+                    <p class="text-green-100 text-sm mb-4">Collez le lien du modèle 3D Printables pour générer automatiquement un listing optimisé pour Etsy.</p>
+
+                    <div class="flex gap-2 mb-3">
+                        <input type="url" id="printables_url" name="printables_url" value="{{ old('printables_url') }}"
+                            placeholder="https://www.printables.com/model/123456-nom-du-modele"
+                            class="block w-full rounded-md border-0 shadow-sm focus:ring-2 focus:ring-white text-gray-900 placeholder-gray-400">
+                        <button type="button" id="analyze-printables-btn" class="inline-flex items-center px-6 py-2 bg-white border border-transparent rounded-md font-semibold text-sm text-green-600 uppercase tracking-widest hover:bg-green-50 disabled:opacity-50 whitespace-nowrap">
+                            🔍 Analyser
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex gap-2 items-center">
+                            <label class="text-white text-sm whitespace-nowrap">💰 Coût impression (€) :</label>
+                            <input type="number" id="printing_cost" step="0.01" min="0"
+                                placeholder="Ex: 5.00"
+                                class="block w-24 rounded-md border-0 shadow-sm text-gray-900 placeholder-gray-400">
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <label class="text-white text-sm whitespace-nowrap">Marge (x) :</label>
+                            <input type="number" id="printing_margin" step="0.5" min="1" value="4"
+                                class="block w-20 rounded-md border-0 shadow-sm text-gray-900 placeholder-gray-400">
+                            <span class="text-green-100 text-xs">→ Prix Etsy</span>
+                        </div>
+                    </div>
+
+                    <div id="printables-status" class="mt-3 hidden"></div>
+
+                    <!-- License Warning -->
+                    <div id="license-warning" class="mt-3 hidden p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-md">
+                        <strong>⚠️ Attention Licence :</strong>
+                        <span id="license-text"></span>
+                    </div>
                 </div>
             </div>
 
@@ -48,6 +121,10 @@
                     <form method="POST" action="{{ route('products.store') }}" id="product-form">
                         @csrf
                         <input type="hidden" name="aliexpress_url" id="aliexpress_url_hidden">
+                        <input type="hidden" name="printables_url" id="printables_url_hidden">
+                        <input type="hidden" name="product_source" id="product_source" value="aliexpress">
+                        <input type="hidden" name="license" id="license_hidden">
+                        <input type="hidden" name="attribution" id="attribution_hidden">
 
                         <div class="mb-4">
                             <label for="title" class="block text-sm font-medium text-gray-700">Titre du produit (optimisé pour Etsy)</label>
@@ -146,6 +223,26 @@
     </div>
 
     <script>
+        // Toggle between AliExpress and Printables sections
+        const productTypeRadios = document.querySelectorAll('input[name="product_type"]');
+        const aliexpressSection = document.getElementById('aliexpress-section');
+        const printablesSection = document.getElementById('printables-section');
+        const productSourceInput = document.getElementById('product_source');
+
+        productTypeRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.value === 'aliexpress') {
+                    aliexpressSection.classList.remove('hidden');
+                    printablesSection.classList.add('hidden');
+                    productSourceInput.value = 'aliexpress';
+                } else {
+                    aliexpressSection.classList.add('hidden');
+                    printablesSection.classList.remove('hidden');
+                    productSourceInput.value = 'printables';
+                }
+            });
+        });
+
         // Auto-calculate Etsy price when AliExpress price is entered
         document.getElementById('aliexpress_price').addEventListener('input', function() {
             const aliPrice = parseFloat(this.value);
@@ -157,14 +254,29 @@
             }
         });
 
+        // Auto-calculate Etsy price when printing cost is entered
+        function calculatePrintingPrice() {
+            const cost = parseFloat(document.getElementById('printing_cost').value) || 0;
+            const margin = parseFloat(document.getElementById('printing_margin').value) || 4;
+            if (cost > 0) {
+                const etsyPrice = (cost * margin).toFixed(2);
+                document.getElementById('price').value = etsyPrice;
+                document.getElementById('price-info').innerHTML =
+                    `🖨️ Coût: <strong>€${cost.toFixed(2)}</strong> × ${margin} = <strong>€${etsyPrice}</strong>`;
+            }
+        }
+
+        document.getElementById('printing_cost').addEventListener('input', calculatePrintingPrice);
+        document.getElementById('printing_margin').addEventListener('input', calculatePrintingPrice);
+
         // Analyze AliExpress URL
-        document.getElementById('analyze-btn').addEventListener('click', async function() {
+        document.getElementById('analyze-aliexpress-btn').addEventListener('click', async function() {
             const url = document.getElementById('aliexpress_url').value;
             const btn = this;
-            const statusDiv = document.getElementById('analyze-status');
+            const statusDiv = document.getElementById('aliexpress-status');
 
             if (!url) {
-                statusDiv.className = 'p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
+                statusDiv.className = 'mt-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
                 statusDiv.textContent = '❌ Veuillez entrer une URL AliExpress';
                 statusDiv.classList.remove('hidden');
                 return;
@@ -176,7 +288,7 @@
             // Disable button and show loading
             btn.disabled = true;
             btn.innerHTML = '⏳ Analyse...';
-            statusDiv.className = 'p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-md';
+            statusDiv.className = 'mt-3 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-md';
             statusDiv.innerHTML = '🔄 Extraction des données et optimisation IA en cours... <br><small>Cela peut prendre 20-40 secondes.</small>';
             statusDiv.classList.remove('hidden');
 
@@ -219,7 +331,7 @@
                     }
 
                     // Show success message
-                    statusDiv.className = 'p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
+                    statusDiv.className = 'mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
                     let priceMsg = aliPrice ? '' : '<br><small class="text-orange-600">⚠️ Prix non détecté - entrez le prix AliExpress ci-dessus et recliquez Analyser</small>';
                     statusDiv.innerHTML = `
                         <strong>✅ Produit importé et optimisé !</strong><br>
@@ -230,7 +342,7 @@
                     document.getElementById('title').scrollIntoView({ behavior: 'smooth', block: 'center' });
                     document.getElementById('title').focus();
                 } else {
-                    statusDiv.className = 'p-3 bg-orange-100 border border-orange-300 text-orange-800 rounded-md';
+                    statusDiv.className = 'mt-3 p-3 bg-orange-100 border border-orange-300 text-orange-800 rounded-md';
                     if (result.use_manual) {
                         statusDiv.innerHTML = `
                             <strong>⚠️ Extraction partielle</strong><br>
@@ -241,7 +353,98 @@
                     }
                 }
             } catch (error) {
-                statusDiv.className = 'p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
+                statusDiv.className = 'mt-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
+                statusDiv.innerHTML = '❌ Erreur de connexion. Veuillez réessayer.';
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔍 Analyser';
+            }
+        });
+
+        // Analyze Printables URL
+        document.getElementById('analyze-printables-btn').addEventListener('click', async function() {
+            const url = document.getElementById('printables_url').value;
+            const btn = this;
+            const statusDiv = document.getElementById('printables-status');
+            const licenseWarning = document.getElementById('license-warning');
+
+            if (!url) {
+                statusDiv.className = 'mt-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
+                statusDiv.textContent = '❌ Veuillez entrer une URL Printables';
+                statusDiv.classList.remove('hidden');
+                return;
+            }
+
+            // Save URL to hidden field
+            document.getElementById('printables_url_hidden').value = url;
+
+            // Disable button and show loading
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Analyse...';
+            statusDiv.className = 'mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
+            statusDiv.innerHTML = '🔄 Extraction des données et optimisation IA en cours... <br><small>Cela peut prendre 20-40 secondes.</small>';
+            statusDiv.classList.remove('hidden');
+            licenseWarning.classList.add('hidden');
+
+            try {
+                const response = await fetch('{{ route('products.analyze-printables') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ printables_url: url })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Fill form with optimized data
+                    document.getElementById('title').value = result.data.title || '';
+                    document.getElementById('description').value = result.data.description || '';
+
+                    if (result.data.tags_string) {
+                        document.getElementById('tags').value = result.data.tags_string;
+                    }
+
+                    // Store license info
+                    document.getElementById('license_hidden').value = result.data.license || '';
+                    document.getElementById('attribution_hidden').value = result.data.attribution || '';
+
+                    // Show license warning if needed
+                    if (result.data.license) {
+                        const licenseText = document.getElementById('license-text');
+                        if (result.data.commercial_allowed === false) {
+                            licenseWarning.className = 'mt-3 p-3 bg-red-100 border border-red-400 text-red-800 rounded-md';
+                            licenseText.innerHTML = `<strong>${result.data.license}</strong> - Cette licence interdit l'usage commercial ! Ne vendez pas ce modèle.`;
+                        } else {
+                            licenseWarning.className = 'mt-3 p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-md';
+                            licenseText.innerHTML = `<strong>${result.data.license}</strong> - Vérifiez que l'usage commercial est autorisé. Attribution: ${result.data.author || 'Inconnu'}`;
+                        }
+                        licenseWarning.classList.remove('hidden');
+                    }
+
+                    // Calculate price if printing cost is set
+                    calculatePrintingPrice();
+
+                    // Show success message
+                    statusDiv.className = 'mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
+                    statusDiv.innerHTML = `
+                        <strong>✅ Modèle 3D importé et optimisé !</strong><br>
+                        <small>Titre, description et ${result.data.tags ? result.data.tags.length : 0} tags générés.</small><br>
+                        <small>Auteur: ${result.data.author || 'Inconnu'} | Licence: ${result.data.license || 'Inconnue'}</small>
+                    `;
+
+                    // Scroll to form
+                    document.getElementById('title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    document.getElementById('title').focus();
+                } else {
+                    statusDiv.className = 'mt-3 p-3 bg-orange-100 border border-orange-300 text-orange-800 rounded-md';
+                    statusDiv.innerHTML = '❌ ' + result.message;
+                }
+            } catch (error) {
+                statusDiv.className = 'mt-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
                 statusDiv.innerHTML = '❌ Erreur de connexion. Veuillez réessayer.';
             } finally {
                 btn.disabled = false;

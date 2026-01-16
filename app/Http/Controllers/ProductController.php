@@ -7,6 +7,7 @@ use App\Models\Shop;
 use App\Services\AliExpressScraperService;
 use App\Services\ContentOptimizerService;
 use App\Services\EtsyApiClient;
+use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -301,6 +302,83 @@ class ProductController extends Controller
                     'specs' => $productData['specs'],
                 ],
                 'message' => 'Product analyzed successfully! Data has been optimized for Etsy.',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Analyze Printables product URL and return optimized data.
+     */
+    public function analyzePrintables(Request $request)
+    {
+        $request->validate([
+            'printables_url' => 'required|url',
+        ]);
+
+        try {
+            $scraper = new PrintablesScraperService();
+            $optimizer = new ContentOptimizerService();
+
+            // Validate URL
+            if (!$scraper->isValidPrintablesUrl($request->printables_url)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid Printables URL. Please provide a valid model link (e.g., https://www.printables.com/model/123456).',
+                ], 400);
+            }
+
+            // Scrape product data
+            $productData = $scraper->scrapeProduct($request->printables_url);
+
+            // Check if scraping got any useful data
+            if (empty($productData['title'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Impossible d\'extraire les données du modèle Printables. Veuillez réessayer ou entrer les détails manuellement.',
+                ], 422);
+            }
+
+            // Check license for commercial use
+            $commercialAllowed = $scraper->isCommercialLicenseAllowed($productData['license'] ?? 'Unknown');
+
+            // Optimize content for Etsy (3D printing context)
+            $optimizedTitle = $optimizer->optimizeTitle($productData['title'], '3D Print');
+            $optimizedDescription = $optimizer->optimizeDescription(
+                $productData['title'],
+                $productData['description'],
+                [],
+                true // is3DPrint flag
+            );
+
+            // Generate 13 SEO tags for Etsy (3D printing focused)
+            $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription, true);
+
+            // Generate attribution
+            $attribution = $scraper->generateAttribution($productData);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'title' => $optimizedTitle,
+                    'description' => $optimizedDescription,
+                    'tags' => $tags,
+                    'tags_string' => implode(', ', $tags),
+                    'images' => $productData['images'],
+                    'author' => $productData['author'],
+                    'license' => $productData['license'],
+                    'commercial_allowed' => $commercialAllowed,
+                    'attribution' => $attribution,
+                    'source_url' => $productData['source_url'],
+                    'downloads' => $productData['downloads'],
+                    'likes' => $productData['likes'],
+                ],
+                'message' => 'Printables model analyzed successfully! Data has been optimized for Etsy.',
             ]);
 
         } catch (\Exception $e) {

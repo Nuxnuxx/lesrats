@@ -19,29 +19,51 @@ class ContentOptimizerService
     /**
      * Optimize product title for Etsy.
      */
-    public function optimizeTitle(string $originalTitle): string
+    public function optimizeTitle(string $originalTitle, ?string $context = null): string
     {
         if (!$this->apiKey) {
             return $this->fallbackOptimizeTitle($originalTitle);
         }
 
         try {
-            $prompt = "Transform this AliExpress product title into an SEO-optimized Etsy listing title.\n\n"
-                . "Original title: {$originalTitle}\n\n"
-                . "RULES:\n"
-                . "1. KEEP the actual product keywords (e.g., kimono, cardigan, Mount Fuji, haori, necklace, ring, etc.)\n"
-                . "2. Translate to English if the title is in French or another language\n"
-                . "3. Remove ONLY these terms: wholesale, dropshipping, China, AliExpress, bulk, lot, pieces\n"
-                . "4. Maximum 140 characters\n"
-                . "5. Make it readable, natural, and SEO-friendly\n"
-                . "6. NEVER use generic terms like 'Handmade Gift', 'Unique Item' - use the REAL product words\n\n"
-                . "Output ONLY the optimized title, nothing else.";
+            $is3DPrint = $context === '3D Print';
 
-            $systemPrompt = "You are an Etsy SEO expert specializing in dropshipping product optimization. "
-                . "Your job is to transform AliExpress titles into compelling Etsy titles. "
-                . "CRITICAL: You must preserve the actual product keywords - never replace them with generic terms like 'Handmade Gift' or 'Unique Item'. "
-                . "Always output in English. Translate if the input is in another language. "
-                . "Output only the title, no explanations or quotes.";
+            if ($is3DPrint) {
+                $prompt = "Transform this 3D model title into an SEO-optimized Etsy listing title for a 3D printed product.\n\n"
+                    . "Original title: {$originalTitle}\n\n"
+                    . "RULES:\n"
+                    . "1. KEEP the actual product keywords (e.g., dragon, planter, figurine, organizer, etc.)\n"
+                    . "2. Add '3D Printed' at the beginning or end of the title\n"
+                    . "3. Translate to English if the title is in another language\n"
+                    . "4. Maximum 140 characters\n"
+                    . "5. Make it readable, natural, and SEO-friendly\n"
+                    . "6. Include keywords like: 3D printed, PLA, custom, unique, handmade\n"
+                    . "7. NEVER use generic terms - use the REAL product words\n\n"
+                    . "Output ONLY the optimized title, nothing else.";
+
+                $systemPrompt = "You are an Etsy SEO expert specializing in 3D printed products. "
+                    . "Your job is to transform 3D model names into compelling Etsy titles for printed items. "
+                    . "CRITICAL: You must preserve the actual product keywords and add 3D printing context. "
+                    . "Always output in English. Translate if the input is in another language. "
+                    . "Output only the title, no explanations or quotes.";
+            } else {
+                $prompt = "Transform this AliExpress product title into an SEO-optimized Etsy listing title.\n\n"
+                    . "Original title: {$originalTitle}\n\n"
+                    . "RULES:\n"
+                    . "1. KEEP the actual product keywords (e.g., kimono, cardigan, Mount Fuji, haori, necklace, ring, etc.)\n"
+                    . "2. Translate to English if the title is in French or another language\n"
+                    . "3. Remove ONLY these terms: wholesale, dropshipping, China, AliExpress, bulk, lot, pieces\n"
+                    . "4. Maximum 140 characters\n"
+                    . "5. Make it readable, natural, and SEO-friendly\n"
+                    . "6. NEVER use generic terms like 'Handmade Gift', 'Unique Item' - use the REAL product words\n\n"
+                    . "Output ONLY the optimized title, nothing else.";
+
+                $systemPrompt = "You are an Etsy SEO expert specializing in dropshipping product optimization. "
+                    . "Your job is to transform AliExpress titles into compelling Etsy titles. "
+                    . "CRITICAL: You must preserve the actual product keywords - never replace them with generic terms like 'Handmade Gift' or 'Unique Item'. "
+                    . "Always output in English. Translate if the input is in another language. "
+                    . "Output only the title, no explanations or quotes.";
+            }
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
@@ -75,10 +97,10 @@ class ContentOptimizerService
     /**
      * Optimize product description for Etsy.
      */
-    public function optimizeDescription(string $originalTitle, ?string $originalDescription = null, array $specs = []): string
+    public function optimizeDescription(string $originalTitle, ?string $originalDescription = null, array $specs = [], bool $is3DPrint = false): string
     {
         if (!$this->apiKey) {
-            return $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs);
+            return $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs, $is3DPrint);
         }
 
         try {
@@ -90,25 +112,51 @@ class ContentOptimizerService
                 }
             }
 
-            $prompt = "Write an SEO-optimized Etsy product description.\n\n"
-                . "Product: {$originalTitle}\n"
-                . ($originalDescription ? "Original description: {$originalDescription}\n" : '')
-                . $specsText . "\n"
-                . "RULES:\n"
-                . "1. Write in English (translate if the product info is in French or another language)\n"
-                . "2. Warm, friendly, sales-driven tone with a few emojis (not too many)\n"
-                . "3. Remove mentions of: wholesale, dropshipping, China, AliExpress\n"
-                . "4. Highlight the ACTUAL product features (e.g., for a kimono: Japanese style, Mount Fuji print, beach cardigan, etc.)\n"
-                . "5. 200-400 words with bullet points for key features\n"
-                . "6. SEO-friendly with natural keyword placement\n"
-                . "7. NEVER write generic descriptions - focus on THIS specific product\n"
-                . "8. Include care instructions if relevant\n\n"
-                . "Output ONLY the description, nothing else.";
+            if ($is3DPrint) {
+                $prompt = "Write an SEO-optimized Etsy product description for a 3D printed item.\n\n"
+                    . "Product: {$originalTitle}\n"
+                    . ($originalDescription ? "Original description: {$originalDescription}\n" : '')
+                    . $specsText . "\n"
+                    . "RULES:\n"
+                    . "1. Write in English (translate if needed)\n"
+                    . "2. Warm, friendly tone with a few emojis\n"
+                    . "3. Highlight that this is a 3D PRINTED item (made to order)\n"
+                    . "4. Include these sections:\n"
+                    . "   - Introduction (what the product is)\n"
+                    . "   - Material info (PLA plastic, eco-friendly, durable)\n"
+                    . "   - Customization options (colors available on request)\n"
+                    . "   - Dimensions (if known) or mention 'see photos for scale'\n"
+                    . "   - Care instructions (keep away from heat, wipe with damp cloth)\n"
+                    . "   - Shipping info (made to order, 2-5 days production)\n"
+                    . "5. 200-400 words with bullet points\n"
+                    . "6. SEO-friendly with 3D printing keywords\n"
+                    . "7. Focus on THIS specific product\n\n"
+                    . "Output ONLY the description, nothing else.";
 
-            $systemPrompt = "You are an Etsy SEO expert and copywriter. Write product descriptions that are warm, friendly, and convert well. "
-                . "Use a few emojis to make it attractive. Always write in English. "
-                . "CRITICAL: Base the description on the ACTUAL product - never write generic content. "
-                . "Focus on the real product keywords and features.";
+                $systemPrompt = "You are an Etsy SEO expert specializing in 3D printed products. Write descriptions that highlight the handmade, custom nature of 3D printing. "
+                    . "Use a few emojis. Always write in English. "
+                    . "CRITICAL: Focus on the ACTUAL product being sold.";
+            } else {
+                $prompt = "Write an SEO-optimized Etsy product description.\n\n"
+                    . "Product: {$originalTitle}\n"
+                    . ($originalDescription ? "Original description: {$originalDescription}\n" : '')
+                    . $specsText . "\n"
+                    . "RULES:\n"
+                    . "1. Write in English (translate if the product info is in French or another language)\n"
+                    . "2. Warm, friendly, sales-driven tone with a few emojis (not too many)\n"
+                    . "3. Remove mentions of: wholesale, dropshipping, China, AliExpress\n"
+                    . "4. Highlight the ACTUAL product features (e.g., for a kimono: Japanese style, Mount Fuji print, beach cardigan, etc.)\n"
+                    . "5. 200-400 words with bullet points for key features\n"
+                    . "6. SEO-friendly with natural keyword placement\n"
+                    . "7. NEVER write generic descriptions - focus on THIS specific product\n"
+                    . "8. Include care instructions if relevant\n\n"
+                    . "Output ONLY the description, nothing else.";
+
+                $systemPrompt = "You are an Etsy SEO expert and copywriter. Write product descriptions that are warm, friendly, and convert well. "
+                    . "Use a few emojis to make it attractive. Always write in English. "
+                    . "CRITICAL: Base the description on the ACTUAL product - never write generic content. "
+                    . "Focus on the real product keywords and features.";
+            }
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
@@ -159,29 +207,48 @@ class ContentOptimizerService
     /**
      * Generate 13 SEO-optimized Etsy tags.
      */
-    public function generateTags(string $title, ?string $description = null): array
+    public function generateTags(string $title, ?string $description = null, bool $is3DPrint = false): array
     {
         if (!$this->apiKey) {
-            return $this->fallbackGenerateTags($title);
+            return $this->fallbackGenerateTags($title, $is3DPrint);
         }
 
         try {
-            $prompt = "Generate exactly 13 Etsy SEO tags for this product:\n\n"
-                . "Product: {$title}\n"
-                . ($description ? "Description: " . substr($description, 0, 500) . "\n" : '')
-                . "\n"
-                . "RULES:\n"
-                . "1. Each tag maximum 20 characters\n"
-                . "2. Tags must relate to the ACTUAL product (e.g., 'japanese kimono', 'mount fuji', 'haori jacket', 'beach cardigan')\n"
-                . "3. Mix of specific keywords and broader terms\n"
-                . "4. All tags in English\n"
-                . "5. No duplicates\n"
-                . "6. NEVER use generic tags like 'handmade gift' unless truly relevant to the product\n\n"
-                . "Output ONLY 13 tags separated by commas on a single line, nothing else.";
+            if ($is3DPrint) {
+                $prompt = "Generate exactly 13 Etsy SEO tags for this 3D printed product:\n\n"
+                    . "Product: {$title}\n"
+                    . ($description ? "Description: " . substr($description, 0, 500) . "\n" : '')
+                    . "\n"
+                    . "RULES:\n"
+                    . "1. Each tag maximum 20 characters\n"
+                    . "2. Include 3D printing related tags: '3d printed', '3d print', 'pla', 'custom', 'made to order'\n"
+                    . "3. Include product-specific tags based on what the item actually is\n"
+                    . "4. Mix of 3D printing terms and product-specific keywords\n"
+                    . "5. All tags in English\n"
+                    . "6. No duplicates\n\n"
+                    . "Output ONLY 13 tags separated by commas on a single line, nothing else.";
 
-            $systemPrompt = "You are an Etsy SEO expert. Generate exactly 13 tags based on the ACTUAL product. "
-                . "Each tag max 20 characters. Focus on real product keywords, not generic terms. "
-                . "Output only the tags separated by commas.";
+                $systemPrompt = "You are an Etsy SEO expert for 3D printed products. Generate exactly 13 tags. "
+                    . "Each tag max 20 characters. Mix 3D printing keywords with product-specific terms. "
+                    . "Output only the tags separated by commas.";
+            } else {
+                $prompt = "Generate exactly 13 Etsy SEO tags for this product:\n\n"
+                    . "Product: {$title}\n"
+                    . ($description ? "Description: " . substr($description, 0, 500) . "\n" : '')
+                    . "\n"
+                    . "RULES:\n"
+                    . "1. Each tag maximum 20 characters\n"
+                    . "2. Tags must relate to the ACTUAL product (e.g., 'japanese kimono', 'mount fuji', 'haori jacket', 'beach cardigan')\n"
+                    . "3. Mix of specific keywords and broader terms\n"
+                    . "4. All tags in English\n"
+                    . "5. No duplicates\n"
+                    . "6. NEVER use generic tags like 'handmade gift' unless truly relevant to the product\n\n"
+                    . "Output ONLY 13 tags separated by commas on a single line, nothing else.";
+
+                $systemPrompt = "You are an Etsy SEO expert. Generate exactly 13 tags based on the ACTUAL product. "
+                    . "Each tag max 20 characters. Focus on real product keywords, not generic terms. "
+                    . "Output only the tags separated by commas.";
+            }
 
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
@@ -217,18 +284,18 @@ class ContentOptimizerService
                 }
             }
 
-            return $this->fallbackGenerateTags($title);
+            return $this->fallbackGenerateTags($title, $is3DPrint);
 
         } catch (\Exception $e) {
             Log::error('Groq tags generation failed', ['error' => $e->getMessage()]);
-            return $this->fallbackGenerateTags($title);
+            return $this->fallbackGenerateTags($title, $is3DPrint);
         }
     }
 
     /**
      * Fallback tag generation (rule-based).
      */
-    protected function fallbackGenerateTags(string $title): array
+    protected function fallbackGenerateTags(string $title, bool $is3DPrint = false): array
     {
         // Extract words from title
         $words = preg_split('/\s+/', strtolower($title));
@@ -236,17 +303,26 @@ class ContentOptimizerService
 
         $tags = [];
 
+        // Add 3D printing tags first if applicable
+        if ($is3DPrint) {
+            $tags = ['3d printed', '3d print', 'pla', 'custom', 'made to order'];
+        }
+
         // Add words as tags (max 20 chars each)
         foreach ($words as $word) {
             $word = preg_replace('/[^a-z0-9\s]/', '', $word);
-            if (strlen($word) > 2 && strlen($word) <= 20) {
+            if (strlen($word) > 2 && strlen($word) <= 20 && !in_array($word, $tags)) {
                 $tags[] = $word;
             }
             if (count($tags) >= 13) break;
         }
 
         // Pad with generic tags if needed
-        $genericTags = ['handmade', 'unique gift', 'gift for her', 'gift for him', 'home decor', 'vintage style', 'boho', 'minimalist', 'custom'];
+        if ($is3DPrint) {
+            $genericTags = ['handmade', 'unique gift', 'home decor', 'geek gift', 'nerd gift', 'desk decor', 'figurine', 'custom gift'];
+        } else {
+            $genericTags = ['handmade', 'unique gift', 'gift for her', 'gift for him', 'home decor', 'vintage style', 'boho', 'minimalist', 'custom'];
+        }
         while (count($tags) < 13 && !empty($genericTags)) {
             $tags[] = array_shift($genericTags);
         }
@@ -282,31 +358,62 @@ class ContentOptimizerService
     /**
      * Fallback description optimization (rule-based).
      */
-    protected function fallbackOptimizeDescription(string $title, ?string $description, array $specs): string
+    protected function fallbackOptimizeDescription(string $title, ?string $description, array $specs, bool $is3DPrint = false): string
     {
-        $optimized = "✨ {$title}\n\n";
-        $optimized .= "Discover this unique and beautiful item, carefully selected for its quality and style.\n\n";
+        if ($is3DPrint) {
+            $optimized = "🖨️ {$title} - 3D Printed\n\n";
+            $optimized .= "Discover this unique 3D printed item, made to order just for you!\n\n";
 
-        if (!empty($specs)) {
-            $optimized .= "📋 Features:\n";
-            foreach (array_slice($specs, 0, 5) as $key => $value) {
-                $optimized .= "• {$key}: {$value}\n";
+            $optimized .= "📋 Product Details:\n";
+            $optimized .= "• Material: High-quality PLA plastic\n";
+            $optimized .= "• Eco-friendly and durable\n";
+            $optimized .= "• Custom colors available upon request\n\n";
+
+            if ($description && strlen($description) > 50) {
+                $cleaned = strip_tags($description);
+                $cleaned = preg_replace('/\s+/', ' ', trim($cleaned));
+                $optimized .= "📝 About this item:\n";
+                $optimized .= substr($cleaned, 0, 300) . (strlen($cleaned) > 300 ? '...' : '') . "\n\n";
             }
-            $optimized .= "\n";
+
+            $optimized .= "🎨 Customization:\n";
+            $optimized .= "Want a different color? Just send us a message and we'll make it happen!\n\n";
+
+            $optimized .= "📦 Shipping & Production:\n";
+            $optimized .= "• Made to order (2-5 business days production)\n";
+            $optimized .= "• Carefully packaged for safe delivery\n\n";
+
+            $optimized .= "⚠️ Care Instructions:\n";
+            $optimized .= "• Keep away from heat sources (PLA softens above 60°C/140°F)\n";
+            $optimized .= "• Clean with a damp cloth\n";
+            $optimized .= "• Not dishwasher or microwave safe\n\n";
+
+            $optimized .= "💝 Perfect gift for 3D printing enthusiasts, geeks, and anyone who loves unique items!";
+        } else {
+            $optimized = "✨ {$title}\n\n";
+            $optimized .= "Discover this unique and beautiful item, carefully selected for its quality and style.\n\n";
+
+            if (!empty($specs)) {
+                $optimized .= "📋 Features:\n";
+                foreach (array_slice($specs, 0, 5) as $key => $value) {
+                    $optimized .= "• {$key}: {$value}\n";
+                }
+                $optimized .= "\n";
+            }
+
+            if ($description && strlen($description) > 50) {
+                // Clean description
+                $cleaned = strip_tags($description);
+                $cleaned = preg_replace('/\b(wholesale|dropshipping|china|bulk)\b/i', '', $cleaned);
+                $cleaned = preg_replace('/\s+/', ' ', trim($cleaned));
+
+                $optimized .= "📝 Description:\n";
+                $optimized .= substr($cleaned, 0, 300) . (strlen($cleaned) > 300 ? '...' : '') . "\n\n";
+            }
+
+            $optimized .= "💝 Perfect for gifts or personal use!\n\n";
+            $optimized .= "📦 Carefully packaged and shipped with care.";
         }
-
-        if ($description && strlen($description) > 50) {
-            // Clean description
-            $cleaned = strip_tags($description);
-            $cleaned = preg_replace('/\b(wholesale|dropshipping|china|bulk)\b/i', '', $cleaned);
-            $cleaned = preg_replace('/\s+/', ' ', trim($cleaned));
-
-            $optimized .= "📝 Description:\n";
-            $optimized .= substr($cleaned, 0, 300) . (strlen($cleaned) > 300 ? '...' : '') . "\n\n";
-        }
-
-        $optimized .= "💝 Perfect for gifts or personal use!\n\n";
-        $optimized .= "📦 Carefully packaged and shipped with care.";
 
         return $optimized;
     }

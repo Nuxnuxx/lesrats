@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/sync-etsy', [ProductController::class, 'syncToEtsy'])->name('products.sync-etsy');
     Route::post('/products/import-etsy', [ProductController::class, 'importFromEtsy'])->name('products.import-etsy');
     Route::post('/products/analyze-aliexpress', [ProductController::class, 'analyzeAliExpress'])->name('products.analyze-aliexpress');
+    Route::post('/products/analyze-printables', [ProductController::class, 'analyzePrintables'])->name('products.analyze-printables');
     Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])->name('products.optimize-content');
 });
 
