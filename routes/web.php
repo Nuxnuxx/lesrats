@@ -4,6 +4,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EtsyAuthController;
 use App\Http\Controllers\EtsyMockController;
 use App\Http\Controllers\OnboardingController;
+use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShopController;
@@ -45,6 +46,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])->name('products.optimize-content');
     Route::post('/products/bulk-sync', [ProductController::class, 'bulkSync'])->name('products.bulk-sync');
     Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
+
+    // Order management routes
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::post('/orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.add-note');
+    Route::post('/orders/import-etsy', [OrderController::class, 'importFromEtsy'])->name('orders.import-etsy');
 });
 
 // Etsy OAuth callback (no auth middleware as it's coming from Etsy)
