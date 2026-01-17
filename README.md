@@ -52,6 +52,12 @@ Email: demo@lesrats.fr
 Password: password
 ```
 
+## Testing with Mock Data
+
+**Prompt Claude:** `Lis docs/TESTING.md et setup le projet pour que je puisse tester`
+
+Voir [docs/TESTING.md](docs/TESTING.md) pour la documentation complete.
+
 ## Configuration
 
 ### Required
