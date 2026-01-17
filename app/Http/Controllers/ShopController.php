@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Order;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -58,7 +59,53 @@ class ShopController extends Controller
 
         $shop->load('members.user');
 
-        return view('shops.show', compact('shop'));
+        // Calculate stats
+        $stats = [
+            'total_products' => $shop->products()->count(),
+            'total_orders' => $shop->orders()->count(),
+            'total_revenue' => $shop->orders()->sum('total_price'),
+            'total_profit' => $shop->orders()->sum('total_profit'),
+            'today_orders' => $shop->orders()->today()->count(),
+            'today_revenue' => $shop->orders()->today()->sum('total_price'),
+            'this_month_orders' => $shop->orders()->thisMonth()->count(),
+            'this_month_revenue' => $shop->orders()->thisMonth()->sum('total_price'),
+            'pending_sync' => $shop->products()->where('etsy_sync_status', 'pending')->count(),
+            'sync_errors' => $shop->products()->where('etsy_sync_status', 'error')->count(),
+        ];
+
+        // Get revenue chart data (last 30 days)
+        $chartData = $shop->getRevenueChartData(30);
+
+        // Get recent products (last 10)
+        $recentProducts = $shop->products()
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        // Get recent orders (last 10)
+        $recentOrders = $shop->orders()
+            ->with('items')
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        // Orders by status for quick stats
+        $ordersByStatus = [
+            'new' => $shop->orders()->where('status', Order::STATUS_NEW)->count(),
+            'ordered' => $shop->orders()->where('status', Order::STATUS_ORDERED)->count(),
+            'shipped' => $shop->orders()->where('status', Order::STATUS_SHIPPED)->count(),
+            'delivered' => $shop->orders()->where('status', Order::STATUS_DELIVERED)->count(),
+            'completed' => $shop->orders()->where('status', Order::STATUS_COMPLETED)->count(),
+        ];
+
+        return view('shops.show', compact(
+            'shop',
+            'stats',
+            'chartData',
+            'recentProducts',
+            'recentOrders',
+            'ordersByStatus'
+        ));
     }
 
     /**

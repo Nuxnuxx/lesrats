@@ -38,7 +38,7 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label for="price" class="block text-sm font-medium text-gray-700">Prix ({{ $product->shop->currency }})</label>
+                                <label for="price" class="block text-sm font-medium text-gray-700">Prix de vente ({{ $product->shop->currency }})</label>
                                 <input type="number" name="price" id="price" step="0.01" min="0" value="{{ old('price', $product->price) }}" required
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 @error('price')
@@ -47,14 +47,42 @@
                             </div>
 
                             <div>
-                                <label for="quantity" class="block text-sm font-medium text-gray-700">Quantité en stock</label>
-                                <input type="number" name="quantity" id="quantity" min="0" value="{{ old('quantity', $product->quantity) }}" required
+                                <label for="cost_price" class="block text-sm font-medium text-gray-700">
+                                    @if($product->source_type === 'printables' || $product->is_digital)
+                                        Cout ({{ $product->shop->currency }})
+                                    @else
+                                        Cout fournisseur ({{ $product->shop->currency }})
+                                    @endif
+                                </label>
+                                <input type="number" name="cost_price" id="cost_price" step="0.01" min="0" value="{{ old('cost_price', $product->cost_price ?? 0) }}"
                                     class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                @error('quantity')
+                                @if($product->source_type === 'printables' || $product->is_digital)
+                                    <p class="mt-1 text-xs text-gray-500">Fichier digital = cout 0</p>
+                                @else
+                                    <p class="mt-1 text-xs text-gray-500">Prix d'achat chez le fournisseur</p>
+                                @endif
+                                @error('cost_price')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
                         </div>
+
+                        @if($product->price > 0 && $product->cost_price !== null)
+                            <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <div class="flex items-center justify-between text-sm">
+                                    <span class="text-gray-600">Profit par vente:</span>
+                                    <span class="font-semibold text-green-600">
+                                        +{{ number_format($product->price - ($product->cost_price ?? 0), 2) }} {{ $product->shop->currency }}
+                                        @if($product->price > 0)
+                                            ({{ number_format((($product->price - ($product->cost_price ?? 0)) / $product->price) * 100, 0) }}% marge)
+                                        @endif
+                                    </span>
+                                </div>
+                            </div>
+                        @endif
+
+                        <!-- Hidden quantity - not tracked for dropship/digital -->
+                        <input type="hidden" name="quantity" value="{{ $product->quantity ?? 999 }}">
 
                         <div class="mb-4">
                             <label for="sku" class="block text-sm font-medium text-gray-700">SKU (optionnel)</label>
@@ -65,11 +93,38 @@
                             @enderror
                         </div>
 
+                        {{-- Product Source Info --}}
+                        @if($product->source_type)
+                            <div class="mb-4 p-4 rounded-lg {{ $product->source_type === 'aliexpress' ? 'bg-red-50 border border-red-200' : ($product->source_type === 'printables' ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50 border border-gray-200') }}">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        @if($product->source_type === 'aliexpress')
+                                            <span class="text-red-600 font-medium">Dropshipping AliExpress</span>
+                                        @elseif($product->source_type === 'printables')
+                                            <span class="text-purple-600 font-medium">Fichier STL (Printables)</span>
+                                        @else
+                                            <span class="text-gray-600 font-medium">Produit manuel</span>
+                                        @endif
+                                        @if($product->is_digital)
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Digital</span>
+                                        @endif
+                                    </div>
+                                    @if($product->source_url)
+                                        <a href="{{ $product->source_url }}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
+                                            Voir la source
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
+                        @endif
+
                         <div class="mb-4">
-                            <label for="aliexpress_url" class="block text-sm font-medium text-gray-700">URL AliExpress (optionnel)</label>
-                            <input type="url" name="aliexpress_url" id="aliexpress_url" value="{{ old('aliexpress_url', $product->aliexpress_url) }}"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            @error('aliexpress_url')
+                            <label for="source_url" class="block text-sm font-medium text-gray-700">URL Source (optionnel)</label>
+                            <input type="url" name="source_url" id="source_url" value="{{ old('source_url', $product->source_url) }}"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                placeholder="https://...">
+                            <p class="mt-1 text-xs text-gray-500">Lien vers le produit chez le fournisseur (AliExpress, Printables...)</p>
+                            @error('source_url')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>

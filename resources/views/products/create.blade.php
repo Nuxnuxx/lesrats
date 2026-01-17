@@ -176,15 +176,22 @@
                                 @enderror
                             </div>
 
-                            <div>
-                                <label for="quantity" class="block text-sm font-medium text-gray-700">Quantité en stock</label>
-                                <input type="number" name="quantity" id="quantity" min="0" value="{{ old('quantity', 999) }}" required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                @error('quantity')
+                            <div id="cost-price-container">
+                                <label for="cost_price" class="block text-sm font-medium text-gray-700">
+                                    <span id="cost-label">Cout fournisseur</span> ({{ $shop->currency }})
+                                </label>
+                                <input type="number" name="cost_price" id="cost_price" step="0.01" min="0" value="{{ old('cost_price', 0) }}"
+                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    placeholder="0.00">
+                                <p class="mt-1 text-xs text-gray-500" id="cost-info">Prix d'achat chez AliExpress</p>
+                                @error('cost_price')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
                         </div>
+
+                        <!-- Hidden quantity field - always 999 for dropship/digital -->
+                        <input type="hidden" name="quantity" id="quantity" value="999">
 
                         <div class="mb-4">
                             <label for="sku" class="block text-sm font-medium text-gray-700">SKU (optionnel)</label>
@@ -323,10 +330,12 @@
                     aliexpressSection.classList.remove('hidden');
                     printablesSection.classList.add('hidden');
                     productSourceInput.value = 'aliexpress';
+                    updateCostLabel('aliexpress');
                 } else {
                     aliexpressSection.classList.add('hidden');
                     printablesSection.classList.remove('hidden');
                     productSourceInput.value = 'printables';
+                    updateCostLabel('printables');
                 }
             });
         });
@@ -337,10 +346,25 @@
             if (aliPrice > 0) {
                 const etsyPrice = (aliPrice * 3).toFixed(2);
                 document.getElementById('price').value = etsyPrice;
+                document.getElementById('cost_price').value = aliPrice.toFixed(2);
                 document.getElementById('price-info').innerHTML =
                     `💰 Prix AliExpress: <strong>€${aliPrice.toFixed(2)}</strong> × 3 = <strong>€${etsyPrice}</strong>`;
             }
         });
+
+        // Update cost label based on product type
+        function updateCostLabel(type) {
+            const costLabel = document.getElementById('cost-label');
+            const costInfo = document.getElementById('cost-info');
+            if (type === 'printables') {
+                costLabel.textContent = 'Cout (optionnel)';
+                costInfo.textContent = 'Fichier digital = cout 0€';
+                document.getElementById('cost_price').value = '0';
+            } else {
+                costLabel.textContent = 'Cout fournisseur';
+                costInfo.textContent = 'Prix d\'achat chez AliExpress';
+            }
+        }
 
         // Set Etsy price when STL price is entered
         function calculatePrintingPrice() {
