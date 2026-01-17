@@ -19,14 +19,14 @@ class EnsureOnboardingCompleted
 
         // If user is authenticated and hasn't completed onboarding
         if ($user && !$user->onboarding_completed) {
-            // Allow access to onboarding routes, logout, and profile
+            // Allow access to onboarding routes, logout, Etsy callback and mock routes
             $allowedRoutes = [
                 'onboarding.index',
-                'onboarding.store-shop',
                 'onboarding.connect-etsy',
-                'onboarding.skip',
-                'onboarding.complete',
                 'etsy.callback',
+                'etsy.mock.authorize',
+                'etsy.mock.approve',
+                'etsy.mock.deny',
                 'logout',
             ];
 

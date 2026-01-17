@@ -30,10 +30,30 @@ class EtsyApiClient
     }
 
     /**
+     * Check if mock mode is enabled.
+     */
+    public function isMockMode(): bool
+    {
+        return config('etsy.mock_enabled', false);
+    }
+
+    /**
      * Get OAuth authorization URL.
      */
     public function getAuthorizationUrl(string $state): string
     {
+        // In mock mode, redirect to local mock authorization page
+        if ($this->isMockMode()) {
+            $params = http_build_query([
+                'client_id' => config('etsy.client_id') ?: 'mock_client_id',
+                'redirect_uri' => url('/etsy/callback'),
+                'scope' => implode(' ', config('etsy.scopes')),
+                'state' => $state,
+            ]);
+
+            return url('/etsy/mock/authorize') . '?' . $params;
+        }
+
         $params = http_build_query([
             'response_type' => 'code',
             'client_id' => config('etsy.client_id'),
@@ -52,6 +72,11 @@ class EtsyApiClient
      */
     public function getAccessToken(string $code): array
     {
+        // In mock mode, return fake token data from session
+        if ($this->isMockMode()) {
+            return $this->getMockAccessToken($code);
+        }
+
         $response = Http::asForm()->post($this->oauthUrl . '/token', [
             'grant_type' => 'authorization_code',
             'client_id' => config('etsy.client_id'),
@@ -73,10 +98,35 @@ class EtsyApiClient
     }
 
     /**
+     * Get mock access token data (for development).
+     */
+    protected function getMockAccessToken(string $code): array
+    {
+        // Verify the mock code matches what we stored
+        if ($code !== session('etsy_mock_code')) {
+            throw new \Exception('Invalid mock authorization code');
+        }
+
+        $userId = session('etsy_mock_user_id', rand(10000000, 99999999));
+
+        return [
+            'access_token' => $userId . '.mock_access_token_' . bin2hex(random_bytes(16)),
+            'token_type' => 'Bearer',
+            'expires_in' => 3600,
+            'refresh_token' => $userId . '.mock_refresh_token_' . bin2hex(random_bytes(16)),
+        ];
+    }
+
+    /**
      * Refresh access token using refresh token.
      */
     public function refreshAccessToken(string $refreshToken): array
     {
+        // In mock mode, return fake refreshed tokens
+        if ($this->isMockMode()) {
+            return $this->getMockRefreshedToken($refreshToken);
+        }
+
         $response = Http::asForm()->post($this->oauthUrl . '/token', [
             'grant_type' => 'refresh_token',
             'client_id' => config('etsy.client_id'),
@@ -93,6 +143,22 @@ class EtsyApiClient
         }
 
         return $response->json();
+    }
+
+    /**
+     * Get mock refreshed token data (for development).
+     */
+    protected function getMockRefreshedToken(string $refreshToken): array
+    {
+        // Extract user_id from the refresh token prefix
+        $userId = explode('.', $refreshToken)[0];
+
+        return [
+            'access_token' => $userId . '.mock_access_token_' . bin2hex(random_bytes(16)),
+            'token_type' => 'Bearer',
+            'expires_in' => 3600,
+            'refresh_token' => $userId . '.mock_refresh_token_' . bin2hex(random_bytes(16)),
+        ];
     }
 
     /**
@@ -175,6 +241,7 @@ class EtsyApiClient
 
     /**
      * Refresh the shop's access token.
+     * Note: Etsy returns a NEW refresh token with each refresh, so we save both.
      */
     protected function refreshShopToken(): void
     {
@@ -184,8 +251,10 @@ class EtsyApiClient
 
         $tokenData = $this->refreshAccessToken($this->shop->etsy_refresh_token);
 
+        // Update both access token AND refresh token (Etsy gives new refresh token each time)
         $this->shop->update([
             'etsy_access_token' => $tokenData['access_token'],
+            'etsy_refresh_token' => $tokenData['refresh_token'],
             'etsy_token_expires_at' => now()->addSeconds($tokenData['expires_in']),
         ]);
 
@@ -227,6 +296,71 @@ class EtsyApiClient
     // ===========================================
     // ETSY API METHODS
     // ===========================================
+
+    /**
+     * Get shops for an Etsy user using a provided access token.
+     * Used during OAuth callback before a Shop model is created.
+     *
+     * @param string $accessToken The OAuth access token
+     * @param int $userId The Etsy user ID (extracted from token prefix)
+     * @return array The API response containing shop data
+     */
+    public function getUserShopsWithToken(string $accessToken, int $userId): array
+    {
+        // In mock mode, return fake shop data from session
+        if ($this->isMockMode()) {
+            return $this->getMockUserShops();
+        }
+
+        $url = $this->apiUrl . "/application/users/{$userId}/shops";
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $accessToken,
+            'x-api-key' => config('etsy.client_id'),
+        ])->get($url);
+
+        if ($response->failed()) {
+            Log::error('Etsy get user shops failed', [
+                'user_id' => $userId,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+            throw new \Exception('Failed to fetch Etsy shops: ' . $response->body());
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * Get mock user shops data (for development).
+     */
+    protected function getMockUserShops(): array
+    {
+        $shopName = session('etsy_mock_shop_name', 'Ma Boutique Test');
+        $shopId = session('etsy_mock_shop_id', rand(10000000, 99999999));
+        $userId = session('etsy_mock_user_id', rand(10000000, 99999999));
+        $currency = session('etsy_mock_currency', 'EUR');
+
+        return [
+            'count' => 1,
+            'results' => [
+                [
+                    'shop_id' => (int) $shopId,
+                    'shop_name' => $shopName,
+                    'user_id' => (int) $userId,
+                    'title' => $shopName,
+                    'currency_code' => $currency,
+                    'url' => 'https://www.etsy.com/shop/' . str_replace(' ', '', $shopName),
+                    'image_url_760x100' => null,
+                    'num_favorers' => rand(10, 1000),
+                    'listing_active_count' => rand(0, 50),
+                    'sale_count' => rand(0, 500),
+                    'review_average' => round(rand(40, 50) / 10, 1),
+                    'review_count' => rand(0, 100),
+                ],
+            ],
+        ];
+    }
 
     /**
      * Get shop information.

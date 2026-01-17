@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\EtsyAuthController;
+use App\Http\Controllers\EtsyMockController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
@@ -18,14 +19,13 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     // Onboarding routes
     Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
-    Route::post('/onboarding/shop', [OnboardingController::class, 'storeShop'])->name('onboarding.store-shop');
-    Route::get('/onboarding/connect-etsy/{shop}', [OnboardingController::class, 'connectEtsy'])->name('onboarding.connect-etsy');
-    Route::get('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
-    Route::get('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
+    Route::get('/onboarding/connect-etsy', [OnboardingController::class, 'connectEtsy'])->name('onboarding.connect-etsy');
 
+    // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile/connect-etsy', [ProfileController::class, 'connectEtsy'])->name('profile.connect-etsy');
 
     // Shop management routes
     Route::resource('shops', ShopController::class);
@@ -46,5 +46,10 @@ Route::middleware('auth')->group(function () {
 
 // Etsy OAuth callback (no auth middleware as it's coming from Etsy)
 Route::get('/etsy/callback', [EtsyAuthController::class, 'callback'])->name('etsy.callback');
+
+// Etsy Mock routes (only available when ETSY_MOCK_ENABLED=true)
+Route::get('/etsy/mock/authorize', [EtsyMockController::class, 'authorize'])->name('etsy.mock.authorize');
+Route::post('/etsy/mock/approve', [EtsyMockController::class, 'approve'])->name('etsy.mock.approve');
+Route::post('/etsy/mock/deny', [EtsyMockController::class, 'deny'])->name('etsy.mock.deny');
 
 require __DIR__.'/auth.php';

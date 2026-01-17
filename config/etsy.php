@@ -18,6 +18,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mock Mode (Development)
+    |--------------------------------------------------------------------------
+    |
+    | Enable mock mode to test the Etsy integration without a real API key.
+    | When enabled, OAuth will be simulated locally.
+    |
+    */
+
+    'mock_enabled' => env('ETSY_MOCK_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | API Endpoints
     |--------------------------------------------------------------------------
     */
