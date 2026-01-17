@@ -43,6 +43,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/analyze-aliexpress', [ProductController::class, 'analyzeAliExpress'])->name('products.analyze-aliexpress');
     Route::post('/products/analyze-printables', [ProductController::class, 'analyzePrintables'])->name('products.analyze-printables');
     Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])->name('products.optimize-content');
+    Route::post('/products/bulk-sync', [ProductController::class, 'bulkSync'])->name('products.bulk-sync');
+    Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
 });
 
 // Etsy OAuth callback (no auth middleware as it's coming from Etsy)

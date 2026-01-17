@@ -14,7 +14,10 @@ class ShopController extends Controller
      */
     public function index()
     {
-        $shops = auth()->user()->shops()->with('members')->get();
+        $shops = auth()->user()->shops()
+            ->with('members')
+            ->withCount(['products', 'orders'])
+            ->get();
 
         return view('shops.index', compact('shops'));
     }
@@ -129,12 +132,17 @@ class ShopController extends Controller
             'name' => 'required|string|max:255',
             'currency' => 'required|string|size:3',
             'is_active' => 'boolean',
+            'auto_sync_enabled' => 'boolean',
         ]);
+
+        // Handle unchecked checkboxes
+        $validated['is_active'] = $request->boolean('is_active');
+        $validated['auto_sync_enabled'] = $request->boolean('auto_sync_enabled');
 
         $shop->update($validated);
 
-        return redirect()->route('shops.index')
-            ->with('success', 'Boutique mise à jour avec succès !');
+        return redirect()->route('shops.show', $shop)
+            ->with('success', 'Parametres mis a jour avec succes !');
     }
 
     /**

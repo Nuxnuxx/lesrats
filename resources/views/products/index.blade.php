@@ -1,123 +1,315 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Produits - {{ $shop->name }}
-            </h2>
-            <div class="flex gap-2">
+            <div class="flex items-center space-x-4">
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                    Produits
+                </h2>
+                {{-- Shop Selector --}}
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" 
+                            class="inline-flex items-center px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        <span>{{ $shop->name }}</span>
+                        <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div x-show="open" 
+                         @click.away="open = false"
+                         x-transition
+                         class="absolute left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                        @foreach($shops as $s)
+                            <a href="{{ route('products.index', ['shop_id' => $s->id]) }}" 
+                               class="block px-4 py-2 text-sm {{ $s->id === $shop->id ? 'bg-orange-50 text-orange-600' : 'text-gray-700 hover:bg-gray-50' }}">
+                                {{ $s->name }}
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
                 @if($shop->etsy_shop_id)
                     <form action="{{ route('products.import-etsy') }}" method="POST">
                         @csrf
-                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-600">
-                            Importer depuis Etsy
+                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-white border border-orange-500 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-50">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                            Importer Etsy
                         </button>
                     </form>
                 @endif
-                <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
-                    Nouveau Produit
+                <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Nouveau produit
                 </a>
             </div>
         </div>
     </x-slot>
 
-    <div class="py-12">
+    <div class="py-8" x-data="productList()">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            
+            {{-- Flash Messages --}}
             @if (session('success'))
-                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
-                    <span class="block sm:inline">{{ session('success') }}</span>
+                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg" role="alert">
+                    {{ session('success') }}
                 </div>
             @endif
 
             @if (session('error'))
-                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                    <span class="block sm:inline">{{ session('error') }}</span>
+                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg" role="alert">
+                    {{ session('error') }}
                 </div>
             @endif
 
-            @if ($products->isEmpty())
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 text-center">
-                    <p class="text-gray-600 mb-4">Vous n'avez pas encore de produit.</p>
-                    <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
-                        Créer mon premier produit
-                    </a>
+            {{-- Stats Bar --}}
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <p class="text-sm text-gray-500">Total</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ $stats['total'] }}</p>
                 </div>
-            @else
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-6">
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produit</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Etsy</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    @foreach($products as $product)
-                                        <tr>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm font-medium text-gray-900">{{ $product->title }}</div>
-                                                @if($product->sku)
-                                                    <div class="text-sm text-gray-500">SKU: {{ $product->sku }}</div>
-                                                @endif
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {{ number_format($product->price, 2) }} {{ $shop->currency }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                {{ $product->quantity }}
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                @if($product->isSyncedWithEtsy())
-                                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
-                                                        Synchronisé
-                                                    </span>
-                                                    @if($product->needsSync())
-                                                        <span class="px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800">
-                                                            Màj requise
-                                                        </span>
-                                                    @endif
-                                                @else
-                                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-800">
-                                                        Non synchronisé
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="px-2 py-1 text-xs font-semibold rounded {{ $product->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                                    {{ $product->is_active ? 'Actif' : 'Inactif' }}
-                                                </span>
-                                            </td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                <div class="flex justify-end gap-2">
-                                                    <a href="{{ route('products.show', $product) }}" class="text-blue-600 hover:text-blue-900">Voir</a>
-                                                    <a href="{{ route('products.edit', $product) }}" class="text-yellow-600 hover:text-yellow-900">Éditer</a>
-                                                    @if($shop->etsy_shop_id)
-                                                        <form action="{{ route('products.sync-etsy', $product) }}" method="POST" class="inline">
-                                                            @csrf
-                                                            <button type="submit" class="text-orange-600 hover:text-orange-900">
-                                                                {{ $product->isSyncedWithEtsy() ? 'Resync' : 'Publier' }}
-                                                            </button>
-                                                        </form>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <p class="text-sm text-green-600">Synchronises</p>
+                    <p class="text-2xl font-bold text-green-600">{{ $stats['synced'] }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <p class="text-sm text-blue-600">En attente</p>
+                    <p class="text-2xl font-bold text-blue-600">{{ $stats['pending'] }}</p>
+                </div>
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <p class="text-sm text-red-600">Erreurs</p>
+                    <p class="text-2xl font-bold text-red-600">{{ $stats['errors'] }}</p>
+                </div>
+            </div>
 
-                        <div class="mt-4">
-                            {{ $products->links() }}
+            {{-- Filters & Bulk Actions Bar --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+                <form method="GET" action="{{ route('products.index') }}" class="flex flex-wrap items-center gap-4">
+                    <input type="hidden" name="shop_id" value="{{ $shop->id }}">
+                    
+                    {{-- Search --}}
+                    <div class="flex-1 min-w-[200px]">
+                        <div class="relative">
+                            <input type="text" 
+                                   name="search" 
+                                   value="{{ request('search') }}"
+                                   placeholder="Rechercher un produit..."
+                                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-orange-500 focus:border-orange-500">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
                         </div>
                     </div>
+
+                    {{-- Source Type Filter --}}
+                    <select name="source_type" class="border border-gray-300 rounded-lg text-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                        <option value="">Toutes sources</option>
+                        <option value="aliexpress" {{ request('source_type') === 'aliexpress' ? 'selected' : '' }}>AliExpress</option>
+                        <option value="printables" {{ request('source_type') === 'printables' ? 'selected' : '' }}>Printables</option>
+                        <option value="manual" {{ request('source_type') === 'manual' ? 'selected' : '' }}>Manuel</option>
+                    </select>
+
+                    {{-- Sync Status Filter --}}
+                    <select name="sync_status" class="border border-gray-300 rounded-lg text-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                        <option value="">Tous statuts</option>
+                        <option value="synced" {{ request('sync_status') === 'synced' ? 'selected' : '' }}>Synchronise</option>
+                        <option value="pending" {{ request('sync_status') === 'pending' ? 'selected' : '' }}>En attente</option>
+                        <option value="error" {{ request('sync_status') === 'error' ? 'selected' : '' }}>Erreur</option>
+                    </select>
+
+                    {{-- Filter Button --}}
+                    <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                        </svg>
+                        Filtrer
+                    </button>
+
+                    @if(request('search') || request('source_type') || request('sync_status'))
+                        <a href="{{ route('products.index', ['shop_id' => $shop->id]) }}" class="text-sm text-gray-500 hover:text-gray-700">
+                            Effacer
+                        </a>
+                    @endif
+                </form>
+
+                {{-- Bulk Actions --}}
+                <div x-show="selectedProducts.length > 0" 
+                     x-transition
+                     class="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                    <span class="text-sm text-gray-600">
+                        <span x-text="selectedProducts.length"></span> produit(s) selectionne(s)
+                    </span>
+                    <div class="flex items-center space-x-3">
+                        <button @click="bulkSync()" 
+                                :disabled="syncing"
+                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50">
+                            <svg class="w-4 h-4 mr-2" :class="{ 'animate-spin': syncing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span x-text="syncing ? 'Synchronisation...' : 'Synchroniser Etsy'"></span>
+                        </button>
+                        <button @click="bulkDelete()" 
+                                :disabled="deleting"
+                                class="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Supprimer
+                        </button>
+                        <button @click="selectedProducts = []" class="text-sm text-gray-500 hover:text-gray-700">
+                            Annuler
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Products Grid --}}
+            @if ($products->isEmpty())
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun produit</h3>
+                    <p class="text-gray-500 mb-4">
+                        @if(request('search') || request('source_type') || request('sync_status'))
+                            Aucun produit ne correspond a vos filtres.
+                        @else
+                            Commencez par ajouter votre premier produit.
+                        @endif
+                    </p>
+                    @if(request('search') || request('source_type') || request('sync_status'))
+                        <a href="{{ route('products.index', ['shop_id' => $shop->id]) }}" class="text-orange-600 hover:text-orange-700 font-medium">
+                            Effacer les filtres
+                        </a>
+                    @else
+                        <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Nouveau produit
+                        </a>
+                    @endif
+                </div>
+            @else
+                {{-- Select All --}}
+                <div class="flex items-center justify-between mb-4">
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" 
+                               class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                               @change="toggleSelectAll($event)">
+                        <span class="ml-2 text-sm text-gray-600">Tout selectionner</span>
+                    </label>
+                    <p class="text-sm text-gray-500">
+                        {{ $products->total() }} produit(s)
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                    @foreach($products as $product)
+                        <x-products.card :product="$product" :selectable="true" />
+                    @endforeach
+                </div>
+
+                {{-- Pagination --}}
+                <div class="mt-6">
+                    {{ $products->links() }}
                 </div>
             @endif
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        function productList() {
+            return {
+                selectedProducts: [],
+                syncing: false,
+                deleting: false,
+
+                init() {
+                    // Listen for product selection events
+                    this.$el.addEventListener('product-selected', (event) => {
+                        const { id, selected } = event.detail;
+                        if (selected) {
+                            if (!this.selectedProducts.includes(id)) {
+                                this.selectedProducts.push(id);
+                            }
+                        } else {
+                            this.selectedProducts = this.selectedProducts.filter(p => p !== id);
+                        }
+                    });
+                },
+
+                toggleSelectAll(event) {
+                    const checkboxes = document.querySelectorAll('.product-checkbox');
+                    checkboxes.forEach(checkbox => {
+                        checkbox.checked = event.target.checked;
+                        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+                },
+
+                async bulkSync() {
+                    if (this.selectedProducts.length === 0) return;
+                    if (!confirm('Synchroniser ' + this.selectedProducts.length + ' produit(s) avec Etsy ?')) return;
+
+                    this.syncing = true;
+                    try {
+                        const response = await fetch('{{ route('products.bulk-sync') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ product_ids: this.selectedProducts })
+                        });
+
+                        const result = await response.json();
+                        alert(result.message);
+                        
+                        if (result.success) {
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        alert('Erreur lors de la synchronisation');
+                    } finally {
+                        this.syncing = false;
+                    }
+                },
+
+                async bulkDelete() {
+                    if (this.selectedProducts.length === 0) return;
+                    if (!confirm('Supprimer ' + this.selectedProducts.length + ' produit(s) ? Cette action est irreversible.')) return;
+
+                    this.deleting = true;
+                    try {
+                        const response = await fetch('{{ route('products.bulk-delete') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ product_ids: this.selectedProducts })
+                        });
+
+                        const result = await response.json();
+                        alert(result.message);
+                        
+                        if (result.success) {
+                            window.location.reload();
+                        }
+                    } catch (error) {
+                        alert('Erreur lors de la suppression');
+                    } finally {
+                        this.deleting = false;
+                    }
+                }
+            };
+        }
+    </script>
+    @endpush
 </x-app-layout>

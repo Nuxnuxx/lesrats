@@ -16,28 +16,62 @@ class ProductController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $activeShopId = session('active_shop_id');
+        $user = $request->user();
+        $shops = $user->shops()->get();
 
-        if (!$activeShopId) {
-            return redirect()->route('shops.index')
-                ->with('error', 'Veuillez d\'abord sélectionner une boutique.');
+        if ($shops->isEmpty()) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Veuillez d\'abord connecter une boutique.');
         }
 
-        $shop = Shop::find($activeShopId);
-
-        if (!$shop) {
-            session()->forget('active_shop_id');
-            return redirect()->route('shops.index')
-                ->with('error', 'Boutique introuvable. Veuillez en sélectionner une autre.');
-        }
+        // Get selected shop or default to first/session
+        $shopId = $request->get('shop_id', session('active_shop_id', $shops->first()->id));
+        $shop = $shops->firstWhere('id', $shopId) ?? $shops->first();
+        
+        // Update session
+        session(['active_shop_id' => $shop->id]);
 
         Gate::authorize('view', $shop);
 
-        $products = $shop->products()->latest()->paginate(20);
+        // Build query with filters
+        $query = $shop->products();
 
-        return view('products.index', compact('products', 'shop'));
+        // Search filter
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%");
+            });
+        }
+
+        // Source type filter
+        if ($sourceType = $request->get('source_type')) {
+            $query->where('source_type', $sourceType);
+        }
+
+        // Sync status filter
+        if ($syncStatus = $request->get('sync_status')) {
+            $query->where('etsy_sync_status', $syncStatus);
+        }
+
+        // Active status filter
+        if ($request->has('is_active')) {
+            $query->where('is_active', $request->boolean('is_active'));
+        }
+
+        // Stats for the current shop
+        $stats = [
+            'total' => $shop->products()->count(),
+            'synced' => $shop->products()->where('etsy_sync_status', 'synced')->count(),
+            'pending' => $shop->products()->where('etsy_sync_status', 'pending')->count(),
+            'errors' => $shop->products()->where('etsy_sync_status', 'error')->count(),
+        ];
+
+        $products = $query->latest()->paginate(24)->withQueryString();
+
+        return view('products.index', compact('products', 'shop', 'shops', 'stats'));
     }
 
     /**
@@ -133,6 +167,111 @@ class ProductController extends Controller
 
         return redirect()->route('products.index')
             ->with('success', 'Produit supprimé avec succès !');
+    }
+
+    /**
+     * Bulk sync products to Etsy.
+     */
+    public function bulkSync(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+        ]);
+
+        $products = Product::whereIn('id', $request->product_ids)->get();
+        $synced = 0;
+        $errors = [];
+
+        foreach ($products as $product) {
+            try {
+                Gate::authorize('update', $product->shop);
+
+                if (!$product->shop->etsy_shop_id) {
+                    $errors[] = "{$product->title}: Boutique non connectée à Etsy";
+                    continue;
+                }
+
+                $etsyClient = new EtsyApiClient($product->shop);
+
+                $listingData = [
+                    'title' => $product->title,
+                    'description' => $product->description ?? '',
+                    'price' => $product->price,
+                    'quantity' => $product->quantity,
+                    'who_made' => 'i_did',
+                    'when_made' => '2020_2023',
+                    'taxonomy_id' => 1,
+                ];
+
+                if ($product->etsy_listing_id) {
+                    $etsyClient->updateListing(
+                        $product->shop->etsy_shop_id,
+                        $product->etsy_listing_id,
+                        $listingData
+                    );
+                } else {
+                    $response = $etsyClient->createListing($product->shop->etsy_shop_id, $listingData);
+                    $product->etsy_listing_id = $response['listing_id'];
+                }
+
+                $product->update([
+                    'etsy_sync_status' => 'synced',
+                    'etsy_sync_error' => null,
+                    'etsy_synced_at' => now(),
+                ]);
+
+                $synced++;
+            } catch (\Exception $e) {
+                $product->update([
+                    'etsy_sync_status' => 'error',
+                    'etsy_sync_error' => $e->getMessage(),
+                ]);
+                $errors[] = "{$product->title}: {$e->getMessage()}";
+            }
+        }
+
+        $message = "{$synced} produit(s) synchronisé(s)";
+        if (!empty($errors)) {
+            $message .= ". " . count($errors) . " erreur(s).";
+        }
+
+        return response()->json([
+            'success' => $synced > 0,
+            'message' => $message,
+            'synced' => $synced,
+            'errors' => $errors,
+        ]);
+    }
+
+    /**
+     * Bulk delete products.
+     */
+    public function bulkDelete(Request $request)
+    {
+        $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+        ]);
+
+        $products = Product::whereIn('id', $request->product_ids)->get();
+        $deleted = 0;
+
+        foreach ($products as $product) {
+            try {
+                Gate::authorize('delete', $product->shop);
+                $product->delete();
+                $deleted++;
+            } catch (\Exception $e) {
+                // Skip products user can't delete
+            }
+        }
+
+        return response()->json([
+            'success' => $deleted > 0,
+            'message' => "{$deleted} produit(s) supprimé(s)",
+            'deleted' => $deleted,
+        ]);
     }
 
     /**
