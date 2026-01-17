@@ -403,12 +403,16 @@ class ProductController extends Controller
             // Scrape product data
             $productData = $scraper->scrapeProduct($request->aliexpress_url);
 
-            // Check if scraping got any useful data
-            if (empty($productData['title'])) {
+            // Check if scraping got any useful data or hit CAPTCHA
+            if (empty($productData['title']) || 
+                stripos($productData['title'], 'captcha') !== false ||
+                stripos($productData['title'], 'recaptcha') !== false ||
+                stripos($productData['title'], 'verification') !== false) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Impossible d\'extraire les données du produit AliExpress (page JavaScript). Veuillez copier le titre du produit depuis AliExpress et utiliser le bouton "Optimiser avec l\'IA" à la place.',
+                    'message' => 'AliExpress a bloque l\'extraction automatique (protection anti-bot). Passez en mode manuel: copiez le titre du produit depuis AliExpress, collez-le dans le champ titre, puis cliquez sur "Optimiser avec l\'IA".',
                     'use_manual' => true,
+                    'tip' => 'Astuce: Copiez aussi le prix et les images manuellement depuis AliExpress.',
                 ], 422);
             }
 

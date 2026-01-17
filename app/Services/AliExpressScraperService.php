@@ -132,6 +132,17 @@ class AliExpressScraperService
                 }
             }
 
+            // Check for CAPTCHA/bot detection
+            if ($title && (
+                stripos($title, 'captcha') !== false ||
+                stripos($title, 'recaptcha') !== false ||
+                stripos($title, 'verification') !== false ||
+                stripos($title, 'punish') !== false
+            )) {
+                Log::warning('AliExpress CAPTCHA detected', ['url' => $url, 'title' => $title]);
+                throw new \Exception('AliExpress a detecte un acces automatise et demande une verification. Veuillez entrer les details manuellement.');
+            }
+
             if (!$title || strlen($title) < 10) {
                 Log::error('Could not extract title from page', [
                     'url' => $url,
@@ -139,7 +150,7 @@ class AliExpressScraperService
                     'markdown_preview' => substr($markdown, 0, 500),
                 ]);
 
-                throw new \Exception('No data extracted from page');
+                throw new \Exception('Impossible d\'extraire les donnees. Le site peut etre temporairement indisponible ou bloquer l\'acces automatique.');
             }
 
             return [

@@ -1,647 +1,768 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Nouveau Produit - {{ $shop->name }}
-            </h2>
-            <a href="{{ route('products.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400">
-                Retour
+        <div class="flex items-center space-x-4">
+            <a href="{{ route('products.index', ['shop_id' => $shop->id]) }}" class="text-gray-400 hover:text-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
             </a>
+            <div>
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                    Nouveau produit
+                </h2>
+                <p class="text-sm text-gray-500">{{ $shop->name }}</p>
+            </div>
         </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+    <div class="py-8" x-data="productWizard()">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
 
-            <!-- Step 1: Choose Product Type -->
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">🎯 Étape 1 : Type de produit</h3>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- AliExpress Option -->
-                        <label class="relative cursor-pointer">
-                            <input type="radio" name="product_type" value="aliexpress" class="peer sr-only" checked>
-                            <div class="p-4 border-2 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50 transition-all">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <span class="text-2xl">📦</span>
-                                    <span class="font-semibold text-gray-800">Dropshipping AliExpress</span>
+            {{-- Progress Steps --}}
+            <div class="mb-8">
+                <div class="flex items-center justify-between">
+                    <template x-for="(stepInfo, index) in steps" :key="index">
+                        <div class="flex items-center" :class="index < steps.length - 1 ? 'flex-1' : ''">
+                            <div class="flex flex-col items-center">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors"
+                                     :class="step > index ? 'bg-orange-600 text-white' : (step === index ? 'bg-orange-600 text-white ring-4 ring-orange-200' : 'bg-gray-200 text-gray-500')">
+                                    <template x-if="step > index">
+                                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </template>
+                                    <template x-if="step <= index">
+                                        <span x-text="index + 1"></span>
+                                    </template>
                                 </div>
-                                <p class="text-sm text-gray-600">Importer un produit depuis AliExpress pour le revendre sur Etsy.</p>
+                                <span class="mt-2 text-xs font-medium" 
+                                      :class="step >= index ? 'text-orange-600' : 'text-gray-500'"
+                                      x-text="stepInfo.label"></span>
+                            </div>
+                            <template x-if="index < steps.length - 1">
+                                <div class="flex-1 h-1 mx-4" :class="step > index ? 'bg-orange-600' : 'bg-gray-200'"></div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            {{-- Step 1: Choose Source --}}
+            <div x-show="step === 0" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-x-4" x-transition:enter-end="opacity-100 transform translate-x-0">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">D'ou vient votre produit ?</h3>
+                    <p class="text-gray-500 mb-6">Choisissez la source pour importer automatiquement les informations.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {{-- AliExpress --}}
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="source_type" value="aliexpress" x-model="sourceType" class="sr-only peer">
+                            <div class="relative p-6 rounded-xl border-2 transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 border-gray-200 hover:border-gray-300 group-hover:shadow-md">
+                                <div class="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mb-4">
+                                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold text-gray-900 mb-1">AliExpress</h4>
+                                <p class="text-sm text-gray-500">Dropshipping de produits physiques</p>
+                                <div class="absolute top-4 right-4 w-5 h-5 rounded-full border-2 peer-checked:border-orange-500 peer-checked:bg-orange-500 border-gray-300 flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
                             </div>
                         </label>
 
-                        <!-- Printables Option -->
-                        <label class="relative cursor-pointer">
-                            <input type="radio" name="product_type" value="printables" class="peer sr-only">
-                            <div class="p-4 border-2 rounded-lg peer-checked:border-green-500 peer-checked:bg-green-50 hover:bg-gray-50 transition-all">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <span class="text-2xl">📁</span>
-                                    <span class="font-semibold text-gray-800">Fichier STL (Printables)</span>
+                        {{-- Printables --}}
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="source_type" value="printables" x-model="sourceType" class="sr-only peer">
+                            <div class="relative p-6 rounded-xl border-2 transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 border-gray-200 hover:border-gray-300 group-hover:shadow-md">
+                                <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4">
+                                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                    </svg>
                                 </div>
-                                <p class="text-sm text-gray-600">Importer un modèle depuis Printables pour vendre des fichiers STL en téléchargement.</p>
+                                <h4 class="font-semibold text-gray-900 mb-1">Printables</h4>
+                                <p class="text-sm text-gray-500">Fichiers STL en telechargement</p>
+                                <div class="absolute top-4 right-4 w-5 h-5 rounded-full border-2 peer-checked:border-orange-500 peer-checked:bg-orange-500 border-gray-300 flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </label>
+
+                        {{-- Manual --}}
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="source_type" value="manual" x-model="sourceType" class="sr-only peer">
+                            <div class="relative p-6 rounded-xl border-2 transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 border-gray-200 hover:border-gray-300 group-hover:shadow-md">
+                                <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mb-4">
+                                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                </div>
+                                <h4 class="font-semibold text-gray-900 mb-1">Manuel</h4>
+                                <p class="text-sm text-gray-500">Creer un produit de zero</p>
+                                <div class="absolute top-4 right-4 w-5 h-5 rounded-full border-2 peer-checked:border-orange-500 peer-checked:bg-orange-500 border-gray-300 flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
                             </div>
                         </label>
                     </div>
-                </div>
-            </div>
 
-            <!-- AliExpress Import Section -->
-            <div id="aliexpress-section" class="bg-gradient-to-r from-blue-500 to-blue-600 overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6">
-                    <h3 class="text-lg font-bold text-white mb-2">📦 Importer depuis AliExpress</h3>
-                    <p class="text-blue-100 text-sm mb-4">Collez le lien du produit AliExpress pour remplir automatiquement le formulaire avec un contenu optimisé pour Etsy.</p>
-
-                    <div class="flex gap-2 mb-3">
-                        <input type="url" id="aliexpress_url" name="aliexpress_url" value="{{ old('aliexpress_url') }}"
-                            placeholder="https://fr.aliexpress.com/item/123456789.html"
-                            class="block w-full rounded-md border-0 shadow-sm focus:ring-2 focus:ring-white text-gray-900 placeholder-gray-400">
-                        <button type="button" id="analyze-aliexpress-btn" class="inline-flex items-center px-6 py-2 bg-white border border-transparent rounded-md font-semibold text-sm text-blue-600 uppercase tracking-widest hover:bg-blue-50 disabled:opacity-50 whitespace-nowrap">
-                            🔍 Analyser
+                    <div class="mt-8 flex justify-end">
+                        <button type="button" 
+                                @click="nextStep()" 
+                                :disabled="!sourceType"
+                                class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            Continuer
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
                         </button>
                     </div>
-
-                    <div class="flex gap-2 items-center">
-                        <label class="text-white text-sm whitespace-nowrap">💰 Prix AliExpress (€) :</label>
-                        <input type="number" id="aliexpress_price" step="0.01" min="0"
-                            placeholder="Ex: 12.99"
-                            class="block w-32 rounded-md border-0 shadow-sm text-gray-900 placeholder-gray-400">
-                        <span class="text-blue-100 text-xs">→ Prix Etsy = x3</span>
-                    </div>
-
-                    <div id="aliexpress-status" class="mt-3 hidden"></div>
                 </div>
             </div>
 
-            <!-- Printables Import Section -->
-            <div id="printables-section" class="bg-gradient-to-r from-green-500 to-green-600 overflow-hidden shadow-sm sm:rounded-lg mb-6 hidden">
-                <div class="p-6">
-                    <h3 class="text-lg font-bold text-white mb-2">📁 Importer depuis Printables</h3>
-                    <p class="text-green-100 text-sm mb-4">Collez le lien du modèle 3D Printables pour générer un listing de fichier STL en téléchargement digital.</p>
+            {{-- Step 2: Import URL (for AliExpress/Printables) or skip to form (Manual) --}}
+            <div x-show="step === 1" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-x-4" x-transition:enter-end="opacity-100 transform translate-x-0">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                    {{-- AliExpress Import --}}
+                    <template x-if="sourceType === 'aliexpress'">
+                        <div>
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900">Importer depuis AliExpress</h3>
+                                    <p class="text-sm text-gray-500">Collez le lien du produit pour l'importer automatiquement</p>
+                                </div>
+                            </div>
 
-                    <div class="flex gap-2 mb-3">
-                        <input type="url" id="printables_url" name="printables_url" value="{{ old('printables_url') }}"
-                            placeholder="https://www.printables.com/model/123456-nom-du-modele"
-                            class="block w-full rounded-md border-0 shadow-sm focus:ring-2 focus:ring-white text-gray-900 placeholder-gray-400">
-                        <button type="button" id="analyze-printables-btn" class="inline-flex items-center px-6 py-2 bg-white border border-transparent rounded-md font-semibold text-sm text-green-600 uppercase tracking-widest hover:bg-green-50 disabled:opacity-50 whitespace-nowrap">
-                            🔍 Analyser
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">URL du produit AliExpress</label>
+                                    <div class="flex gap-3">
+                                        <input type="url" 
+                                               x-model="sourceUrl"
+                                               placeholder="https://fr.aliexpress.com/item/123456789.html"
+                                               class="flex-1 rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                                        <button type="button" 
+                                                @click="analyzeUrl()"
+                                                :disabled="!sourceUrl || analyzing"
+                                                class="inline-flex items-center px-5 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 disabled:opacity-50 transition-colors">
+                                            <svg x-show="!analyzing" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                            </svg>
+                                            <svg x-show="analyzing" class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span x-text="analyzing ? 'Analyse...' : 'Analyser'"></span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p class="text-sm text-gray-500 mt-4">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Le prix sera configure a l'etape suivante apres l'analyse.
+                                </p>
+                            </div>
+                        </div>
+                    </template>
+
+                    {{-- Printables Import --}}
+                    <template x-if="sourceType === 'printables'">
+                        <div>
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900">Importer depuis Printables</h3>
+                                    <p class="text-sm text-gray-500">Collez le lien du modele 3D pour l'importer</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">URL du modele Printables</label>
+                                    <div class="flex gap-3">
+                                        <input type="url" 
+                                               x-model="sourceUrl"
+                                               placeholder="https://www.printables.com/model/123456-nom-du-modele"
+                                               class="flex-1 rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                                        <button type="button" 
+                                                @click="analyzeUrl()"
+                                                :disabled="!sourceUrl || analyzing"
+                                                class="inline-flex items-center px-5 py-2.5 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors">
+                                            <svg x-show="!analyzing" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                            </svg>
+                                            <svg x-show="analyzing" class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            <span x-text="analyzing ? 'Analyse...' : 'Analyser'"></span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p class="text-sm text-gray-500 mt-4">
+                                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    Le prix sera configure a l'etape suivante. Cout = 0 EUR pour les fichiers digitaux.
+                                </p>
+                            </div>
+                        </div>
+                    </template>
+
+                    {{-- Manual entry info --}}
+                    <template x-if="sourceType === 'manual'">
+                        <div>
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold text-gray-900">Creation manuelle</h3>
+                                    <p class="text-sm text-gray-500">Remplissez les informations vous-meme</p>
+                                </div>
+                            </div>
+
+                            <div class="p-6 bg-gray-50 rounded-lg text-center">
+                                <p class="text-gray-600 mb-4">Vous allez creer un produit manuellement sans import automatique.</p>
+                                <p class="text-sm text-gray-500">Cliquez sur Continuer pour remplir les details du produit.</p>
+                            </div>
+                        </div>
+                    </template>
+
+                    {{-- Status message --}}
+                    <div x-show="statusMessage" x-transition class="mt-4">
+                        <div :class="{
+                            'bg-green-50 border-green-200 text-green-800': statusType === 'success',
+                            'bg-red-50 border-red-200 text-red-800': statusType === 'error',
+                            'bg-blue-50 border-blue-200 text-blue-800': statusType === 'info',
+                            'bg-yellow-50 border-yellow-200 text-yellow-800': statusType === 'warning'
+                        }" class="p-4 rounded-lg border">
+                            <p x-html="statusMessage"></p>
+                        </div>
+                    </div>
+
+                    {{-- License warning for Printables --}}
+                    <div x-show="licenseWarning" x-transition class="mt-4">
+                        <div class="p-4 rounded-lg border" :class="commercialAllowed ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'">
+                            <div class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 flex-shrink-0" :class="commercialAllowed ? 'text-yellow-600' : 'text-red-600'" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                <div>
+                                    <p class="font-medium" :class="commercialAllowed ? 'text-yellow-800' : 'text-red-800'">
+                                        Licence: <span x-text="productData.license"></span>
+                                    </p>
+                                    <p class="text-sm mt-1" :class="commercialAllowed ? 'text-yellow-700' : 'text-red-700'" x-text="commercialAllowed ? 'Verifiez que l\'usage commercial est autorise.' : 'Cette licence interdit l\'usage commercial !'"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" @click="prevStep()" class="text-gray-500 hover:text-gray-700 font-medium">
+                            Retour
+                        </button>
+                        <button type="button" 
+                                @click="nextStep()"
+                                :disabled="(sourceType !== 'manual' && !analyzed) || analyzing"
+                                class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            Continuer
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
                         </button>
                     </div>
+                </div>
+            </div>
 
-                    <div class="flex gap-2 items-center">
-                        <label class="text-white text-sm whitespace-nowrap">💰 Prix STL (€) :</label>
-                        <input type="number" id="printing_cost" step="0.01" min="0"
-                            placeholder="Ex: 3.99"
-                            class="block w-24 rounded-md border-0 shadow-sm text-gray-900 placeholder-gray-400">
-                        <span class="text-green-100 text-xs">Prix de vente du fichier digital</span>
+            {{-- Step 3: Preview & Edit --}}
+            <div x-show="step === 2" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-x-4" x-transition:enter-end="opacity-100 transform translate-x-0">
+                
+                {{-- Images Selection --}}
+                <div x-show="productData.images && productData.images.length > 0" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Images du produit</h3>
+                        <span class="text-sm text-gray-500">
+                            <span x-text="selectedImages.length"></span>/10 selectionnees
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-500 mb-4">Cliquez sur les images a inclure dans votre listing Etsy (max 10).</p>
+                    
+                    <div class="grid grid-cols-3 md:grid-cols-5 gap-3">
+                        <template x-for="(img, index) in productData.images" :key="index">
+                            <div @click="toggleImage(img)" 
+                                 class="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition-all"
+                                 :class="selectedImages.includes(img) ? 'border-orange-500 ring-2 ring-orange-200' : 'border-gray-200 hover:border-gray-300'">
+                                <img :src="img" class="w-full h-full object-cover">
+                                <div x-show="selectedImages.includes(img)" class="absolute inset-0 bg-orange-500 bg-opacity-20"></div>
+                                <div class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                                     :class="selectedImages.includes(img) ? 'bg-orange-500 text-white' : 'bg-white border border-gray-300 text-gray-500'">
+                                    <span x-show="selectedImages.includes(img)">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                        </svg>
+                                    </span>
+                                    <span x-show="!selectedImages.includes(img)" x-text="index + 1"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                {{-- Product Details Form --}}
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-6">Details du produit</h3>
+
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Titre (optimise pour Etsy)</label>
+                            <input type="text" 
+                                   x-model="productData.title"
+                                   class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                                   placeholder="Titre accrocheur pour votre produit...">
+                            <p class="mt-1 text-xs text-gray-500"><span x-text="(productData.title || '').length"></span>/140 caracteres</p>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea x-model="productData.description"
+                                      rows="6"
+                                      class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                                      placeholder="Description detaillee de votre produit..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Tags Etsy (13 max)</label>
+                            <input type="text" 
+                                   x-model="productData.tags_string"
+                                   class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                                   placeholder="tag1, tag2, tag3...">
+                            <p class="mt-1 text-xs text-gray-500">Separes par des virgules, 20 caracteres max par tag</p>
+                        </div>
+
+                        {{-- Re-optimize with AI --}}
+                        <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="font-medium text-purple-900">Optimiser avec l'IA</p>
+                                    <p class="text-sm text-purple-700">Regenerer le titre, la description et les tags</p>
+                                </div>
+                                <button type="button" 
+                                        @click="optimizeContent()"
+                                        :disabled="optimizing"
+                                        class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 transition-colors">
+                                    <svg x-show="!optimizing" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                    <svg x-show="optimizing" class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                                    </svg>
+                                    <span x-text="optimizing ? 'Optimisation...' : 'Optimiser'"></span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
-                    <div id="printables-status" class="mt-3 hidden"></div>
-
-                    <!-- License Warning -->
-                    <div id="license-warning" class="mt-3 hidden p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-md">
-                        <strong>⚠️ Attention Licence :</strong>
-                        <span id="license-text"></span>
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" @click="prevStep()" class="text-gray-500 hover:text-gray-700 font-medium">
+                            Retour
+                        </button>
+                        <button type="button" 
+                                @click="nextStep()"
+                                :disabled="!productData.title"
+                                class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                            Continuer
+                            <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Image Preview Section -->
-            <div id="images-preview-section" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6 hidden">
-                <div class="p-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">🖼️ Images du produit</h3>
-                    <p class="text-sm text-gray-600 mb-4">Images récupérées depuis la source. Cliquez sur une image pour la sélectionner pour votre listing Etsy.</p>
+            {{-- Step 4: Pricing & Confirm --}}
+            <div x-show="step === 3" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-x-4" x-transition:enter-end="opacity-100 transform translate-x-0">
+                <form method="POST" action="{{ route('products.store') }}" @submit="submitForm">
+                    @csrf
+                    <input type="hidden" name="source_type" :value="sourceType">
+                    <input type="hidden" name="source_url" :value="sourceUrl">
+                    <input type="hidden" name="title" :value="productData.title">
+                    <input type="hidden" name="description" :value="productData.description">
+                    <input type="hidden" name="tags" :value="productData.tags_string">
+                    <input type="hidden" name="images" :value="JSON.stringify(selectedImages)">
+                    <input type="hidden" name="license" :value="productData.license || ''">
+                    <input type="hidden" name="attribution" :value="productData.attribution || ''">
+                    <input type="hidden" name="quantity" value="999">
 
-                    <div id="images-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <!-- Images will be inserted here by JavaScript -->
-                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {{-- Pricing --}}
+                        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6">Prix et parametres</h3>
 
-                    <div id="selected-images-info" class="mt-4 text-sm text-gray-600 hidden">
-                        <span class="font-semibold">Images sélectionnées:</span> <span id="selected-count">0</span>/10
-                    </div>
-                </div>
-            </div>
+                            <div class="grid grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Prix de vente ({{ $shop->currency }})</label>
+                                    <div class="relative">
+                                        <input type="number" 
+                                               name="price"
+                                               x-model="sellingPrice"
+                                               step="0.01" 
+                                               min="0"
+                                               required
+                                               class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500 pr-12">
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 text-sm">{{ $shop->currency }}</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-            <!-- Product Form -->
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">📝 Étape 2 : Détails du produit</h3>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Cout d'achat ({{ $shop->currency }})</label>
+                                    <div class="relative">
+                                        <input type="number" 
+                                               name="cost_price"
+                                               x-model="costPrice"
+                                               step="0.01" 
+                                               min="0"
+                                               class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500 pr-12">
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 text-sm">{{ $shop->currency }}</span>
+                                        </div>
+                                    </div>
+                                    <p x-show="sourceType === 'printables'" class="mt-1 text-xs text-gray-500">Digital = 0</p>
+                                </div>
+                            </div>
 
-                    <form method="POST" action="{{ route('products.store') }}" id="product-form">
-                        @csrf
-                        <input type="hidden" name="aliexpress_url" id="aliexpress_url_hidden">
-                        <input type="hidden" name="printables_url" id="printables_url_hidden">
-                        <input type="hidden" name="product_source" id="product_source" value="aliexpress">
-                        <input type="hidden" name="license" id="license_hidden">
-                        <input type="hidden" name="attribution" id="attribution_hidden">
-                        <input type="hidden" name="images" id="images_hidden">
+                            {{-- Profit Calculator --}}
+                            <div class="p-4 bg-gray-50 rounded-lg mb-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-sm text-gray-600">Profit par vente</span>
+                                    <span class="text-lg font-bold" :class="profit >= 0 ? 'text-green-600' : 'text-red-600'" x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $shop->currency }}'"></span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600">Marge</span>
+                                    <span class="text-sm font-medium" :class="margin >= 30 ? 'text-green-600' : (margin >= 15 ? 'text-yellow-600' : 'text-red-600')" x-text="margin.toFixed(1) + '%'"></span>
+                                </div>
+                            </div>
 
-                        <div class="mb-4">
-                            <label for="title" class="block text-sm font-medium text-gray-700">Titre du produit (optimisé pour Etsy)</label>
-                            <input type="text" name="title" id="title" value="{{ old('title') }}" required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                placeholder="Le titre sera généré automatiquement...">
-                            @error('title')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="description" class="block text-sm font-medium text-gray-700">Description (optimisée SEO)</label>
-                            <textarea name="description" id="description" rows="8"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                placeholder="La description sera générée automatiquement...">{{ old('description') }}</textarea>
-                            @error('description')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="tags" class="block text-sm font-medium text-gray-700">Tags Etsy (13 tags SEO)</label>
-                            <input type="text" name="tags" id="tags" value="{{ old('tags') }}"
-                                placeholder="Les tags seront générés automatiquement..."
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            <p class="mt-1 text-xs text-gray-500">13 tags maximum, 20 caractères chacun, séparés par des virgules.</p>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label for="price" class="block text-sm font-medium text-gray-700">Prix Etsy ({{ $shop->currency }})</label>
-                                <input type="number" name="price" id="price" step="0.01" min="0" value="{{ old('price') }}" required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    placeholder="0.00">
-                                <p class="mt-1 text-xs text-gray-500" id="price-info"></p>
-                                @error('price')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                <label class="block text-sm font-medium text-gray-700 mb-2">SKU (optionnel)</label>
+                                <input type="text" 
+                                       name="sku"
+                                       x-model="productData.sku"
+                                       class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                                       placeholder="REF-001">
                             </div>
 
-                            <div id="cost-price-container">
-                                <label for="cost_price" class="block text-sm font-medium text-gray-700">
-                                    <span id="cost-label">Cout fournisseur</span> ({{ $shop->currency }})
+                            <div class="mt-6 space-y-4">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="is_active" value="1" checked
+                                           class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                                    <span class="ml-3">
+                                        <span class="text-sm font-medium text-gray-900">Produit actif</span>
+                                    </span>
                                 </label>
-                                <input type="number" name="cost_price" id="cost_price" step="0.01" min="0" value="{{ old('cost_price', 0) }}"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                    placeholder="0.00">
-                                <p class="mt-1 text-xs text-gray-500" id="cost-info">Prix d'achat chez AliExpress</p>
-                                @error('cost_price')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="auto_sync" value="1"
+                                           class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                                    <span class="ml-3">
+                                        <span class="text-sm font-medium text-gray-900">Synchronisation automatique Etsy</span>
+                                    </span>
+                                </label>
                             </div>
                         </div>
 
-                        <!-- Hidden quantity field - always 999 for dropship/digital -->
-                        <input type="hidden" name="quantity" id="quantity" value="999">
+                        {{-- Preview --}}
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
+                            
+                            <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+                                <template x-if="selectedImages.length > 0">
+                                    <img :src="selectedImages[0]" class="w-full h-full object-cover">
+                                </template>
+                                <template x-if="selectedImages.length === 0">
+                                    <div class="w-full h-full flex items-center justify-center">
+                                        <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                </template>
+                            </div>
 
-                        <div class="mb-4">
-                            <label for="sku" class="block text-sm font-medium text-gray-700">SKU (optionnel)</label>
-                            <input type="text" name="sku" id="sku" value="{{ old('sku') }}"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            @error('sku')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <p class="text-sm font-medium text-gray-900 line-clamp-2" x-text="productData.title || 'Titre du produit'"></p>
+                            <p class="text-lg font-bold text-gray-900 mt-2" x-text="sellingPrice + ' {{ $shop->currency }}'"></p>
+                            
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <x-ui.source-badge :type="'aliexpress'" x-show="sourceType === 'aliexpress'" />
+                                <x-ui.source-badge :type="'printables'" x-show="sourceType === 'printables'" />
+                                <x-ui.source-badge :type="'manual'" x-show="sourceType === 'manual'" />
+                            </div>
                         </div>
+                    </div>
 
-                        <!-- Manual AI Optimization (fallback) -->
-                        <div class="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                            <h4 class="text-sm font-semibold text-purple-800 mb-2">🤖 Re-optimiser avec l'IA</h4>
-                            <p class="text-xs text-purple-600 mb-3">Si vous modifiez le titre manuellement, cliquez ici pour régénérer la description et les tags.</p>
-                            <button type="button" id="optimize-btn" class="inline-flex items-center px-4 py-2 bg-purple-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-purple-700 disabled:opacity-50">
-                                Optimiser avec l'IA
-                            </button>
-                            <div id="optimize-status" class="mt-2 hidden"></div>
-                        </div>
-
-                        <div class="mb-4 flex gap-4">
-                            <label class="flex items-center">
-                                <input type="checkbox" name="is_active" value="1" checked
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <span class="ml-2 text-sm text-gray-700">Produit actif</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input type="checkbox" name="auto_sync" value="1"
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <span class="ml-2 text-sm text-gray-700">Sync auto Etsy</span>
-                            </label>
-                        </div>
-
-                        <div class="flex justify-end gap-3 pt-4 border-t">
-                            <a href="{{ route('products.index') }}" class="inline-flex items-center px-4 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400">
-                                Annuler
-                            </a>
-                            <button type="submit" class="inline-flex items-center px-6 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700">
-                                ✓ Créer le produit
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" @click="prevStep()" class="text-gray-500 hover:text-gray-700 font-medium">
+                            Retour
+                        </button>
+                        <button type="submit" 
+                                :disabled="submitting"
+                                class="inline-flex items-center px-8 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 transition-colors">
+                            <svg x-show="!submitting" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <svg x-show="submitting" class="w-5 h-5 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                            </svg>
+                            <span x-text="submitting ? 'Creation...' : 'Creer le produit'"></span>
+                        </button>
+                    </div>
+                </form>
             </div>
+
         </div>
     </div>
 
+    @push('scripts')
     <script>
-        // Image selection state
-        let selectedImages = [];
-
-        // Function to display images in the preview grid
-        function displayImages(images) {
-            const grid = document.getElementById('images-grid');
-            const section = document.getElementById('images-preview-section');
-            const selectedInfo = document.getElementById('selected-images-info');
-
-            if (!images || images.length === 0) {
-                section.classList.add('hidden');
-                return;
-            }
-
-            // Clear previous images
-            grid.innerHTML = '';
-            selectedImages = [];
-
-            // Add each image to the grid
-            images.forEach((imageUrl, index) => {
-                const imageContainer = document.createElement('div');
-                imageContainer.className = 'relative cursor-pointer group';
-                imageContainer.innerHTML = `
-                    <div class="aspect-square overflow-hidden rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all" data-index="${index}">
-                        <img src="${imageUrl}" alt="Image ${index + 1}" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-blue-500 bg-opacity-0 group-hover:bg-opacity-10 transition-all"></div>
-                        <div class="absolute top-2 right-2 w-6 h-6 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shadow check-indicator">
-                            ${index + 1}
-                        </div>
-                    </div>
-                `;
-
-                imageContainer.addEventListener('click', () => toggleImageSelection(index, imageUrl, imageContainer));
-                grid.appendChild(imageContainer);
-            });
-
-            // Show the section
-            section.classList.remove('hidden');
-            selectedInfo.classList.remove('hidden');
-            updateSelectedCount();
-        }
-
-        // Toggle image selection
-        function toggleImageSelection(index, imageUrl, container) {
-            const imgContainer = container.querySelector('[data-index]');
-            const checkIndicator = container.querySelector('.check-indicator');
-
-            if (selectedImages.includes(imageUrl)) {
-                // Deselect
-                selectedImages = selectedImages.filter(url => url !== imageUrl);
-                imgContainer.classList.remove('border-green-500', 'ring-2', 'ring-green-300');
-                imgContainer.classList.add('border-gray-200');
-                checkIndicator.classList.remove('bg-green-500', 'text-white');
-                checkIndicator.classList.add('bg-gray-200', 'text-gray-600');
-                checkIndicator.innerHTML = index + 1;
-            } else {
-                // Select (max 10)
-                if (selectedImages.length >= 10) {
-                    alert('Maximum 10 images autorisées sur Etsy');
-                    return;
-                }
-                selectedImages.push(imageUrl);
-                imgContainer.classList.remove('border-gray-200');
-                imgContainer.classList.add('border-green-500', 'ring-2', 'ring-green-300');
-                checkIndicator.classList.remove('bg-gray-200', 'text-gray-600');
-                checkIndicator.classList.add('bg-green-500', 'text-white');
-                checkIndicator.innerHTML = '✓';
-            }
-
-            updateSelectedCount();
-            document.getElementById('images_hidden').value = JSON.stringify(selectedImages);
-        }
-
-        // Update selected count display
-        function updateSelectedCount() {
-            document.getElementById('selected-count').textContent = selectedImages.length;
-        }
-
-        // Toggle between AliExpress and Printables sections
-        const productTypeRadios = document.querySelectorAll('input[name="product_type"]');
-        const aliexpressSection = document.getElementById('aliexpress-section');
-        const printablesSection = document.getElementById('printables-section');
-        const productSourceInput = document.getElementById('product_source');
-
-        productTypeRadios.forEach(radio => {
-            radio.addEventListener('change', function() {
-                if (this.value === 'aliexpress') {
-                    aliexpressSection.classList.remove('hidden');
-                    printablesSection.classList.add('hidden');
-                    productSourceInput.value = 'aliexpress';
-                    updateCostLabel('aliexpress');
-                } else {
-                    aliexpressSection.classList.add('hidden');
-                    printablesSection.classList.remove('hidden');
-                    productSourceInput.value = 'printables';
-                    updateCostLabel('printables');
-                }
-            });
-        });
-
-        // Auto-calculate Etsy price when AliExpress price is entered
-        document.getElementById('aliexpress_price').addEventListener('input', function() {
-            const aliPrice = parseFloat(this.value);
-            if (aliPrice > 0) {
-                const etsyPrice = (aliPrice * 3).toFixed(2);
-                document.getElementById('price').value = etsyPrice;
-                document.getElementById('cost_price').value = aliPrice.toFixed(2);
-                document.getElementById('price-info').innerHTML =
-                    `💰 Prix AliExpress: <strong>€${aliPrice.toFixed(2)}</strong> × 3 = <strong>€${etsyPrice}</strong>`;
-            }
-        });
-
-        // Update cost label based on product type
-        function updateCostLabel(type) {
-            const costLabel = document.getElementById('cost-label');
-            const costInfo = document.getElementById('cost-info');
-            if (type === 'printables') {
-                costLabel.textContent = 'Cout (optionnel)';
-                costInfo.textContent = 'Fichier digital = cout 0€';
-                document.getElementById('cost_price').value = '0';
-            } else {
-                costLabel.textContent = 'Cout fournisseur';
-                costInfo.textContent = 'Prix d\'achat chez AliExpress';
-            }
-        }
-
-        // Set Etsy price when STL price is entered
-        function calculatePrintingPrice() {
-            const price = parseFloat(document.getElementById('printing_cost').value) || 0;
-            if (price > 0) {
-                document.getElementById('price').value = price.toFixed(2);
-                document.getElementById('price-info').innerHTML =
-                    `📁 Prix fichier STL: <strong>€${price.toFixed(2)}</strong>`;
-            }
-        }
-
-        document.getElementById('printing_cost').addEventListener('input', calculatePrintingPrice);
-
-        // Analyze AliExpress URL
-        document.getElementById('analyze-aliexpress-btn').addEventListener('click', async function() {
-            const url = document.getElementById('aliexpress_url').value;
-            const btn = this;
-            const statusDiv = document.getElementById('aliexpress-status');
-
-            if (!url) {
-                statusDiv.className = 'mt-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
-                statusDiv.textContent = '❌ Veuillez entrer une URL AliExpress';
-                statusDiv.classList.remove('hidden');
-                return;
-            }
-
-            // Save URL to hidden field
-            document.getElementById('aliexpress_url_hidden').value = url;
-
-            // Disable button and show loading
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Analyse...';
-            statusDiv.className = 'mt-3 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-md';
-            statusDiv.innerHTML = '🔄 Extraction des données et optimisation IA en cours... <br><small>Cela peut prendre 20-40 secondes.</small>';
-            statusDiv.classList.remove('hidden');
-
-            try {
-                const response = await fetch('{{ route('products.analyze-aliexpress') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ aliexpress_url: url })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Fill form with optimized data
-                    document.getElementById('title').value = result.data.title || '';
-                    document.getElementById('description').value = result.data.description || '';
-
-                    if (result.data.tags_string) {
-                        document.getElementById('tags').value = result.data.tags_string;
+        function productWizard() {
+            return {
+                step: 0,
+                steps: [
+                    { label: 'Source' },
+                    { label: 'Import' },
+                    { label: 'Details' },
+                    { label: 'Prix' }
+                ],
+                
+                sourceType: '',
+                sourceUrl: '',
+                costPrice: 0,
+                sellingPrice: 0,
+                
+                analyzing: false,
+                analyzed: false,
+                optimizing: false,
+                submitting: false,
+                
+                statusMessage: '',
+                statusType: 'info',
+                licenseWarning: false,
+                commercialAllowed: true,
+                
+                productData: {
+                    title: '',
+                    description: '',
+                    tags_string: '',
+                    images: [],
+                    license: '',
+                    attribution: '',
+                    author: '',
+                    sku: ''
+                },
+                
+                selectedImages: [],
+                
+                get profit() {
+                    return (parseFloat(this.sellingPrice) || 0) - (parseFloat(this.costPrice) || 0);
+                },
+                
+                get margin() {
+                    const price = parseFloat(this.sellingPrice) || 0;
+                    if (price <= 0) return 0;
+                    return (this.profit / price) * 100;
+                },
+                
+                nextStep() {
+                    if (this.step === 0 && this.sourceType === 'manual') {
+                        // Skip import step for manual
+                        this.analyzed = true;
                     }
-
-                    // Get price from scraper or manual input
-                    let aliPrice = result.data.original_price;
-                    const manualPrice = parseFloat(document.getElementById('aliexpress_price').value);
-                    if (!aliPrice && manualPrice > 0) {
-                        aliPrice = manualPrice;
-                    }
-
-                    if (aliPrice && aliPrice > 0) {
-                        const etsyPrice = (aliPrice * 3).toFixed(2);
-                        document.getElementById('price').value = etsyPrice;
-                        document.getElementById('price-info').innerHTML =
-                            `💰 Prix AliExpress: <strong>€${aliPrice.toFixed(2)}</strong> × 3 = <strong>€${etsyPrice}</strong>`;
-                    } else if (result.data.price) {
-                        document.getElementById('price').value = result.data.price.toFixed(2);
-                    }
-
-                    // Display images if available
-                    if (result.data.images && result.data.images.length > 0) {
-                        displayImages(result.data.images);
-                    }
-
-                    // Show success message
-                    statusDiv.className = 'mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
-                    let priceMsg = aliPrice ? '' : '<br><small class="text-orange-600">⚠️ Prix non détecté - entrez le prix AliExpress ci-dessus et recliquez Analyser</small>';
-                    let imgMsg = result.data.images && result.data.images.length > 0 ? `<br><small>🖼️ ${result.data.images.length} images récupérées</small>` : '';
-                    statusDiv.innerHTML = `
-                        <strong>✅ Produit importé et optimisé !</strong><br>
-                        <small>Titre, description et ${result.data.tags ? result.data.tags.length : 0} tags générés.</small>${priceMsg}${imgMsg}
-                    `;
-
-                    // Scroll to images or form
-                    const scrollTarget = result.data.images && result.data.images.length > 0
-                        ? document.getElementById('images-preview-section')
-                        : document.getElementById('title');
-                    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    if (!result.data.images || result.data.images.length === 0) {
-                        document.getElementById('title').focus();
-                    }
-                } else {
-                    statusDiv.className = 'mt-3 p-3 bg-orange-100 border border-orange-300 text-orange-800 rounded-md';
-                    if (result.use_manual) {
-                        statusDiv.innerHTML = `
-                            <strong>⚠️ Extraction partielle</strong><br>
-                            <small>${result.message}</small>
-                        `;
-                    } else {
-                        statusDiv.innerHTML = '❌ ' + result.message;
-                    }
-                }
-            } catch (error) {
-                statusDiv.className = 'mt-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
-                statusDiv.innerHTML = '❌ Erreur de connexion. Veuillez réessayer.';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '🔍 Analyser';
-            }
-        });
-
-        // Analyze Printables URL
-        document.getElementById('analyze-printables-btn').addEventListener('click', async function() {
-            const url = document.getElementById('printables_url').value;
-            const btn = this;
-            const statusDiv = document.getElementById('printables-status');
-            const licenseWarning = document.getElementById('license-warning');
-
-            if (!url) {
-                statusDiv.className = 'mt-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
-                statusDiv.textContent = '❌ Veuillez entrer une URL Printables';
-                statusDiv.classList.remove('hidden');
-                return;
-            }
-
-            // Save URL to hidden field
-            document.getElementById('printables_url_hidden').value = url;
-
-            // Disable button and show loading
-            btn.disabled = true;
-            btn.innerHTML = '⏳ Analyse...';
-            statusDiv.className = 'mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
-            statusDiv.innerHTML = '🔄 Extraction des données et optimisation IA en cours... <br><small>Cela peut prendre 20-40 secondes.</small>';
-            statusDiv.classList.remove('hidden');
-            licenseWarning.classList.add('hidden');
-
-            try {
-                const response = await fetch('{{ route('products.analyze-printables') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ printables_url: url })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    // Fill form with optimized data
-                    document.getElementById('title').value = result.data.title || '';
-                    document.getElementById('description').value = result.data.description || '';
-
-                    if (result.data.tags_string) {
-                        document.getElementById('tags').value = result.data.tags_string;
-                    }
-
-                    // Store license info
-                    document.getElementById('license_hidden').value = result.data.license || '';
-                    document.getElementById('attribution_hidden').value = result.data.attribution || '';
-
-                    // Show license warning if needed
-                    if (result.data.license) {
-                        const licenseText = document.getElementById('license-text');
-                        if (result.data.commercial_allowed === false) {
-                            licenseWarning.className = 'mt-3 p-3 bg-red-100 border border-red-400 text-red-800 rounded-md';
-                            licenseText.innerHTML = `<strong>${result.data.license}</strong> - Cette licence interdit l'usage commercial ! Ne vendez pas ce modèle.`;
+                    
+                    // Set default prices when moving to pricing step
+                    if (this.step === 2) {
+                        if (this.sourceType === 'printables') {
+                            this.costPrice = 0;
+                            if (!this.sellingPrice || this.sellingPrice == 0) {
+                                this.sellingPrice = 4.99;
+                            }
+                        } else if (this.sourceType === 'aliexpress') {
+                            // If no cost price set, use a default
+                            if (!this.sellingPrice || this.sellingPrice == 0) {
+                                if (this.costPrice > 0) {
+                                    this.sellingPrice = (this.costPrice * 3).toFixed(2);
+                                } else {
+                                    this.sellingPrice = 29.99; // Default selling price
+                                }
+                            }
                         } else {
-                            licenseWarning.className = 'mt-3 p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-md';
-                            licenseText.innerHTML = `<strong>${result.data.license}</strong> - Vérifiez que l'usage commercial est autorisé. Attribution: ${result.data.author || 'Inconnu'}`;
+                            // Manual - set defaults
+                            if (!this.sellingPrice || this.sellingPrice == 0) {
+                                this.sellingPrice = 19.99;
+                            }
                         }
-                        licenseWarning.classList.remove('hidden');
                     }
-
-                    // Calculate price if printing cost is set
-                    calculatePrintingPrice();
-
-                    // Display images if available
-                    if (result.data.images && result.data.images.length > 0) {
-                        displayImages(result.data.images);
+                    
+                    if (this.step < this.steps.length - 1) {
+                        this.step++;
                     }
-
-                    // Show success message
-                    statusDiv.className = 'mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
-                    let imgMsg = result.data.images && result.data.images.length > 0 ? `<br><small>🖼️ ${result.data.images.length} images récupérées</small>` : '';
-                    statusDiv.innerHTML = `
-                        <strong>✅ Fichier STL importé et optimisé !</strong><br>
-                        <small>Titre, description et ${result.data.tags ? result.data.tags.length : 0} tags générés.</small><br>
-                        <small>Auteur: ${result.data.author || 'Inconnu'} | Licence: ${result.data.license || 'Inconnue'}</small>${imgMsg}
-                    `;
-
-                    // Scroll to images or form
-                    const scrollTarget = result.data.images && result.data.images.length > 0
-                        ? document.getElementById('images-preview-section')
-                        : document.getElementById('title');
-                    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    if (!result.data.images || result.data.images.length === 0) {
-                        document.getElementById('title').focus();
+                },
+                
+                prevStep() {
+                    if (this.step > 0) {
+                        this.step--;
                     }
-                } else {
-                    statusDiv.className = 'mt-3 p-3 bg-orange-100 border border-orange-300 text-orange-800 rounded-md';
-                    statusDiv.innerHTML = '❌ ' + result.message;
+                },
+                
+                async analyzeUrl() {
+                    if (!this.sourceUrl) return;
+                    
+                    this.analyzing = true;
+                    this.statusMessage = 'Extraction des donnees en cours... (20-40 secondes)';
+                    this.statusType = 'info';
+                    
+                    const endpoint = this.sourceType === 'aliexpress' 
+                        ? '{{ route("products.analyze-aliexpress") }}'
+                        : '{{ route("products.analyze-printables") }}';
+                    
+                    const bodyKey = this.sourceType === 'aliexpress' ? 'aliexpress_url' : 'printables_url';
+                    
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ [bodyKey]: this.sourceUrl })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            this.productData.title = result.data.title || '';
+                            this.productData.description = result.data.description || '';
+                            this.productData.tags_string = result.data.tags_string || '';
+                            this.productData.images = result.data.images || [];
+                            this.productData.license = result.data.license || '';
+                            this.productData.attribution = result.data.attribution || '';
+                            this.productData.author = result.data.author || '';
+                            
+                            // Auto-select first 5 images
+                            this.selectedImages = this.productData.images.slice(0, 5);
+                            
+                            // Set prices
+                            if (this.sourceType === 'aliexpress') {
+                                if (result.data.original_price) {
+                                    this.costPrice = result.data.original_price;
+                                }
+                                if (this.costPrice > 0) {
+                                    this.sellingPrice = (this.costPrice * 3).toFixed(2);
+                                }
+                            } else if (this.sourceType === 'printables') {
+                                this.costPrice = 0;
+                                if (!this.sellingPrice) this.sellingPrice = 4.99;
+                            }
+                            
+                            // License warning for Printables
+                            if (this.sourceType === 'printables' && result.data.license) {
+                                this.licenseWarning = true;
+                                this.commercialAllowed = result.data.commercial_allowed !== false;
+                            }
+                            
+                            this.statusMessage = `<strong>Import reussi !</strong> ${this.productData.images.length} images recuperees.`;
+                            this.statusType = 'success';
+                            this.analyzed = true;
+                        } else {
+                            // Check if we should switch to manual mode
+                            if (result.use_manual) {
+                                this.statusMessage = `<strong>Mode manuel requis</strong><br>${result.message}<br><small class="text-gray-600">${result.tip || 'Cliquez sur Continuer pour entrer les details manuellement.'}</small>`;
+                                this.statusType = 'warning';
+                                // Allow continuing in manual mode
+                                this.analyzed = true;
+                            } else {
+                                this.statusMessage = result.message || 'Erreur lors de l\'analyse';
+                                this.statusType = 'error';
+                            }
+                        }
+                    } catch (error) {
+                        this.statusMessage = 'Erreur de connexion. Veuillez reessayer.';
+                        this.statusType = 'error';
+                    } finally {
+                        this.analyzing = false;
+                    }
+                },
+                
+                async optimizeContent() {
+                    if (!this.productData.title) return;
+                    
+                    this.optimizing = true;
+                    
+                    try {
+                        const response = await fetch('{{ route("products.optimize-content") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                title: this.productData.title,
+                                description: this.productData.description,
+                                price: this.sellingPrice
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            this.productData.title = result.data.title || this.productData.title;
+                            this.productData.description = result.data.description || this.productData.description;
+                            this.productData.tags_string = result.data.tags_string || this.productData.tags_string;
+                        }
+                    } catch (error) {
+                        console.error('Optimization failed:', error);
+                    } finally {
+                        this.optimizing = false;
+                    }
+                },
+                
+                toggleImage(img) {
+                    if (this.selectedImages.includes(img)) {
+                        this.selectedImages = this.selectedImages.filter(i => i !== img);
+                    } else if (this.selectedImages.length < 10) {
+                        this.selectedImages.push(img);
+                    }
+                },
+                
+                submitForm() {
+                    this.submitting = true;
                 }
-            } catch (error) {
-                statusDiv.className = 'mt-3 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md';
-                statusDiv.innerHTML = '❌ Erreur de connexion. Veuillez réessayer.';
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '🔍 Analyser';
             }
-        });
-
-        // Manual optimization button
-        document.getElementById('optimize-btn').addEventListener('click', async function() {
-            const title = document.getElementById('title').value;
-            const description = document.getElementById('description').value;
-            const price = document.getElementById('price').value;
-            const btn = this;
-            const statusDiv = document.getElementById('optimize-status');
-
-            if (!title || title.length < 3) {
-                statusDiv.className = 'mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded';
-                statusDiv.textContent = '❌ Veuillez entrer un titre (minimum 3 caractères)';
-                statusDiv.classList.remove('hidden');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.textContent = '⏳ Optimisation...';
-            statusDiv.className = 'mt-2 p-3 bg-blue-100 border border-blue-400 text-blue-700 rounded';
-            statusDiv.textContent = '🔄 Génération du contenu optimisé SEO...';
-            statusDiv.classList.remove('hidden');
-
-            try {
-                const response = await fetch('{{ route('products.optimize-content') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                    body: JSON.stringify({ title, description, price })
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    document.getElementById('title').value = result.data.title || '';
-                    document.getElementById('description').value = result.data.description || '';
-
-                    if (result.data.tags_string) {
-                        document.getElementById('tags').value = result.data.tags_string;
-                    }
-
-                    if (result.data.price) {
-                        document.getElementById('price').value = result.data.price.toFixed(2);
-                    }
-
-                    statusDiv.className = 'mt-2 p-3 bg-green-100 border border-green-400 text-green-700 rounded';
-                    statusDiv.innerHTML = `✅ Contenu optimisé ! ${result.data.tags ? result.data.tags.length : 0} tags générés.`;
-                } else {
-                    statusDiv.className = 'mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded';
-                    statusDiv.textContent = '❌ ' + result.message;
-                }
-            } catch (error) {
-                statusDiv.className = 'mt-2 p-3 bg-red-100 border border-red-400 text-red-700 rounded';
-                statusDiv.textContent = '❌ Erreur. Veuillez réessayer.';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Optimiser avec l\'IA';
-            }
-        });
+        }
     </script>
+    @endpush
 </x-app-layout>
