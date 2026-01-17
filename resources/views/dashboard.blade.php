@@ -10,63 +10,30 @@
             
             {{-- Global Stats Summary --}}
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 p-3 bg-orange-100 rounded-lg">
-                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                            </svg>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Produits</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ $totalStats['total_products'] }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 p-3 bg-blue-100 rounded-lg">
-                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                            </svg>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Commandes</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ $totalStats['total_orders'] }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 p-3 bg-green-100 rounded-lg">
-                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Revenus totaux</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ number_format($totalStats['total_revenue'], 0, ',', ' ') }} EUR</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 p-3 bg-purple-100 rounded-lg">
-                            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                            </svg>
-                        </div>
-                        <div class="ml-4">
-                            <p class="text-sm font-medium text-gray-500">Profit total</p>
-                            <p class="text-2xl font-bold text-{{ $totalStats['total_profit'] >= 0 ? 'green' : 'red' }}-600">
-                                {{ $totalStats['total_profit'] >= 0 ? '+' : '' }}{{ number_format($totalStats['total_profit'], 0, ',', ' ') }} EUR
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <x-ui.stat-card 
+                    label="Produits" 
+                    :value="$totalStats['total_products']" 
+                    icon="products" 
+                    color="orange" 
+                />
+                <x-ui.stat-card 
+                    label="Commandes" 
+                    :value="$totalStats['total_orders']" 
+                    icon="orders" 
+                    color="blue" 
+                />
+                <x-ui.stat-card 
+                    label="Revenus totaux" 
+                    :value="number_format($totalStats['total_revenue'], 0, ',', ' ') . ' EUR'" 
+                    icon="revenue" 
+                    color="green" 
+                />
+                <x-ui.stat-card 
+                    label="Profit total" 
+                    :value="($totalStats['total_profit'] >= 0 ? '+' : '') . number_format($totalStats['total_profit'], 0, ',', ' ') . ' EUR'" 
+                    icon="profit" 
+                    :color="$totalStats['total_profit'] >= 0 ? 'green' : 'red'" 
+                />
             </div>
 
             {{-- Shops Grid --}}
@@ -80,17 +47,13 @@
                 </div>
                 
                 @if($shops->isEmpty())
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-                        <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                        </svg>
-                        <h4 class="text-lg font-medium text-gray-900 mb-2">Aucune boutique</h4>
-                        <p class="text-gray-500 mb-4">Connectez votre boutique Etsy pour commencer.</p>
-                        <a href="{{ route('profile.edit') }}#etsy-connections" 
-                           class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                            Connecter Etsy
-                        </a>
-                    </div>
+                    <x-ui.empty-state 
+                        icon="shop"
+                        title="Aucune boutique"
+                        description="Connectez votre boutique Etsy pour commencer."
+                        :actionUrl="route('profile.edit') . '#etsy-connections'"
+                        actionLabel="Connecter Etsy"
+                    />
                 @else
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         @foreach($shops as $shop)
@@ -139,14 +102,7 @@
                                                     <span class="text-sm font-medium text-gray-900 truncate">
                                                         {{ $order->customer_name }}
                                                     </span>
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                                        {{ $order->status_color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                                        {{ $order->status_color === 'blue' ? 'bg-blue-100 text-blue-800' : '' }}
-                                                        {{ $order->status_color === 'indigo' ? 'bg-indigo-100 text-indigo-800' : '' }}
-                                                        {{ $order->status_color === 'green' ? 'bg-green-100 text-green-800' : '' }}
-                                                        {{ $order->status_color === 'gray' ? 'bg-gray-100 text-gray-800' : '' }}">
-                                                        {{ $order->status_label }}
-                                                    </span>
+                                                    <x-ui.status-badge :status="$order->status" type="order" />
                                                 </div>
                                                 <p class="text-xs text-gray-500 mt-1">
                                                     {{ $order->shop->name }} &bull; {{ $order->items->count() }} article(s)
@@ -199,21 +155,7 @@
                                                 </p>
                                             </div>
                                             <div class="ml-4 flex-shrink-0">
-                                                @if($product->etsy_sync_status === 'error')
-                                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700">
-                                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                                        </svg>
-                                                        Erreur sync
-                                                    </span>
-                                                @elseif($product->etsy_sync_status === 'pending')
-                                                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                                                        </svg>
-                                                        A synchroniser
-                                                    </span>
-                                                @endif
+                                                <x-ui.status-badge :status="$product->etsy_sync_status" type="sync" />
                                             </div>
                                         </a>
                                     </li>

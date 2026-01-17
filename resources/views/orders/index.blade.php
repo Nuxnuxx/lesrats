@@ -47,45 +47,14 @@
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
-            {{-- Flash Messages --}}
-            @if (session('success'))
-                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-                    {{ session('error') }}
-                </div>
-            @endif
-
             {{-- Stats Bar --}}
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-6">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-gray-500">Total</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['total'] }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-yellow-600">Nouvelles</p>
-                    <p class="text-2xl font-bold text-yellow-600">{{ $stats['new'] }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-blue-600">En cours</p>
-                    <p class="text-2xl font-bold text-blue-600">{{ $stats['in_progress'] }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-green-600">Terminees</p>
-                    <p class="text-2xl font-bold text-green-600">{{ $stats['completed'] }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-gray-500">CA Aujourd'hui</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ number_format($stats['today_revenue'], 0, ',', ' ') }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-gray-500">Profit Aujourd'hui</p>
-                    <p class="text-2xl font-bold text-green-600">+{{ number_format($stats['today_profit'], 0, ',', ' ') }}</p>
-                </div>
+                <x-ui.stat-card label="Total" :value="$stats['total']" />
+                <x-ui.stat-card label="Nouvelles" :value="$stats['new']" color="yellow" />
+                <x-ui.stat-card label="En cours" :value="$stats['in_progress']" color="blue" />
+                <x-ui.stat-card label="Terminees" :value="$stats['completed']" color="green" />
+                <x-ui.stat-card label="CA Aujourd'hui" :value="number_format($stats['today_revenue'], 0, ',', ' ')" />
+                <x-ui.stat-card label="Profit Aujourd'hui" :value="'+' . number_format($stats['today_profit'], 0, ',', ' ')" color="green" />
             </div>
 
             {{-- Filters --}}
@@ -143,23 +112,16 @@
 
             {{-- Orders List --}}
             @if ($orders->isEmpty())
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
-                    </svg>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune commande</h3>
-                    <p class="text-gray-500 mb-4">
-                        @if(request('search') || request('status') || request('date'))
-                            Aucune commande ne correspond a vos filtres.
-                        @else
-                            Importez vos commandes depuis Etsy pour commencer.
-                        @endif
-                    </p>
-                    @if(request('search') || request('status') || request('date'))
-                        <a href="{{ route('orders.index', ['shop_id' => $shop->id]) }}" class="text-orange-600 hover:text-orange-700 font-medium">
-                            Effacer les filtres
-                        </a>
-                    @elseif($shop->etsy_shop_id)
+                <x-ui.empty-state 
+                    icon="orders"
+                    title="Aucune commande"
+                    :description="request('search') || request('status') || request('date') 
+                        ? 'Aucune commande ne correspond a vos filtres.' 
+                        : 'Importez vos commandes depuis Etsy pour commencer.'"
+                    :secondaryActionUrl="request('search') || request('status') || request('date') ? route('orders.index', ['shop_id' => $shop->id]) : null"
+                    :secondaryActionLabel="request('search') || request('status') || request('date') ? 'Effacer les filtres' : null"
+                >
+                    @if(!request('search') && !request('status') && !request('date') && $shop->etsy_shop_id)
                         <form action="{{ route('orders.import-etsy') }}" method="POST" class="inline">
                             @csrf
                             <input type="hidden" name="shop_id" value="{{ $shop->id }}">
@@ -171,7 +133,7 @@
                             </button>
                         </form>
                     @endif
-                </div>
+                </x-ui.empty-state>
             @else
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -206,18 +168,10 @@
                                         <div class="flex items-center">
                                             <span class="text-sm text-gray-900">{{ $order->items->count() }} article(s)</span>
                                             @if($order->items->where('source_type', 'aliexpress')->count() > 0)
-                                                <span class="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700" title="Dropship">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-                                                    </svg>
-                                                </span>
+                                                <x-ui.source-badge type="aliexpress" :showLabel="false" class="ml-2" title="Dropship" />
                                             @endif
                                             @if($order->items->where('is_digital', true)->count() > 0)
-                                                <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700" title="Digital">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                                    </svg>
-                                                </span>
+                                                <x-ui.source-badge type="printables" :showLabel="false" class="ml-1" title="Digital" />
                                             @endif
                                         </div>
                                     </td>
@@ -226,14 +180,7 @@
                                         <div class="text-xs text-green-600">{{ $order->formatted_profit }}</div>
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                            {{ $order->status_color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                            {{ $order->status_color === 'blue' ? 'bg-blue-100 text-blue-800' : '' }}
-                                            {{ $order->status_color === 'indigo' ? 'bg-indigo-100 text-indigo-800' : '' }}
-                                            {{ $order->status_color === 'green' ? 'bg-green-100 text-green-800' : '' }}
-                                            {{ $order->status_color === 'gray' ? 'bg-gray-100 text-gray-800' : '' }}">
-                                            {{ $order->status_label }}
-                                        </span>
+                                                        <x-ui.status-badge :status="$order->status" type="order" />
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
                                         <a href="{{ route('orders.show', $order) }}" class="text-orange-600 hover:text-orange-700 font-medium">

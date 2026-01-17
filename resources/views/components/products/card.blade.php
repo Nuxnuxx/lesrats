@@ -34,45 +34,21 @@
         {{-- Source Badge --}}
         <div class="absolute top-2 left-2">
             @if($product->source_type === 'aliexpress')
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-                    </svg>
-                    Dropship
-                </span>
+                <x-ui.source-badge type="aliexpress" class="rounded-full">Dropship</x-ui.source-badge>
             @elseif($product->source_type === 'printables')
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
-                    STL
-                </span>
+                <x-ui.source-badge type="printables" class="rounded-full">STL</x-ui.source-badge>
             @endif
         </div>
 
         {{-- Sync Status Badge --}}
         <div class="absolute top-2 right-2">
-            @if($product->etsy_sync_status === 'synced')
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
-                    Etsy
-                </span>
-            @elseif($product->etsy_sync_status === 'pending')
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                    </svg>
-                    En attente
-                </span>
-            @elseif($product->etsy_sync_status === 'error')
-                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700" title="{{ $product->etsy_sync_error }}">
-                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                    </svg>
-                    Erreur
-                </span>
+            @if($product->etsy_sync_status && $product->etsy_sync_status !== 'not_synced')
+                <x-ui.status-badge 
+                    :status="$product->etsy_sync_status" 
+                    type="sync" 
+                    class="rounded-full"
+                    :title="$product->etsy_sync_status === 'error' ? $product->etsy_sync_error : null"
+                />
             @endif
         </div>
 

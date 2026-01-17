@@ -1,161 +1,333 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Modifier - {{ $product->title }}
-            </h2>
-            <a href="{{ route('products.show', $product) }}" class="inline-flex items-center px-4 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400">
-                Retour
-            </a>
+            <div class="flex items-center space-x-4">
+                <a href="{{ route('products.index', ['shop_id' => $product->shop_id]) }}" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+                <div>
+                    <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                        Modifier le produit
+                    </h2>
+                    <p class="text-sm text-gray-500">{{ $product->shop->name }}</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                @if($product->etsy_listing_id)
+                    <a href="https://www.etsy.com/listing/{{ $product->etsy_listing_id }}" 
+                       target="_blank"
+                       class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-800">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        Voir sur Etsy
+                    </a>
+                @endif
+                <x-ui.status-badge :status="$product->etsy_sync_status ?? 'not_synced'" type="sync" />
+            </div>
         </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
-                    <form method="POST" action="{{ route('products.update', $product) }}">
+    <div class="py-8">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
+
+            {{-- Sync Error Alert --}}
+            @if($product->etsy_sync_status === 'error' && $product->etsy_sync_error)
+                <x-ui.flash-message type="error" :autoDismiss="false">
+                    <strong>Erreur de synchronisation Etsy:</strong> {{ $product->etsy_sync_error }}
+                </x-ui.flash-message>
+            @endif
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {{-- Main Form --}}
+                <div class="lg:col-span-2 space-y-6">
+                    <form method="POST" action="{{ route('products.update', $product) }}" id="product-form">
                         @csrf
                         @method('PUT')
 
-                        <div class="mb-4">
-                            <label for="title" class="block text-sm font-medium text-gray-700">Titre du produit</label>
-                            <input type="text" name="title" id="title" value="{{ old('title', $product->title) }}" required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            @error('title')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
+                        {{-- Basic Info --}}
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Informations generales</h3>
 
-                        <div class="mb-4">
-                            <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
-                            <textarea name="description" id="description" rows="4"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('description', $product->description) }}</textarea>
-                            @error('description')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="title" class="block text-sm font-medium text-gray-700">Titre du produit</label>
+                                    <input type="text" name="title" id="title" value="{{ old('title', $product->title) }}" required
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                                    @error('title')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label for="price" class="block text-sm font-medium text-gray-700">Prix de vente ({{ $product->shop->currency }})</label>
-                                <input type="number" name="price" id="price" step="0.01" min="0" value="{{ old('price', $product->price) }}" required
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                @error('price')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
+                                <div>
+                                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                                    <textarea name="description" id="description" rows="5"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">{{ old('description', $product->description) }}</textarea>
+                                    @error('description')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
 
-                            <div>
-                                <label for="cost_price" class="block text-sm font-medium text-gray-700">
-                                    @if($product->source_type === 'printables' || $product->is_digital)
-                                        Cout ({{ $product->shop->currency }})
-                                    @else
-                                        Cout fournisseur ({{ $product->shop->currency }})
-                                    @endif
-                                </label>
-                                <input type="number" name="cost_price" id="cost_price" step="0.01" min="0" value="{{ old('cost_price', $product->cost_price ?? 0) }}"
-                                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                @if($product->source_type === 'printables' || $product->is_digital)
-                                    <p class="mt-1 text-xs text-gray-500">Fichier digital = cout 0</p>
-                                @else
-                                    <p class="mt-1 text-xs text-gray-500">Prix d'achat chez le fournisseur</p>
-                                @endif
-                                @error('cost_price')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-
-                        @if($product->price > 0 && $product->cost_price !== null)
-                            <div class="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                <div class="flex items-center justify-between text-sm">
-                                    <span class="text-gray-600">Profit par vente:</span>
-                                    <span class="font-semibold text-green-600">
-                                        +{{ number_format($product->price - ($product->cost_price ?? 0), 2) }} {{ $product->shop->currency }}
-                                        @if($product->price > 0)
-                                            ({{ number_format((($product->price - ($product->cost_price ?? 0)) / $product->price) * 100, 0) }}% marge)
-                                        @endif
-                                    </span>
+                                <div>
+                                    <label for="sku" class="block text-sm font-medium text-gray-700">SKU (optionnel)</label>
+                                    <input type="text" name="sku" id="sku" value="{{ old('sku', $product->sku) }}"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                                        placeholder="REF-001">
+                                    @error('sku')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
                                 </div>
                             </div>
-                        @endif
+                        </div>
+
+                        {{-- Pricing --}}
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Prix et rentabilite</h3>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="price" class="block text-sm font-medium text-gray-700">Prix de vente</label>
+                                    <div class="mt-1 relative">
+                                        <input type="number" name="price" id="price" step="0.01" min="0" 
+                                               value="{{ old('price', $product->price) }}" required
+                                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 text-sm">{{ $product->shop->currency }}</span>
+                                        </div>
+                                    </div>
+                                    @error('price')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="cost_price" class="block text-sm font-medium text-gray-700">
+                                        Cout d'achat
+                                    </label>
+                                    <div class="mt-1 relative">
+                                        <input type="number" name="cost_price" id="cost_price" step="0.01" min="0" 
+                                               value="{{ old('cost_price', $product->cost_price ?? 0) }}"
+                                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 text-sm">{{ $product->shop->currency }}</span>
+                                        </div>
+                                    </div>
+                                    @if($product->source_type === 'printables' || $product->is_digital)
+                                        <p class="mt-1 text-xs text-gray-500">Fichier digital = generalement 0</p>
+                                    @endif
+                                    @error('cost_price')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            {{-- Profit Calculator --}}
+                            @php
+                                $profit = $product->price - ($product->cost_price ?? 0);
+                                $margin = $product->price > 0 ? ($profit / $product->price) * 100 : 0;
+                            @endphp
+                            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600">Profit par vente</span>
+                                    <span class="text-lg font-bold {{ $profit >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                                        {{ $profit >= 0 ? '+' : '' }}{{ number_format($profit, 2) }} {{ $product->shop->currency }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-between mt-1">
+                                    <span class="text-sm text-gray-600">Marge</span>
+                                    <span class="text-sm font-medium {{ $margin >= 30 ? 'text-green-600' : ($margin >= 15 ? 'text-yellow-600' : 'text-red-600') }}">
+                                        {{ number_format($margin, 1) }}%
+                                    </span>
+                                </div>
+                                @if($margin < 15)
+                                    <p class="mt-2 text-xs text-red-600">Attention: marge faible</p>
+                                @endif
+                            </div>
+                        </div>
+
+                        {{-- Source Info --}}
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Source du produit</h3>
+
+                            {{-- Source Type Display --}}
+                            <div class="flex items-center space-x-3 mb-4">
+                                <x-ui.source-badge :type="$product->source_type ?? 'manual'" size="md" />
+                                @if($product->is_digital)
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded text-sm font-medium bg-blue-100 text-blue-800">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                        </svg>
+                                        Digital
+                                    </span>
+                                @endif
+                            </div>
+
+                            <div>
+                                <label for="source_url" class="block text-sm font-medium text-gray-700">URL Source</label>
+                                <input type="url" name="source_url" id="source_url" value="{{ old('source_url', $product->source_url) }}"
+                                    class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                                    placeholder="https://...">
+                                <p class="mt-1 text-xs text-gray-500">Lien vers le produit chez le fournisseur</p>
+                                @error('source_url')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            @if($product->source_url)
+                                <a href="{{ $product->source_url }}" target="_blank" 
+                                   class="mt-3 inline-flex items-center text-sm text-orange-600 hover:text-orange-700">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                    </svg>
+                                    Ouvrir la source
+                                </a>
+                            @endif
+                        </div>
+
+                        {{-- Settings --}}
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Parametres</h3>
+
+                            <div class="space-y-4">
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="is_active" value="1" {{ old('is_active', $product->is_active) ? 'checked' : '' }}
+                                        class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                                    <span class="ml-3">
+                                        <span class="text-sm font-medium text-gray-900">Produit actif</span>
+                                        <span class="block text-xs text-gray-500">Desactiver pour masquer le produit</span>
+                                    </span>
+                                </label>
+
+                                <label class="flex items-center">
+                                    <input type="checkbox" name="auto_sync" value="1" {{ old('auto_sync', $product->auto_sync) ? 'checked' : '' }}
+                                        class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                                    <span class="ml-3">
+                                        <span class="text-sm font-medium text-gray-900">Synchronisation automatique</span>
+                                        <span class="block text-xs text-gray-500">Mettre a jour automatiquement sur Etsy</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
 
                         <!-- Hidden quantity - not tracked for dropship/digital -->
                         <input type="hidden" name="quantity" value="{{ $product->quantity ?? 999 }}">
-
-                        <div class="mb-4">
-                            <label for="sku" class="block text-sm font-medium text-gray-700">SKU (optionnel)</label>
-                            <input type="text" name="sku" id="sku" value="{{ old('sku', $product->sku) }}"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            @error('sku')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        {{-- Product Source Info --}}
-                        @if($product->source_type)
-                            <div class="mb-4 p-4 rounded-lg {{ $product->source_type === 'aliexpress' ? 'bg-red-50 border border-red-200' : ($product->source_type === 'printables' ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50 border border-gray-200') }}">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center space-x-2">
-                                        @if($product->source_type === 'aliexpress')
-                                            <span class="text-red-600 font-medium">Dropshipping AliExpress</span>
-                                        @elseif($product->source_type === 'printables')
-                                            <span class="text-purple-600 font-medium">Fichier STL (Printables)</span>
-                                        @else
-                                            <span class="text-gray-600 font-medium">Produit manuel</span>
-                                        @endif
-                                        @if($product->is_digital)
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">Digital</span>
-                                        @endif
-                                    </div>
-                                    @if($product->source_url)
-                                        <a href="{{ $product->source_url }}" target="_blank" class="text-sm text-blue-600 hover:text-blue-800">
-                                            Voir la source
-                                        </a>
-                                    @endif
-                                </div>
-                            </div>
-                        @endif
-
-                        <div class="mb-4">
-                            <label for="source_url" class="block text-sm font-medium text-gray-700">URL Source (optionnel)</label>
-                            <input type="url" name="source_url" id="source_url" value="{{ old('source_url', $product->source_url) }}"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                placeholder="https://...">
-                            <p class="mt-1 text-xs text-gray-500">Lien vers le produit chez le fournisseur (AliExpress, Printables...)</p>
-                            @error('source_url')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="flex items-center">
-                                <input type="checkbox" name="is_active" value="1" {{ old('is_active', $product->is_active) ? 'checked' : '' }}
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <span class="ml-2 text-sm text-gray-700">Produit actif</span>
-                            </label>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="flex items-center">
-                                <input type="checkbox" name="auto_sync" value="1" {{ old('auto_sync', $product->auto_sync) ? 'checked' : '' }}
-                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <span class="ml-2 text-sm text-gray-700">Synchronisation automatique avec Etsy</span>
-                            </label>
-                        </div>
-
-                        <div class="flex justify-end gap-3">
-                            <a href="{{ route('products.show', $product) }}" class="inline-flex items-center px-4 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400">
-                                Annuler
-                            </a>
-                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">
-                                Enregistrer les modifications
-                            </button>
-                        </div>
                     </form>
+
+                    {{-- Form Actions --}}
+                    <div class="flex items-center justify-between">
+                        <a href="{{ route('products.index', ['shop_id' => $product->shop_id]) }}" 
+                           class="text-sm text-gray-500 hover:text-gray-700">
+                            Annuler
+                        </a>
+                        <button type="submit" form="product-form"
+                                class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Enregistrer
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Sidebar --}}
+                <div class="space-y-6">
+                    {{-- Product Preview --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
+                        
+                        @php
+                            $images = is_string($product->images) ? json_decode($product->images, true) : $product->images;
+                            $firstImage = is_array($images) && !empty($images) ? $images[0] : null;
+                        @endphp
+                        
+                        <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+                            @if($firstImage)
+                                <img src="{{ $firstImage }}" alt="{{ $product->title }}" class="w-full h-full object-cover">
+                            @else
+                                <div class="w-full h-full flex items-center justify-center">
+                                    <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                            @endif
+                        </div>
+
+                        <p class="text-sm font-medium text-gray-900 line-clamp-2">{{ $product->title }}</p>
+                        <p class="text-lg font-bold text-gray-900 mt-1">{{ number_format($product->price, 2) }} {{ $product->shop->currency }}</p>
+                    </div>
+
+                    {{-- Stats --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4">Statistiques</h3>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Ventes totales</span>
+                                <span class="font-medium text-gray-900">{{ $product->total_sold ?? 0 }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Revenus</span>
+                                <span class="font-medium text-gray-900">{{ number_format($product->total_revenue ?? 0, 2) }} {{ $product->shop->currency }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Derniere sync</span>
+                                <span class="font-medium text-gray-900">{{ $product->etsy_synced_at?->diffForHumans() ?? 'Jamais' }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Cree le</span>
+                                <span class="font-medium text-gray-900">{{ $product->created_at->format('d/m/Y') }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Etsy Actions --}}
+                    @if($product->shop->etsy_shop_id)
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <h3 class="text-sm font-semibold text-gray-900 mb-4">Actions Etsy</h3>
+                            
+                            <form action="{{ route('products.bulk-sync') }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="product_ids[]" value="{{ $product->id }}">
+                                <button type="submit" 
+                                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    Synchroniser avec Etsy
+                                </button>
+                            </form>
+                        </div>
+                    @endif
+
+                    {{-- Danger Zone --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-red-200 p-6">
+                        <h3 class="text-sm font-semibold text-red-600 mb-4">Zone de danger</h3>
+                        
+                        <x-ui.confirm-modal 
+                            id="delete-product"
+                            title="Supprimer ce produit"
+                            message="Cette action est irreversible. Le produit sera supprime de votre boutique mais restera sur Etsy si deja publie."
+                            confirmLabel="Supprimer"
+                            type="danger"
+                            :formAction="route('products.destroy', $product)"
+                            formMethod="DELETE"
+                        >
+                            <x-slot name="trigger">
+                                <button type="button" 
+                                        class="w-full inline-flex items-center justify-center px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                    Supprimer le produit
+                                </button>
+                            </x-slot>
+                        </x-ui.confirm-modal>
+                    </div>
                 </div>
             </div>
+
         </div>
     </div>
 </x-app-layout>

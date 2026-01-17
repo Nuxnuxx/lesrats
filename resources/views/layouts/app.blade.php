@@ -30,6 +30,24 @@
                 </header>
             @endisset
 
+            <!-- Flash Messages -->
+            @if (session('success') || session('error') || session('warning') || session('info'))
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+                    @if (session('success'))
+                        <x-ui.flash-message type="success" class="mb-4">{{ session('success') }}</x-ui.flash-message>
+                    @endif
+                    @if (session('error'))
+                        <x-ui.flash-message type="error" class="mb-4">{{ session('error') }}</x-ui.flash-message>
+                    @endif
+                    @if (session('warning'))
+                        <x-ui.flash-message type="warning" class="mb-4">{{ session('warning') }}</x-ui.flash-message>
+                    @endif
+                    @if (session('info'))
+                        <x-ui.flash-message type="info" class="mb-4">{{ session('info') }}</x-ui.flash-message>
+                    @endif
+                </div>
+            @endif
+
             <!-- Page Content -->
             <main>
                 {{ $slot }}

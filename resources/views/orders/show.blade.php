@@ -14,26 +14,12 @@
                     <p class="text-sm text-gray-500">{{ $order->created_at->format('d/m/Y H:i') }} - {{ $order->shop->name }}</p>
                 </div>
             </div>
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium
-                {{ $order->status_color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                {{ $order->status_color === 'blue' ? 'bg-blue-100 text-blue-800' : '' }}
-                {{ $order->status_color === 'indigo' ? 'bg-indigo-100 text-indigo-800' : '' }}
-                {{ $order->status_color === 'green' ? 'bg-green-100 text-green-800' : '' }}
-                {{ $order->status_color === 'gray' ? 'bg-gray-100 text-gray-800' : '' }}">
-                {{ $order->status_label }}
-            </span>
+            <x-ui.status-badge :status="$order->status" type="order" class="px-3 py-1 text-sm" />
         </div>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-5xl mx-auto sm:px-6 lg:px-8 space-y-6">
-
-            {{-- Flash Messages --}}
-            @if (session('success'))
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg">
-                    {{ session('success') }}
-                </div>
-            @endif
 
             {{-- Status Workflow --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

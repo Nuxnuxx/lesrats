@@ -52,37 +52,12 @@
     <div class="py-8" x-data="productList()">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
-            {{-- Flash Messages --}}
-            @if (session('success'))
-                <div class="mb-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg" role="alert">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg" role="alert">
-                    {{ session('error') }}
-                </div>
-            @endif
-
             {{-- Stats Bar --}}
             <div class="grid grid-cols-4 gap-4 mb-6">
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-gray-500">Total</p>
-                    <p class="text-2xl font-bold text-gray-900">{{ $stats['total'] }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-green-600">Synchronises</p>
-                    <p class="text-2xl font-bold text-green-600">{{ $stats['synced'] }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-blue-600">En attente</p>
-                    <p class="text-2xl font-bold text-blue-600">{{ $stats['pending'] }}</p>
-                </div>
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                    <p class="text-sm text-red-600">Erreurs</p>
-                    <p class="text-2xl font-bold text-red-600">{{ $stats['errors'] }}</p>
-                </div>
+                <x-ui.stat-card label="Total" :value="$stats['total']" />
+                <x-ui.stat-card label="Synchronises" :value="$stats['synced']" color="green" />
+                <x-ui.stat-card label="En attente" :value="$stats['pending']" color="blue" />
+                <x-ui.stat-card label="Erreurs" :value="$stats['errors']" color="red" />
             </div>
 
             {{-- Filters & Bulk Actions Bar --}}
@@ -168,31 +143,17 @@
 
             {{-- Products Grid --}}
             @if ($products->isEmpty())
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
-                    <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun produit</h3>
-                    <p class="text-gray-500 mb-4">
-                        @if(request('search') || request('source_type') || request('sync_status'))
-                            Aucun produit ne correspond a vos filtres.
-                        @else
-                            Commencez par ajouter votre premier produit.
-                        @endif
-                    </p>
-                    @if(request('search') || request('source_type') || request('sync_status'))
-                        <a href="{{ route('products.index', ['shop_id' => $shop->id]) }}" class="text-orange-600 hover:text-orange-700 font-medium">
-                            Effacer les filtres
-                        </a>
-                    @else
-                        <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                            Nouveau produit
-                        </a>
-                    @endif
-                </div>
+                <x-ui.empty-state 
+                    icon="products"
+                    title="Aucun produit"
+                    :description="request('search') || request('source_type') || request('sync_status') 
+                        ? 'Aucun produit ne correspond a vos filtres.' 
+                        : 'Commencez par ajouter votre premier produit.'"
+                    :actionUrl="!(request('search') || request('source_type') || request('sync_status')) ? route('products.create') : null"
+                    :actionLabel="!(request('search') || request('source_type') || request('sync_status')) ? 'Nouveau produit' : null"
+                    :secondaryActionUrl="request('search') || request('source_type') || request('sync_status') ? route('products.index', ['shop_id' => $shop->id]) : null"
+                    :secondaryActionLabel="request('search') || request('source_type') || request('sync_status') ? 'Effacer les filtres' : null"
+                />
             @else
                 {{-- Select All --}}
                 <div class="flex items-center justify-between mb-4">
