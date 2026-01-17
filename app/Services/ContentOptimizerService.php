@@ -29,21 +29,21 @@ class ContentOptimizerService
             $is3DPrint = $context === '3D Print';
 
             if ($is3DPrint) {
-                $prompt = "Transform this 3D model title into an SEO-optimized Etsy listing title for a 3D printed product.\n\n"
+                $prompt = "Transform this 3D model title into an SEO-optimized Etsy listing title for a DIGITAL STL FILE download.\n\n"
                     . "Original title: {$originalTitle}\n\n"
                     . "RULES:\n"
                     . "1. KEEP the actual product keywords (e.g., dragon, planter, figurine, organizer, etc.)\n"
-                    . "2. Add '3D Printed' at the beginning or end of the title\n"
+                    . "2. Add 'STL File' or '3D Print File' or 'Digital Download' in the title\n"
                     . "3. Translate to English if the title is in another language\n"
                     . "4. Maximum 140 characters\n"
                     . "5. Make it readable, natural, and SEO-friendly\n"
-                    . "6. Include keywords like: 3D printed, PLA, custom, unique, handmade\n"
+                    . "6. Include keywords like: STL, 3D print file, digital download, printable\n"
                     . "7. NEVER use generic terms - use the REAL product words\n\n"
                     . "Output ONLY the optimized title, nothing else.";
 
-                $systemPrompt = "You are an Etsy SEO expert specializing in 3D printed products. "
-                    . "Your job is to transform 3D model names into compelling Etsy titles for printed items. "
-                    . "CRITICAL: You must preserve the actual product keywords and add 3D printing context. "
+                $systemPrompt = "You are an Etsy SEO expert specializing in digital 3D model files (STL). "
+                    . "Your job is to transform 3D model names into compelling Etsy titles for DIGITAL FILE downloads. "
+                    . "CRITICAL: You must preserve the actual product keywords and emphasize it's a digital STL file. "
                     . "Always output in English. Translate if the input is in another language. "
                     . "Output only the title, no explanations or quotes.";
             } else {
@@ -113,29 +113,30 @@ class ContentOptimizerService
             }
 
             if ($is3DPrint) {
-                $prompt = "Write an SEO-optimized Etsy product description for a 3D printed item.\n\n"
+                $prompt = "Write an SEO-optimized Etsy product description for a DIGITAL STL FILE download.\n\n"
                     . "Product: {$originalTitle}\n"
                     . ($originalDescription ? "Original description: {$originalDescription}\n" : '')
                     . $specsText . "\n"
                     . "RULES:\n"
                     . "1. Write in English (translate if needed)\n"
                     . "2. Warm, friendly tone with a few emojis\n"
-                    . "3. Highlight that this is a 3D PRINTED item (made to order)\n"
+                    . "3. Emphasize this is a DIGITAL DOWNLOAD - customer receives STL files, NOT a physical product\n"
                     . "4. Include these sections:\n"
-                    . "   - Introduction (what the product is)\n"
-                    . "   - Material info (PLA plastic, eco-friendly, durable)\n"
-                    . "   - Customization options (colors available on request)\n"
-                    . "   - Dimensions (if known) or mention 'see photos for scale'\n"
-                    . "   - Care instructions (keep away from heat, wipe with damp cloth)\n"
-                    . "   - Shipping info (made to order, 2-5 days production)\n"
+                    . "   - Introduction (what the 3D model is)\n"
+                    . "   - What's included (STL file(s), instant download after purchase)\n"
+                    . "   - Printing recommendations (suggested infill, supports, layer height)\n"
+                    . "   - Compatible with most FDM/SLA printers\n"
+                    . "   - No physical item shipped - digital product only\n"
+                    . "   - Personal/hobby use license\n"
                     . "5. 200-400 words with bullet points\n"
-                    . "6. SEO-friendly with 3D printing keywords\n"
-                    . "7. Focus on THIS specific product\n\n"
+                    . "6. SEO-friendly with keywords: STL file, 3D print file, digital download, printable\n"
+                    . "7. Focus on THIS specific product\n"
+                    . "8. IMPORTANT: Clearly state NO PHYSICAL ITEM WILL BE SHIPPED\n\n"
                     . "Output ONLY the description, nothing else.";
 
-                $systemPrompt = "You are an Etsy SEO expert specializing in 3D printed products. Write descriptions that highlight the handmade, custom nature of 3D printing. "
+                $systemPrompt = "You are an Etsy SEO expert specializing in digital 3D model files (STL). Write descriptions for DIGITAL DOWNLOADS. "
                     . "Use a few emojis. Always write in English. "
-                    . "CRITICAL: Focus on the ACTUAL product being sold.";
+                    . "CRITICAL: Make it VERY CLEAR this is a digital file download, NOT a physical product. The customer prints it themselves.";
             } else {
                 $prompt = "Write an SEO-optimized Etsy product description.\n\n"
                     . "Product: {$originalTitle}\n"
@@ -215,21 +216,22 @@ class ContentOptimizerService
 
         try {
             if ($is3DPrint) {
-                $prompt = "Generate exactly 13 Etsy SEO tags for this 3D printed product:\n\n"
+                $prompt = "Generate exactly 13 Etsy SEO tags for this DIGITAL STL FILE:\n\n"
                     . "Product: {$title}\n"
                     . ($description ? "Description: " . substr($description, 0, 500) . "\n" : '')
                     . "\n"
                     . "RULES:\n"
                     . "1. Each tag maximum 20 characters\n"
-                    . "2. Include 3D printing related tags: '3d printed', '3d print', 'pla', 'custom', 'made to order'\n"
-                    . "3. Include product-specific tags based on what the item actually is\n"
-                    . "4. Mix of 3D printing terms and product-specific keywords\n"
+                    . "2. Include digital file tags: 'stl file', '3d print file', 'digital download', 'printable'\n"
+                    . "3. Include product-specific tags based on what the 3D model actually is\n"
+                    . "4. Mix of digital/STL terms and product-specific keywords\n"
                     . "5. All tags in English\n"
-                    . "6. No duplicates\n\n"
+                    . "6. No duplicates\n"
+                    . "7. Focus on digital download keywords\n\n"
                     . "Output ONLY 13 tags separated by commas on a single line, nothing else.";
 
-                $systemPrompt = "You are an Etsy SEO expert for 3D printed products. Generate exactly 13 tags. "
-                    . "Each tag max 20 characters. Mix 3D printing keywords with product-specific terms. "
+                $systemPrompt = "You are an Etsy SEO expert for digital STL files. Generate exactly 13 tags. "
+                    . "Each tag max 20 characters. Mix digital download keywords with product-specific terms. "
                     . "Output only the tags separated by commas.";
             } else {
                 $prompt = "Generate exactly 13 Etsy SEO tags for this product:\n\n"
@@ -303,9 +305,9 @@ class ContentOptimizerService
 
         $tags = [];
 
-        // Add 3D printing tags first if applicable
+        // Add STL/digital file tags first if applicable
         if ($is3DPrint) {
-            $tags = ['3d printed', '3d print', 'pla', 'custom', 'made to order'];
+            $tags = ['stl file', '3d print file', 'digital download', 'printable', 'stl download'];
         }
 
         // Add words as tags (max 20 chars each)
@@ -319,7 +321,7 @@ class ContentOptimizerService
 
         // Pad with generic tags if needed
         if ($is3DPrint) {
-            $genericTags = ['handmade', 'unique gift', 'home decor', 'geek gift', 'nerd gift', 'desk decor', 'figurine', 'custom gift'];
+            $genericTags = ['3d model', 'instant download', 'diy print', 'maker gift', 'stl', '3d design', 'print file', 'digital file'];
         } else {
             $genericTags = ['handmade', 'unique gift', 'gift for her', 'gift for him', 'home decor', 'vintage style', 'boho', 'minimalist', 'custom'];
         }
@@ -361,34 +363,34 @@ class ContentOptimizerService
     protected function fallbackOptimizeDescription(string $title, ?string $description, array $specs, bool $is3DPrint = false): string
     {
         if ($is3DPrint) {
-            $optimized = "🖨️ {$title} - 3D Printed\n\n";
-            $optimized .= "Discover this unique 3D printed item, made to order just for you!\n\n";
+            $optimized = "📁 {$title} - STL File | Digital Download\n\n";
+            $optimized .= "⚠️ THIS IS A DIGITAL PRODUCT - NO PHYSICAL ITEM WILL BE SHIPPED ⚠️\n\n";
+            $optimized .= "Print this amazing 3D model on your own printer!\n\n";
 
-            $optimized .= "📋 Product Details:\n";
-            $optimized .= "• Material: High-quality PLA plastic\n";
-            $optimized .= "• Eco-friendly and durable\n";
-            $optimized .= "• Custom colors available upon request\n\n";
+            $optimized .= "📥 What You'll Receive:\n";
+            $optimized .= "• STL file(s) - Instant download after purchase\n";
+            $optimized .= "• Ready to print on any FDM or SLA 3D printer\n";
+            $optimized .= "• High-quality, tested model\n\n";
 
             if ($description && strlen($description) > 50) {
                 $cleaned = strip_tags($description);
                 $cleaned = preg_replace('/\s+/', ' ', trim($cleaned));
-                $optimized .= "📝 About this item:\n";
+                $optimized .= "📝 About This Model:\n";
                 $optimized .= substr($cleaned, 0, 300) . (strlen($cleaned) > 300 ? '...' : '') . "\n\n";
             }
 
-            $optimized .= "🎨 Customization:\n";
-            $optimized .= "Want a different color? Just send us a message and we'll make it happen!\n\n";
+            $optimized .= "🖨️ Printing Recommendations:\n";
+            $optimized .= "• Layer height: 0.2mm for speed, 0.12mm for detail\n";
+            $optimized .= "• Infill: 15-20% for most models\n";
+            $optimized .= "• Supports: Check preview images\n";
+            $optimized .= "• Material: PLA, PETG, or ABS recommended\n\n";
 
-            $optimized .= "📦 Shipping & Production:\n";
-            $optimized .= "• Made to order (2-5 business days production)\n";
-            $optimized .= "• Carefully packaged for safe delivery\n\n";
+            $optimized .= "📋 Important Notes:\n";
+            $optimized .= "• This is a DIGITAL FILE - you print it yourself\n";
+            $optimized .= "• No refunds on digital products\n";
+            $optimized .= "• For personal use only\n\n";
 
-            $optimized .= "⚠️ Care Instructions:\n";
-            $optimized .= "• Keep away from heat sources (PLA softens above 60°C/140°F)\n";
-            $optimized .= "• Clean with a damp cloth\n";
-            $optimized .= "• Not dishwasher or microwave safe\n\n";
-
-            $optimized .= "💝 Perfect gift for 3D printing enthusiasts, geeks, and anyone who loves unique items!";
+            $optimized .= "💡 Perfect for makers, hobbyists, and 3D printing enthusiasts!";
         } else {
             $optimized = "✨ {$title}\n\n";
             $optimized .= "Discover this unique and beautiful item, carefully selected for its quality and style.\n\n";

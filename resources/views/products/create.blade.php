@@ -36,10 +36,10 @@
                             <input type="radio" name="product_type" value="printables" class="peer sr-only">
                             <div class="p-4 border-2 rounded-lg peer-checked:border-green-500 peer-checked:bg-green-50 hover:bg-gray-50 transition-all">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <span class="text-2xl">🖨️</span>
-                                    <span class="font-semibold text-gray-800">Impression 3D (Printables)</span>
+                                    <span class="text-2xl">📁</span>
+                                    <span class="font-semibold text-gray-800">Fichier STL (Printables)</span>
                                 </div>
-                                <p class="text-sm text-gray-600">Importer un STL depuis Printables pour vendre des impressions 3D.</p>
+                                <p class="text-sm text-gray-600">Importer un modèle depuis Printables pour vendre des fichiers STL en téléchargement.</p>
                             </div>
                         </label>
                     </div>
@@ -76,8 +76,8 @@
             <!-- Printables Import Section -->
             <div id="printables-section" class="bg-gradient-to-r from-green-500 to-green-600 overflow-hidden shadow-sm sm:rounded-lg mb-6 hidden">
                 <div class="p-6">
-                    <h3 class="text-lg font-bold text-white mb-2">🖨️ Importer depuis Printables</h3>
-                    <p class="text-green-100 text-sm mb-4">Collez le lien du modèle 3D Printables pour générer automatiquement un listing optimisé pour Etsy.</p>
+                    <h3 class="text-lg font-bold text-white mb-2">📁 Importer depuis Printables</h3>
+                    <p class="text-green-100 text-sm mb-4">Collez le lien du modèle 3D Printables pour générer un listing de fichier STL en téléchargement digital.</p>
 
                     <div class="flex gap-2 mb-3">
                         <input type="url" id="printables_url" name="printables_url" value="{{ old('printables_url') }}"
@@ -88,19 +88,12 @@
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex gap-2 items-center">
-                            <label class="text-white text-sm whitespace-nowrap">💰 Coût impression (€) :</label>
-                            <input type="number" id="printing_cost" step="0.01" min="0"
-                                placeholder="Ex: 5.00"
-                                class="block w-24 rounded-md border-0 shadow-sm text-gray-900 placeholder-gray-400">
-                        </div>
-                        <div class="flex gap-2 items-center">
-                            <label class="text-white text-sm whitespace-nowrap">Marge (x) :</label>
-                            <input type="number" id="printing_margin" step="0.5" min="1" value="4"
-                                class="block w-20 rounded-md border-0 shadow-sm text-gray-900 placeholder-gray-400">
-                            <span class="text-green-100 text-xs">→ Prix Etsy</span>
-                        </div>
+                    <div class="flex gap-2 items-center">
+                        <label class="text-white text-sm whitespace-nowrap">💰 Prix STL (€) :</label>
+                        <input type="number" id="printing_cost" step="0.01" min="0"
+                            placeholder="Ex: 3.99"
+                            class="block w-24 rounded-md border-0 shadow-sm text-gray-900 placeholder-gray-400">
+                        <span class="text-green-100 text-xs">Prix de vente du fichier digital</span>
                     </div>
 
                     <div id="printables-status" class="mt-3 hidden"></div>
@@ -109,6 +102,22 @@
                     <div id="license-warning" class="mt-3 hidden p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded-md">
                         <strong>⚠️ Attention Licence :</strong>
                         <span id="license-text"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Image Preview Section -->
+            <div id="images-preview-section" class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6 hidden">
+                <div class="p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🖼️ Images du produit</h3>
+                    <p class="text-sm text-gray-600 mb-4">Images récupérées depuis la source. Cliquez sur une image pour la sélectionner pour votre listing Etsy.</p>
+
+                    <div id="images-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <!-- Images will be inserted here by JavaScript -->
+                    </div>
+
+                    <div id="selected-images-info" class="mt-4 text-sm text-gray-600 hidden">
+                        <span class="font-semibold">Images sélectionnées:</span> <span id="selected-count">0</span>/10
                     </div>
                 </div>
             </div>
@@ -125,6 +134,7 @@
                         <input type="hidden" name="product_source" id="product_source" value="aliexpress">
                         <input type="hidden" name="license" id="license_hidden">
                         <input type="hidden" name="attribution" id="attribution_hidden">
+                        <input type="hidden" name="images" id="images_hidden">
 
                         <div class="mb-4">
                             <label for="title" class="block text-sm font-medium text-gray-700">Titre du produit (optimisé pour Etsy)</label>
@@ -223,6 +233,84 @@
     </div>
 
     <script>
+        // Image selection state
+        let selectedImages = [];
+
+        // Function to display images in the preview grid
+        function displayImages(images) {
+            const grid = document.getElementById('images-grid');
+            const section = document.getElementById('images-preview-section');
+            const selectedInfo = document.getElementById('selected-images-info');
+
+            if (!images || images.length === 0) {
+                section.classList.add('hidden');
+                return;
+            }
+
+            // Clear previous images
+            grid.innerHTML = '';
+            selectedImages = [];
+
+            // Add each image to the grid
+            images.forEach((imageUrl, index) => {
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'relative cursor-pointer group';
+                imageContainer.innerHTML = `
+                    <div class="aspect-square overflow-hidden rounded-lg border-2 border-gray-200 hover:border-blue-400 transition-all" data-index="${index}">
+                        <img src="${imageUrl}" alt="Image ${index + 1}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-blue-500 bg-opacity-0 group-hover:bg-opacity-10 transition-all"></div>
+                        <div class="absolute top-2 right-2 w-6 h-6 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shadow check-indicator">
+                            ${index + 1}
+                        </div>
+                    </div>
+                `;
+
+                imageContainer.addEventListener('click', () => toggleImageSelection(index, imageUrl, imageContainer));
+                grid.appendChild(imageContainer);
+            });
+
+            // Show the section
+            section.classList.remove('hidden');
+            selectedInfo.classList.remove('hidden');
+            updateSelectedCount();
+        }
+
+        // Toggle image selection
+        function toggleImageSelection(index, imageUrl, container) {
+            const imgContainer = container.querySelector('[data-index]');
+            const checkIndicator = container.querySelector('.check-indicator');
+
+            if (selectedImages.includes(imageUrl)) {
+                // Deselect
+                selectedImages = selectedImages.filter(url => url !== imageUrl);
+                imgContainer.classList.remove('border-green-500', 'ring-2', 'ring-green-300');
+                imgContainer.classList.add('border-gray-200');
+                checkIndicator.classList.remove('bg-green-500', 'text-white');
+                checkIndicator.classList.add('bg-gray-200', 'text-gray-600');
+                checkIndicator.innerHTML = index + 1;
+            } else {
+                // Select (max 10)
+                if (selectedImages.length >= 10) {
+                    alert('Maximum 10 images autorisées sur Etsy');
+                    return;
+                }
+                selectedImages.push(imageUrl);
+                imgContainer.classList.remove('border-gray-200');
+                imgContainer.classList.add('border-green-500', 'ring-2', 'ring-green-300');
+                checkIndicator.classList.remove('bg-gray-200', 'text-gray-600');
+                checkIndicator.classList.add('bg-green-500', 'text-white');
+                checkIndicator.innerHTML = '✓';
+            }
+
+            updateSelectedCount();
+            document.getElementById('images_hidden').value = JSON.stringify(selectedImages);
+        }
+
+        // Update selected count display
+        function updateSelectedCount() {
+            document.getElementById('selected-count').textContent = selectedImages.length;
+        }
+
         // Toggle between AliExpress and Printables sections
         const productTypeRadios = document.querySelectorAll('input[name="product_type"]');
         const aliexpressSection = document.getElementById('aliexpress-section');
@@ -254,20 +342,17 @@
             }
         });
 
-        // Auto-calculate Etsy price when printing cost is entered
+        // Set Etsy price when STL price is entered
         function calculatePrintingPrice() {
-            const cost = parseFloat(document.getElementById('printing_cost').value) || 0;
-            const margin = parseFloat(document.getElementById('printing_margin').value) || 4;
-            if (cost > 0) {
-                const etsyPrice = (cost * margin).toFixed(2);
-                document.getElementById('price').value = etsyPrice;
+            const price = parseFloat(document.getElementById('printing_cost').value) || 0;
+            if (price > 0) {
+                document.getElementById('price').value = price.toFixed(2);
                 document.getElementById('price-info').innerHTML =
-                    `🖨️ Coût: <strong>€${cost.toFixed(2)}</strong> × ${margin} = <strong>€${etsyPrice}</strong>`;
+                    `📁 Prix fichier STL: <strong>€${price.toFixed(2)}</strong>`;
             }
         }
 
         document.getElementById('printing_cost').addEventListener('input', calculatePrintingPrice);
-        document.getElementById('printing_margin').addEventListener('input', calculatePrintingPrice);
 
         // Analyze AliExpress URL
         document.getElementById('analyze-aliexpress-btn').addEventListener('click', async function() {
@@ -330,17 +415,28 @@
                         document.getElementById('price').value = result.data.price.toFixed(2);
                     }
 
+                    // Display images if available
+                    if (result.data.images && result.data.images.length > 0) {
+                        displayImages(result.data.images);
+                    }
+
                     // Show success message
                     statusDiv.className = 'mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
                     let priceMsg = aliPrice ? '' : '<br><small class="text-orange-600">⚠️ Prix non détecté - entrez le prix AliExpress ci-dessus et recliquez Analyser</small>';
+                    let imgMsg = result.data.images && result.data.images.length > 0 ? `<br><small>🖼️ ${result.data.images.length} images récupérées</small>` : '';
                     statusDiv.innerHTML = `
                         <strong>✅ Produit importé et optimisé !</strong><br>
-                        <small>Titre, description et ${result.data.tags ? result.data.tags.length : 0} tags générés.</small>${priceMsg}
+                        <small>Titre, description et ${result.data.tags ? result.data.tags.length : 0} tags générés.</small>${priceMsg}${imgMsg}
                     `;
 
-                    // Scroll to form
-                    document.getElementById('title').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    document.getElementById('title').focus();
+                    // Scroll to images or form
+                    const scrollTarget = result.data.images && result.data.images.length > 0
+                        ? document.getElementById('images-preview-section')
+                        : document.getElementById('title');
+                    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (!result.data.images || result.data.images.length === 0) {
+                        document.getElementById('title').focus();
+                    }
                 } else {
                     statusDiv.className = 'mt-3 p-3 bg-orange-100 border border-orange-300 text-orange-800 rounded-md';
                     if (result.use_manual) {
@@ -428,17 +524,28 @@
                     // Calculate price if printing cost is set
                     calculatePrintingPrice();
 
+                    // Display images if available
+                    if (result.data.images && result.data.images.length > 0) {
+                        displayImages(result.data.images);
+                    }
+
                     // Show success message
                     statusDiv.className = 'mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md';
+                    let imgMsg = result.data.images && result.data.images.length > 0 ? `<br><small>🖼️ ${result.data.images.length} images récupérées</small>` : '';
                     statusDiv.innerHTML = `
-                        <strong>✅ Modèle 3D importé et optimisé !</strong><br>
+                        <strong>✅ Fichier STL importé et optimisé !</strong><br>
                         <small>Titre, description et ${result.data.tags ? result.data.tags.length : 0} tags générés.</small><br>
-                        <small>Auteur: ${result.data.author || 'Inconnu'} | Licence: ${result.data.license || 'Inconnue'}</small>
+                        <small>Auteur: ${result.data.author || 'Inconnu'} | Licence: ${result.data.license || 'Inconnue'}</small>${imgMsg}
                     `;
 
-                    // Scroll to form
-                    document.getElementById('title').scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    document.getElementById('title').focus();
+                    // Scroll to images or form
+                    const scrollTarget = result.data.images && result.data.images.length > 0
+                        ? document.getElementById('images-preview-section')
+                        : document.getElementById('title');
+                    scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (!result.data.images || result.data.images.length === 0) {
+                        document.getElementById('title').focus();
+                    }
                 } else {
                     statusDiv.className = 'mt-3 p-3 bg-orange-100 border border-orange-300 text-orange-800 rounded-md';
                     statusDiv.innerHTML = '❌ ' + result.message;

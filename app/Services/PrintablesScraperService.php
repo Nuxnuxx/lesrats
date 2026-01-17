@@ -149,9 +149,12 @@ class PrintablesScraperService
             if (empty($images) && $markdown) {
                 preg_match_all('/!\[.*?\]\((https?:\/\/[^\)]+)\)/', $markdown, $imageMatches);
                 if (!empty($imageMatches[1])) {
-                    $images = array_slice($imageMatches[1], 0, 10);
+                    $images = $imageMatches[1];
                 }
             }
+
+            // Deduplicate images based on base filename (ignore size parameters)
+            $images = $this->deduplicateImages($images);
 
             // Extract tags
             $tags = $extract['tags'] ?? [];
@@ -246,5 +249,51 @@ class PrintablesScraperService
         $url = $productData['source_url'] ?? '';
 
         return "Design by {$author}. Licensed under {$license}. Original: {$url}";
+    }
+
+    /**
+     * Deduplicate images based on base filename.
+     * Printables often returns the same image in different sizes (thumbnails, etc.)
+     */
+    protected function deduplicateImages(array $images): array
+    {
+        $seen = [];
+        $unique = [];
+
+        foreach ($images as $imageUrl) {
+            // Extract the base filename without size parameters
+            // Printables URLs often look like: https://media.printables.com/media/prints/123456/images/1234567_12345678-xxxx-xxxx-xxxx-xxxxxxxxxxxx/thumbs/cover/320x240/png/image.png
+            // We want to identify unique images by their core identifier
+
+            // Get the path without query string
+            $path = parse_url($imageUrl, PHP_URL_PATH);
+            if (!$path) {
+                continue;
+            }
+
+            // Try to extract a unique identifier from the path
+            // Remove size indicators like /320x240/, /640x480/, /thumbs/, /cover/, etc.
+            $normalized = preg_replace('/\/\d+x\d+\//', '/', $path);
+            $normalized = preg_replace('/\/thumbs\//', '/', $normalized);
+            $normalized = preg_replace('/\/cover\//', '/', $normalized);
+            $normalized = preg_replace('/\/inside\//', '/', $normalized);
+
+            // Extract the image identifier (usually a UUID or numeric ID)
+            if (preg_match('/images\/(\d+_[a-f0-9-]+)/', $path, $matches)) {
+                $identifier = $matches[1];
+            } else {
+                // Fallback: use the filename
+                $identifier = basename($path);
+            }
+
+            if (!isset($seen[$identifier])) {
+                $seen[$identifier] = true;
+                // Prefer larger images - try to get the original/largest version
+                $unique[] = $imageUrl;
+            }
+        }
+
+        // Limit to 10 images
+        return array_slice($unique, 0, 10);
     }
 }
