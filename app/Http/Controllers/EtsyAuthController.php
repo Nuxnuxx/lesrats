@@ -79,8 +79,17 @@ class EtsyAuthController extends Controller
                 'etsy_token_expires_at' => now()->addSeconds($tokenData['expires_in']),
             ]);
 
+            // Check if this is from onboarding
+            $fromOnboarding = session('etsy_oauth_from_onboarding', false);
+
             // Clear session data
-            session()->forget(['etsy_oauth_state', 'etsy_oauth_shop_id', 'etsy_code_verifier']);
+            session()->forget(['etsy_oauth_state', 'etsy_oauth_shop_id', 'etsy_code_verifier', 'etsy_oauth_from_onboarding']);
+
+            // Redirect based on context
+            if ($fromOnboarding) {
+                return redirect()->route('onboarding.complete')
+                    ->with('success', 'Boutique connectée à Etsy avec succès !');
+            }
 
             return redirect()->route('shops.show', $shop)
                 ->with('success', 'Boutique connectée à Etsy avec succès !');

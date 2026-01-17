@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\EtsyAuthController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShopController;
@@ -15,6 +16,13 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // Onboarding routes
+    Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
+    Route::post('/onboarding/shop', [OnboardingController::class, 'storeShop'])->name('onboarding.store-shop');
+    Route::get('/onboarding/connect-etsy/{shop}', [OnboardingController::class, 'connectEtsy'])->name('onboarding.connect-etsy');
+    Route::get('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
+    Route::get('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
