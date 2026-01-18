@@ -10,7 +10,11 @@
       "Bash(git commit -m \"$\\(cat <<''EOF''\nComplete Phase 1: Multi-tenancy foundation with shop management\n\nPhase 1 achievements \\(12/12 tasks completed\\):\n- Laravel 12.47 project setup with MySQL database\n- Multi-tenancy architecture \\(User, Shop, ShopMembership models\\)\n- Eloquent relationships configured\n- Laravel Breeze authentication system\n- ShopPolicy with role-based permissions \\(owner/admin/member\\)\n- SetActiveShop middleware for shop context\n- ShopController with full CRUD operations\n- 6 isolation tests passed \\(11 assertions\\)\n- Blade views for shop management \\(index, create, show\\)\n- Navigation integration\n\nArchitecture:\n- Users can manage multiple shops\n- Role-based access control \\(owner, admin, member\\)\n- Complete data isolation between users\n- Active shop context management\n- Security policies enforced\n\nTech Stack:\n- Laravel 12.47, PHP 8.3.28\n- MySQL 8.4.3, Node.js 22.21.1\n- Tailwind CSS, Laravel Breeze\n- PHPUnit tests passing\n\nDocumentation:\n- README_PHASE1.md with full technical specs\n- TODOLIST.md updated with Phase 1 completion\n\nNext: Phase 2 - Etsy API Integration \\(OAuth, Listings, Webhooks\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
       "Bash(git commit:*)",
-      "Bash(php test_etsy.php:*)"
+      "Bash(php test_etsy.php:*)",
+      "Bash(npm run dev:*)",
+      "Bash(git pull:*)",
+      "Bash(php:*)",
+      "Bash(node -e:*)"
     ]
   }
 }

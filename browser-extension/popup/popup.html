@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LesRats Importer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">🐀</div>
+      <h1>LesRats</h1>
+      <p class="subtitle">AliExpress Importer</p>
+    </header>
+
+    <!-- État: Pas sur AliExpress -->
+    <div id="state-not-aliexpress" class="state">
+      <div class="icon-large">🔍</div>
+      <p>Naviguez vers une page produit AliExpress pour commencer l'import.</p>
+      <a href="https://fr.aliexpress.com" target="_blank" class="btn btn-secondary">
+        Aller sur AliExpress
+      </a>
+    </div>
+
+    <!-- État: Extraction en cours -->
+    <div id="state-extracting" class="state hidden">
+      <div class="spinner"></div>
+      <p>Extraction des données du produit...</p>
+    </div>
+
+    <!-- État: Produit prêt -->
+    <div id="state-ready" class="state hidden">
+      <div class="product-preview">
+        <img id="product-image" src="" alt="Product">
+        <div class="product-info">
+          <h3 id="product-title"></h3>
+          <p class="price" id="product-price"></p>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="api-url">URL de votre serveur LesRats:</label>
+        <input type="text" id="api-url" placeholder="http://localhost:8000">
+      </div>
+
+      <div class="form-group">
+        <label for="api-token">Token API (optionnel):</label>
+        <input type="password" id="api-token" placeholder="Votre token API">
+      </div>
+
+      <button id="btn-import" class="btn btn-primary">
+        🚀 Importer vers LesRats
+      </button>
+    </div>
+
+    <!-- État: Envoi en cours -->
+    <div id="state-sending" class="state hidden">
+      <div class="spinner"></div>
+      <p>Envoi vers LesRats...</p>
+    </div>
+
+    <!-- État: Succès -->
+    <div id="state-success" class="state hidden">
+      <div class="icon-large">✅</div>
+      <p>Produit importé avec succès!</p>
+      <button id="btn-view-product" class="btn btn-primary">
+        Voir le produit
+      </button>
+      <button id="btn-import-another" class="btn btn-secondary">
+        Importer un autre produit
+      </button>
+    </div>
+
+    <!-- État: Erreur -->
+    <div id="state-error" class="state hidden">
+      <div class="icon-large">❌</div>
+      <p id="error-message">Une erreur est survenue</p>
+      <button id="btn-retry" class="btn btn-secondary">
+        Réessayer
+      </button>
+    </div>
+
+    <footer>
+      <p>v1.0.0 • Made with 🧀 by LesRats</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
