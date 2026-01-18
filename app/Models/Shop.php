@@ -10,6 +10,8 @@ class Shop extends Model
 {
     protected $fillable = [
         'name',
+        'etsy_client_id',
+        'etsy_client_secret',
         'etsy_shop_id',
         'etsy_user_id',
         'etsy_access_token',
@@ -27,6 +29,8 @@ class Shop extends Model
     ];
 
     protected $casts = [
+        'etsy_client_id' => 'encrypted',
+        'etsy_client_secret' => 'encrypted',
         'etsy_token_expires_at' => 'datetime',
         'is_active' => 'boolean',
         'auto_sync_enabled' => 'boolean',
@@ -36,6 +40,8 @@ class Shop extends Model
     ];
 
     protected $hidden = [
+        'etsy_client_id',
+        'etsy_client_secret',
         'etsy_access_token',
         'etsy_refresh_token',
     ];

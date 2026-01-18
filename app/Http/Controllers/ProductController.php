@@ -7,6 +7,7 @@ use App\Models\Shop;
 use App\Services\AliExpressScraperService;
 use App\Services\ContentOptimizerService;
 use App\Services\EtsyApiClient;
+use App\Services\FalImageService;
 use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -582,6 +583,77 @@ class ProductController extends Controller
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Generate AI images for a product using Fal.ai
+     */
+    public function generateAiImages(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $shop = $product->shop;
+        $user = $request->user();
+
+        // Check if AI image generation is configured
+        if (empty($shop->ai_image_prompt)) {
+            return redirect()->back()
+                ->with('error', 'Aucun prompt d\'image IA configure. Configurez le prompt dans les parametres de la boutique.');
+        }
+
+        // Get current images
+        $images = is_string($product->images) ? json_decode($product->images, true) : $product->images;
+        
+        if (empty($images)) {
+            return redirect()->back()
+                ->with('error', 'Ce produit n\'a pas d\'images a transformer.');
+        }
+
+        try {
+            // Get Fal.ai API key
+            $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
+            
+            if (empty($falApiKey)) {
+                return redirect()->back()
+                    ->with('error', 'Cle API Fal.ai non configuree. Ajoutez-la dans votre profil ou dans la configuration.');
+            }
+
+            $falService = new FalImageService($falApiKey);
+            $transformedImages = [];
+            $successCount = 0;
+            
+            // Transform each image (limit to 5)
+            foreach (array_slice($images, 0, 5) as $imageUrl) {
+                $transformedPath = $falService->transformImage($imageUrl, $shop->ai_image_prompt);
+                if ($transformedPath) {
+                    $transformedImages[] = $transformedPath;
+                    $successCount++;
+                } else {
+                    // Keep original image if transformation fails
+                    $transformedImages[] = $imageUrl;
+                }
+            }
+            
+            // Add remaining untransformed images
+            if (count($images) > 5) {
+                $transformedImages = array_merge($transformedImages, array_slice($images, 5));
+            }
+            
+            // Update product with new images
+            $product->update(['images' => $transformedImages]);
+
+            if ($successCount > 0) {
+                return redirect()->back()
+                    ->with('success', "{$successCount} image(s) transformee(s) avec succes par l'IA!");
+            } else {
+                return redirect()->back()
+                    ->with('error', 'Aucune image n\'a pu etre transformee. Verifiez les logs pour plus de details.');
+            }
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erreur lors de la generation des images: ' . $e->getMessage());
         }
     }
 }

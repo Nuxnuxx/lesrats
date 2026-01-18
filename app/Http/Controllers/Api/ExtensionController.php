@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\ContentOptimizerService;
-use App\Services\FalImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -96,8 +95,6 @@ class ExtensionController extends Controller
             // Récupérer les prompts personnalisés de la boutique
             $titlePrompt = $shop->ai_title_prompt;
             $descriptionPrompt = $shop->ai_description_prompt;
-            $imagePrompt = $shop->ai_image_prompt;
-            $imageEnabled = $shop->ai_image_enabled;
 
             // Optimiser le titre et la description avec l'IA
             $originalTitle = $validated['title'];
@@ -130,41 +127,9 @@ class ExtensionController extends Controller
                 $description = $originalDescription;
             }
 
-            // Transformer les images avec Fal.ai si activé et si un prompt est configuré
+            // Images are kept as-is during import
+            // AI image generation can be triggered manually from the product edit page
             $images = $validated['images'] ?? [];
-            if ($imageEnabled && !empty($imagePrompt) && !empty($images)) {
-                try {
-                    // Récupérer la clé API Fal.ai de l'utilisateur ou utiliser celle par défaut
-                    $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
-                    
-                    if ($falApiKey) {
-                        $falService = new FalImageService($falApiKey);
-                        $transformedImages = [];
-                        
-                        // Transformer chaque image (limiter à 5 pour éviter les temps de traitement trop longs)
-                        foreach (array_slice($images, 0, 5) as $imageUrl) {
-                            $transformedPath = $falService->transformImage($imageUrl, $imagePrompt);
-                            if ($transformedPath) {
-                                $transformedImages[] = $transformedPath;
-                            } else {
-                                // Garder l'image originale si la transformation échoue
-                                $transformedImages[] = $imageUrl;
-                            }
-                        }
-                        
-                        // Ajouter les images restantes non transformées
-                        if (count($images) > 5) {
-                            $transformedImages = array_merge($transformedImages, array_slice($images, 5));
-                        }
-                        
-                        $images = $transformedImages;
-                        Log::info('Images transformed with Fal.ai', ['count' => count($transformedImages)]);
-                    }
-                } catch (\Exception $e) {
-                    Log::error('Failed to transform images', ['error' => $e->getMessage()]);
-                    // Garder les images originales en cas d'erreur
-                }
-            }
 
             // Déterminer le stock et les paramètres selon le type de source
             $sourceType = $validated['source_type'] ?? 'aliexpress';
@@ -201,8 +166,7 @@ class ExtensionController extends Controller
 
             Log::info('Product imported via extension', [
                 'product_id' => $product->id,
-                'title' => $product->title,
-                'images_transformed' => $imageEnabled && !empty($imagePrompt)
+                'title' => $product->title
             ]);
 
             return response()->json([
