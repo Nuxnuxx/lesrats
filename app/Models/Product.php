@@ -17,6 +17,7 @@ class Product extends Model
         'cost_price',
         'is_digital',
         'quantity',
+        'low_stock_threshold',
         'sku',
         'etsy_listing_id',
         'etsy_state',
@@ -212,6 +213,25 @@ class Product extends Model
         return $query->where('source_type', $source);
     }
 
+    /**
+     * Scope for products with low stock (excluding digital).
+     */
+    public function scopeLowStock($query)
+    {
+        return $query->where('is_digital', false)
+            ->where('quantity', '<', 999)
+            ->whereRaw('quantity <= low_stock_threshold');
+    }
+
+    /**
+     * Scope for products out of stock.
+     */
+    public function scopeOutOfStock($query)
+    {
+        return $query->where('is_digital', false)
+            ->where('quantity', '<=', 0);
+    }
+
     // ============================================
     // METHODS
     // ============================================
@@ -275,5 +295,35 @@ class Product extends Model
         $this->update([
             'etsy_sync_status' => self::SYNC_STATUS_PENDING,
         ]);
+    }
+
+    /**
+     * Check if stock is low.
+     */
+    public function isLowStock(): bool
+    {
+        if ($this->is_digital || $this->quantity >= 999) {
+            return false;
+        }
+        return $this->quantity <= ($this->low_stock_threshold ?? 5);
+    }
+
+    /**
+     * Check if out of stock.
+     */
+    public function isOutOfStock(): bool
+    {
+        if ($this->is_digital || $this->quantity >= 999) {
+            return false;
+        }
+        return $this->quantity <= 0;
+    }
+
+    /**
+     * Check if has unlimited stock (digital or 999+).
+     */
+    public function hasUnlimitedStock(): bool
+    {
+        return $this->is_digital || $this->quantity >= 999;
     }
 }

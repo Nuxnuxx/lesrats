@@ -109,11 +109,37 @@
                 @endif
             </div>
 
-            @if(!$product->is_active)
-                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                    Inactif
-                </span>
-            @endif
+            <div class="flex flex-col items-end gap-1">
+                @if(!$product->is_active)
+                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                        Inactif
+                    </span>
+                @endif
+
+                {{-- Stock Badge --}}
+                @php
+                    $qty = $product->quantity ?? 999;
+                    $threshold = $product->low_stock_threshold ?? 5;
+                    $isDigital = $product->is_digital ?? false;
+                @endphp
+                @if($isDigital || $qty >= 999)
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                        Illimite
+                    </span>
+                @elseif($qty <= 0)
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
+                        Rupture
+                    </span>
+                @elseif($qty <= $threshold)
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-700">
+                        Stock: {{ $qty }}
+                    </span>
+                @else
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                        Stock: {{ $qty }}
+                    </span>
+                @endif
+            </div>
         </div>
     </div>
 </div>

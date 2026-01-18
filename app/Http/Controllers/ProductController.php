@@ -98,6 +98,8 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'quantity' => 'required|integer|min:0',
+            'low_stock_threshold' => 'nullable|integer|min:0|max:100',
+            'is_digital' => 'boolean',
             'sku' => 'nullable|string|max:255',
             'aliexpress_url' => 'nullable|url',
             'is_active' => 'boolean',
@@ -105,6 +107,8 @@ class ProductController extends Controller
         ]);
 
         $validated['shop_id'] = $shop->id;
+        $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;
+        $validated['is_digital'] = $validated['is_digital'] ?? false;
 
         $product = Product::create($validated);
 
@@ -144,11 +148,14 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'quantity' => 'required|integer|min:0',
+            'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'sku' => 'nullable|string|max:255',
             'aliexpress_url' => 'nullable|url',
             'is_active' => 'boolean',
             'auto_sync' => 'boolean',
         ]);
+
+        $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;
 
         $product->update($validated);
 

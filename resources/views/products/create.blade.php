@@ -413,7 +413,8 @@
                     <input type="hidden" name="images" :value="JSON.stringify(selectedImages)">
                     <input type="hidden" name="license" :value="productData.license || ''">
                     <input type="hidden" name="attribution" :value="productData.attribution || ''">
-                    <input type="hidden" name="quantity" value="999">
+                    <input type="hidden" name="quantity" :value="stockQuantity">
+                    <input type="hidden" name="is_digital" :value="sourceType === 'printables' ? '1' : '0'">
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {{-- Pricing --}}
@@ -466,9 +467,50 @@
                                 </div>
                             </div>
 
+                            {{-- Stock Management --}}
+                            <div class="grid grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Stock</label>
+                                    <div class="relative">
+                                        <input type="number"
+                                               x-model="stockQuantity"
+                                               :disabled="isUnlimitedStock"
+                                               min="0"
+                                               class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500 disabled:bg-gray-100 disabled:text-gray-500">
+                                    </div>
+                                    <p x-show="sourceType === 'printables'" class="mt-1 text-xs text-green-600">
+                                        Produit digital = Stock illimite
+                                    </p>
+                                </div>
+
+                                <div class="flex items-end pb-2">
+                                    <label class="flex items-center" x-show="sourceType !== 'printables'">
+                                        <input type="checkbox"
+                                               x-model="isUnlimitedStock"
+                                               @change="if(isUnlimitedStock) stockQuantity = 999"
+                                               class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
+                                        <span class="ml-2 text-sm text-gray-700">Stock illimite</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {{-- Low Stock Alert --}}
+                            <div x-show="!isUnlimitedStock && sourceType !== 'printables'" class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Alerte stock bas</label>
+                                <div class="flex items-center gap-3">
+                                    <input type="number"
+                                           name="low_stock_threshold"
+                                           x-model="lowStockThreshold"
+                                           min="0"
+                                           max="100"
+                                           class="w-24 rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                                    <span class="text-sm text-gray-500">Notifier quand le stock descend sous ce seuil</span>
+                                </div>
+                            </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">SKU (optionnel)</label>
-                                <input type="text" 
+                                <input type="text"
                                        name="sku"
                                        x-model="productData.sku"
                                        class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
@@ -561,6 +603,9 @@
                 sourceUrl: '',
                 costPrice: 0,
                 sellingPrice: 0,
+                stockQuantity: 10,
+                isUnlimitedStock: false,
+                lowStockThreshold: 5,
                 
                 analyzing: false,
                 analyzed: false,
@@ -601,10 +646,12 @@
                         this.analyzed = true;
                     }
                     
-                    // Set default prices when moving to pricing step
+                    // Set default prices and stock when moving to pricing step
                     if (this.step === 2) {
                         if (this.sourceType === 'printables') {
                             this.costPrice = 0;
+                            this.stockQuantity = 999; // Unlimited for digital
+                            this.isUnlimitedStock = true;
                             if (!this.sellingPrice || this.sellingPrice == 0) {
                                 this.sellingPrice = 4.99;
                             }
