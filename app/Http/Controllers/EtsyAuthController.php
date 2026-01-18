@@ -28,6 +28,12 @@ class EtsyAuthController extends Controller
     {
         Gate::authorize('update', $shop);
 
+        // Check if shop has Etsy credentials configured
+        if (!$shop->etsy_client_id || !$shop->etsy_client_secret) {
+            return redirect()->route('shops.edit', $shop)
+                ->with('error', 'Veuillez d\'abord configurer vos identifiants API Etsy (Client ID et Client Secret).');
+        }
+
         // Generate unique state for CSRF protection
         $state = Str::random(40);
         session([
@@ -36,6 +42,8 @@ class EtsyAuthController extends Controller
             'etsy_oauth_reconnect' => true,
         ]);
 
+        // Use the shop's credentials for OAuth
+        $this->etsyClient->setShop($shop);
         $authUrl = $this->etsyClient->getAuthorizationUrl($state);
 
         return redirect($authUrl);
@@ -61,17 +69,35 @@ class EtsyAuthController extends Controller
         }
 
         try {
-            // Exchange authorization code for access token
-            $tokenData = $this->etsyClient->getAccessToken($request->code);
-
-            // Extract Etsy user ID from token prefix (format: "12345678.xxxxx")
-            $etsyUserId = explode('.', $tokenData['access_token'])[0];
-
             // Determine the context of this OAuth flow
             $isOnboarding = session('etsy_oauth_from_onboarding', false);
             $isAddingNewShop = session('etsy_oauth_add_new_shop', false);
             $isReconnecting = session('etsy_oauth_reconnect', false);
             $existingShopId = session('etsy_oauth_shop_id');
+
+            // Get pending credentials from session (for new shop creation)
+            $pendingClientId = session('etsy_pending_client_id');
+            $pendingClientSecret = session('etsy_pending_client_secret');
+
+            // For reconnecting, use the existing shop's credentials
+            if ($isReconnecting && $existingShopId) {
+                $existingShop = Shop::findOrFail($existingShopId);
+                $this->etsyClient->setShop($existingShop);
+            } 
+            // For new connections, use pending credentials from session
+            elseif ($pendingClientId && $pendingClientSecret) {
+                $tempShop = new Shop([
+                    'etsy_client_id' => $pendingClientId,
+                    'etsy_client_secret' => $pendingClientSecret,
+                ]);
+                $this->etsyClient->setShop($tempShop);
+            }
+
+            // Exchange authorization code for access token
+            $tokenData = $this->etsyClient->getAccessToken($request->code);
+
+            // Extract Etsy user ID from token prefix (format: "12345678.xxxxx")
+            $etsyUserId = explode('.', $tokenData['access_token'])[0];
 
             // Handle reconnecting an existing shop
             if ($isReconnecting && $existingShopId) {
@@ -97,8 +123,8 @@ class EtsyAuthController extends Controller
 
             $etsyShop = $etsyShopsData['results'][0];
 
-            // Create the shop from Etsy data
-            $shop = $this->createShopFromEtsyData($etsyShop, $tokenData, $etsyUserId);
+            // Create the shop from Etsy data (including pending credentials)
+            $shop = $this->createShopFromEtsyData($etsyShop, $tokenData, $etsyUserId, $pendingClientId, $pendingClientSecret);
 
             // Clear session data
             $this->clearOAuthSession();
@@ -158,9 +184,14 @@ class EtsyAuthController extends Controller
     /**
      * Create a new Shop model from Etsy shop data.
      */
-    protected function createShopFromEtsyData(array $etsyShop, array $tokenData, string $etsyUserId): Shop
-    {
-        $shop = Shop::create([
+    protected function createShopFromEtsyData(
+        array $etsyShop, 
+        array $tokenData, 
+        string $etsyUserId,
+        ?string $clientId = null,
+        ?string $clientSecret = null
+    ): Shop {
+        $shopData = [
             'name' => $etsyShop['shop_name'],
             'etsy_shop_id' => $etsyShop['shop_id'],
             'etsy_user_id' => $etsyUserId,
@@ -169,7 +200,17 @@ class EtsyAuthController extends Controller
             'etsy_token_expires_at' => now()->addSeconds($tokenData['expires_in']),
             'currency' => $etsyShop['currency_code'] ?? 'EUR',
             'is_active' => true,
-        ]);
+        ];
+
+        // Include API credentials if provided
+        if ($clientId) {
+            $shopData['etsy_client_id'] = $clientId;
+        }
+        if ($clientSecret) {
+            $shopData['etsy_client_secret'] = $clientSecret;
+        }
+
+        $shop = Shop::create($shopData);
 
         // Create membership for current user as owner
         ShopMembership::create([
@@ -185,6 +226,7 @@ class EtsyAuthController extends Controller
             'shop_id' => $shop->id,
             'etsy_shop_id' => $etsyShop['shop_id'],
             'etsy_user_id' => $etsyUserId,
+            'has_api_credentials' => !empty($clientId),
         ]);
 
         return $shop;
@@ -221,6 +263,8 @@ class EtsyAuthController extends Controller
             'etsy_oauth_add_new_shop',
             'etsy_oauth_reconnect',
             'etsy_code_verifier',
+            'etsy_pending_client_id',
+            'etsy_pending_client_secret',
         ]);
     }
 

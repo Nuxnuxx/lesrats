@@ -86,18 +86,64 @@
             </div>
         @endforelse
 
-        <!-- Add another Etsy shop button -->
+        <!-- Add another Etsy shop -->
         <div class="mt-6 pt-6 border-t border-gray-200">
-            <a href="{{ route('profile.connect-etsy') }}" 
-                class="inline-flex items-center px-4 py-2 bg-orange-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-600 focus:bg-orange-600 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                </svg>
-                Ajouter une autre boutique Etsy
-            </a>
-            <p class="mt-2 text-xs text-gray-500">
-                Connectez un autre compte Etsy pour gérer plusieurs boutiques.
-            </p>
+            <h3 class="text-sm font-medium text-gray-900 mb-4">Ajouter une autre boutique Etsy</h3>
+            
+            <!-- Instructions -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 class="text-xs font-semibold text-blue-800 mb-2">Comment obtenir vos identifiants API Etsy :</h4>
+                <ol class="text-xs text-blue-700 space-y-1 list-decimal list-inside">
+                    <li>Allez sur <a href="https://www.etsy.com/developers/your-apps" target="_blank" class="underline font-medium">etsy.com/developers/your-apps</a></li>
+                    <li>Cliquez sur "Create a new app"</li>
+                    <li>Copiez le "Keystring" (Client ID) et le "Shared secret" (Client Secret)</li>
+                </ol>
+            </div>
+
+            <form method="POST" action="{{ route('profile.connect-etsy') }}" class="space-y-4">
+                @csrf
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Client ID -->
+                    <div>
+                        <x-input-label for="profile_etsy_client_id" value="Etsy Client ID" class="text-xs" />
+                        <x-text-input 
+                            id="profile_etsy_client_id" 
+                            name="etsy_client_id" 
+                            type="text" 
+                            class="mt-1 block w-full text-sm" 
+                            :value="old('etsy_client_id')"
+                            required
+                            placeholder="abc123def456..."
+                        />
+                        <x-input-error :messages="$errors->get('etsy_client_id')" class="mt-1" />
+                    </div>
+
+                    <!-- Client Secret -->
+                    <div>
+                        <x-input-label for="profile_etsy_client_secret" value="Etsy Client Secret" class="text-xs" />
+                        <x-text-input 
+                            id="profile_etsy_client_secret" 
+                            name="etsy_client_secret" 
+                            type="password" 
+                            class="mt-1 block w-full text-sm" 
+                            required
+                            placeholder="xyz789..."
+                        />
+                        <x-input-error :messages="$errors->get('etsy_client_secret')" class="mt-1" />
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <button type="submit" 
+                        class="inline-flex items-center px-4 py-2 bg-orange-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-600 focus:bg-orange-600 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                        </svg>
+                        Connecter une nouvelle boutique
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </section>

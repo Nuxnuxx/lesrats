@@ -147,11 +147,84 @@
                 </form>
             </div>
 
+            {{-- Etsy API Credentials --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Identifiants API Etsy</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    Entrez vos identifiants API Etsy pour connecter cette boutique. 
+                    <a href="https://www.etsy.com/developers/your-apps" target="_blank" class="text-orange-600 hover:underline">Creer une application Etsy</a>
+                </p>
+
+                <form method="POST" action="{{ route('shops.update', $shop) }}">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="name" value="{{ $shop->name }}">
+                    <input type="hidden" name="currency" value="{{ $shop->currency }}">
+                    <input type="hidden" name="is_active" value="{{ $shop->is_active ? '1' : '0' }}">
+                    <input type="hidden" name="auto_sync_enabled" value="{{ $shop->auto_sync_enabled ? '1' : '0' }}">
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="etsy_client_id" class="block text-sm font-medium text-gray-700">Client ID (Keystring)</label>
+                            <input type="text" id="etsy_client_id" name="etsy_client_id"
+                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm"
+                                placeholder="{{ $shop->etsy_client_id ? 'Client ID configure (laisser vide pour garder)' : 'Votre Client ID Etsy' }}">
+                            @if($shop->etsy_client_id)
+                                <p class="mt-1 text-xs text-green-600">
+                                    <svg class="inline w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Client ID configure
+                                </p>
+                            @endif
+                            @error('etsy_client_id')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="etsy_client_secret" class="block text-sm font-medium text-gray-700">Client Secret</label>
+                            <input type="password" id="etsy_client_secret" name="etsy_client_secret"
+                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm"
+                                placeholder="{{ $shop->etsy_client_secret ? 'Client Secret configure (laisser vide pour garder)' : 'Votre Client Secret Etsy' }}">
+                            @if($shop->etsy_client_secret)
+                                <p class="mt-1 text-xs text-green-600">
+                                    <svg class="inline w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Client Secret configure
+                                </p>
+                            @endif
+                            @error('etsy_client_secret')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end mt-6">
+                        <button type="submit" 
+                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                            Enregistrer les identifiants
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             {{-- Etsy Connection --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Connexion Etsy</h3>
 
-                @if($shop->etsy_shop_id)
+                @if(!$shop->etsy_client_id || !$shop->etsy_client_secret)
+                    <div class="text-center py-6">
+                        <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <p class="text-gray-600 mb-2">Identifiants API Etsy requis</p>
+                        <p class="text-sm text-gray-500">Veuillez d'abord configurer vos identifiants API Etsy (Client ID et Client Secret) ci-dessus.</p>
+                    </div>
+                @elseif($shop->etsy_shop_id)
                     <div class="flex items-start space-x-4 mb-4">
                         <div class="flex-shrink-0 w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                             <svg class="w-6 h-6 text-orange-600" viewBox="0 0 24 24" fill="currentColor">

@@ -21,14 +21,14 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 Route::middleware('auth')->group(function () {
     // Onboarding routes
     Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding.index');
-    Route::get('/onboarding/connect-etsy', [OnboardingController::class, 'connectEtsy'])->name('onboarding.connect-etsy');
+    Route::post('/onboarding/connect-etsy', [OnboardingController::class, 'connectEtsy'])->name('onboarding.connect-etsy');
 
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/api-keys', [ProfileController::class, 'updateApiKeys'])->name('profile.update-api-keys');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::get('/profile/connect-etsy', [ProfileController::class, 'connectEtsy'])->name('profile.connect-etsy');
+    Route::post('/profile/connect-etsy', [ProfileController::class, 'connectEtsy'])->name('profile.connect-etsy');
 
     // Shop management routes
     Route::resource('shops', ShopController::class);

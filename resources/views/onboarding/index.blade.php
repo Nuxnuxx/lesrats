@@ -26,7 +26,7 @@
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-8">
-                    <div class="text-center">
+                    <div class="text-center mb-8">
                         <!-- Etsy Logo -->
                         <div class="mx-auto w-24 h-24 bg-orange-100 rounded-full flex items-center justify-center mb-6">
                             <svg class="w-12 h-12 text-orange-500" viewBox="0 0 24 24" fill="currentColor">
@@ -37,49 +37,99 @@
                         <h3 class="text-2xl font-bold text-gray-900 mb-2">
                             Connectez votre boutique Etsy
                         </h3>
-                        <p class="text-gray-600 mb-8 max-w-md mx-auto">
-                            Pour commencer, connectez votre compte Etsy. Votre boutique sera automatiquement importée avec toutes ses informations.
+                        <p class="text-gray-600 max-w-md mx-auto">
+                            Pour commencer, entrez vos identifiants API Etsy puis connectez votre boutique.
                         </p>
+                    </div>
 
-                        <a href="{{ route('onboarding.connect-etsy') }}" 
-                            class="inline-flex items-center px-8 py-4 bg-orange-500 border border-transparent rounded-lg font-semibold text-base text-white uppercase tracking-widest hover:bg-orange-600 focus:bg-orange-600 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition ease-in-out duration-150 shadow-lg">
-                            <svg class="w-6 h-6 mr-3" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22C6.486 22 2 17.514 2 12S6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/>
-                                <path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4z"/>
-                            </svg>
-                            Connecter mon compte Etsy
+                    <!-- Step 1: API Credentials Form -->
+                    <form method="POST" action="{{ route('onboarding.connect-etsy') }}" class="max-w-lg mx-auto">
+                        @csrf
+                        
+                        <div class="space-y-6">
+                            <!-- Instructions -->
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h4 class="text-sm font-semibold text-blue-800 mb-2">Comment obtenir vos identifiants API Etsy :</h4>
+                                <ol class="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                                    <li>Allez sur <a href="https://www.etsy.com/developers/your-apps" target="_blank" class="underline font-medium">etsy.com/developers/your-apps</a></li>
+                                    <li>Cliquez sur "Create a new app"</li>
+                                    <li>Remplissez les informations de l'application</li>
+                                    <li>Copiez le "Keystring" (Client ID) et le "Shared secret" (Client Secret)</li>
+                                </ol>
+                            </div>
+
+                            <!-- Client ID -->
+                            <div>
+                                <x-input-label for="etsy_client_id" value="Etsy Client ID (Keystring)" />
+                                <x-text-input 
+                                    id="etsy_client_id" 
+                                    name="etsy_client_id" 
+                                    type="text" 
+                                    class="mt-1 block w-full" 
+                                    :value="old('etsy_client_id')"
+                                    required
+                                    placeholder="abc123def456..."
+                                />
+                                <x-input-error :messages="$errors->get('etsy_client_id')" class="mt-2" />
+                            </div>
+
+                            <!-- Client Secret -->
+                            <div>
+                                <x-input-label for="etsy_client_secret" value="Etsy Client Secret (Shared secret)" />
+                                <x-text-input 
+                                    id="etsy_client_secret" 
+                                    name="etsy_client_secret" 
+                                    type="password" 
+                                    class="mt-1 block w-full" 
+                                    required
+                                    placeholder="xyz789..."
+                                />
+                                <x-input-error :messages="$errors->get('etsy_client_secret')" class="mt-2" />
+                            </div>
+
+                            <!-- Submit Button -->
+                            <div class="text-center">
+                                <button type="submit" 
+                                    class="inline-flex items-center px-8 py-4 bg-orange-500 border border-transparent rounded-lg font-semibold text-base text-white uppercase tracking-widest hover:bg-orange-600 focus:bg-orange-600 active:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition ease-in-out duration-150 shadow-lg">
+                                    <svg class="w-6 h-6 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 22C6.486 22 2 17.514 2 12S6.486 2 12 2s10 4.486 10 10-4.486 10-10 10z"/>
+                                        <path d="M13 7h-2v4H7v2h4v4h2v-4h4v-2h-4z"/>
+                                    </svg>
+                                    Connecter mon compte Etsy
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="mt-8 pt-6 border-t border-gray-200 text-center">
+                        <h4 class="text-sm font-medium text-gray-700 mb-3">Ce qui va se passer :</h4>
+                        <ul class="text-sm text-gray-500 space-y-2">
+                            <li class="flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Vos identifiants seront sauvegardés de manière sécurisée
+                            </li>
+                            <li class="flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Vous serez redirigé vers Etsy pour autoriser l'accès
+                            </li>
+                            <li class="flex items-center justify-center">
+                                <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Votre boutique sera automatiquement créée
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-6 text-xs text-gray-400 text-center">
+                        Vous n'avez pas encore de boutique Etsy ?
+                        <a href="https://www.etsy.com/sell" target="_blank" class="text-orange-500 hover:text-orange-600 underline">
+                            Créez-en une ici
                         </a>
-
-                        <div class="mt-8 pt-6 border-t border-gray-200">
-                            <h4 class="text-sm font-medium text-gray-700 mb-3">Ce qui va se passer :</h4>
-                            <ul class="text-sm text-gray-500 space-y-2">
-                                <li class="flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Vous serez redirigé vers Etsy pour autoriser l'accès
-                                </li>
-                                <li class="flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Votre boutique sera automatiquement créée
-                                </li>
-                                <li class="flex items-center justify-center">
-                                    <svg class="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Vous pourrez gérer vos produits depuis l'application
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="mt-6 text-xs text-gray-400">
-                            Vous n'avez pas encore de boutique Etsy ?
-                            <a href="https://www.etsy.com/sell" target="_blank" class="text-orange-500 hover:text-orange-600 underline">
-                                Créez-en une ici
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>

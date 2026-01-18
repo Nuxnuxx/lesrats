@@ -38,14 +38,44 @@ class EtsyApiClient
     }
 
     /**
+     * Get the client ID for API requests.
+     * Uses shop credentials if available, otherwise falls back to config.
+     */
+    protected function getClientId(): ?string
+    {
+        if ($this->shop && $this->shop->etsy_client_id) {
+            return $this->shop->etsy_client_id;
+        }
+        return config('etsy.client_id');
+    }
+
+    /**
+     * Get the client secret for OAuth.
+     * Uses shop credentials if available, otherwise falls back to config.
+     */
+    protected function getClientSecret(): ?string
+    {
+        if ($this->shop && $this->shop->etsy_client_secret) {
+            return $this->shop->etsy_client_secret;
+        }
+        return config('etsy.client_secret');
+    }
+
+    /**
      * Get OAuth authorization URL.
      */
     public function getAuthorizationUrl(string $state): string
     {
+        $clientId = $this->getClientId();
+        
+        if (!$clientId) {
+            throw new \Exception('Etsy client_id not configured. Please add your Etsy API credentials in shop settings.');
+        }
+
         // In mock mode, redirect to local mock authorization page
         if ($this->isMockMode()) {
             $params = http_build_query([
-                'client_id' => config('etsy.client_id') ?: 'mock_client_id',
+                'client_id' => $clientId,
                 'redirect_uri' => url('/etsy/callback'),
                 'scope' => implode(' ', config('etsy.scopes')),
                 'state' => $state,
@@ -56,7 +86,7 @@ class EtsyApiClient
 
         $params = http_build_query([
             'response_type' => 'code',
-            'client_id' => config('etsy.client_id'),
+            'client_id' => $clientId,
             'redirect_uri' => config('etsy.redirect_uri'),
             'scope' => implode(' ', config('etsy.scopes')),
             'state' => $state,
@@ -77,10 +107,17 @@ class EtsyApiClient
             return $this->getMockAccessToken($code);
         }
 
+        $clientId = $this->getClientId();
+        $clientSecret = $this->getClientSecret();
+
+        if (!$clientId || !$clientSecret) {
+            throw new \Exception('Etsy API credentials not configured. Please add your Etsy client_id and client_secret in shop settings.');
+        }
+
         $response = Http::asForm()->post($this->oauthUrl . '/token', [
             'grant_type' => 'authorization_code',
-            'client_id' => config('etsy.client_id'),
-            'client_secret' => config('etsy.client_secret'),
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
             'redirect_uri' => config('etsy.redirect_uri'),
             'code' => $code,
             'code_verifier' => session('etsy_code_verifier'),
@@ -127,10 +164,17 @@ class EtsyApiClient
             return $this->getMockRefreshedToken($refreshToken);
         }
 
+        $clientId = $this->getClientId();
+        $clientSecret = $this->getClientSecret();
+
+        if (!$clientId || !$clientSecret) {
+            throw new \Exception('Etsy API credentials not configured for token refresh.');
+        }
+
         $response = Http::asForm()->post($this->oauthUrl . '/token', [
             'grant_type' => 'refresh_token',
-            'client_id' => config('etsy.client_id'),
-            'client_secret' => config('etsy.client_secret'),
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
             'refresh_token' => $refreshToken,
         ]);
 
@@ -170,6 +214,11 @@ class EtsyApiClient
             throw new \Exception('Shop not authenticated with Etsy');
         }
 
+        $clientId = $this->getClientId();
+        if (!$clientId) {
+            throw new \Exception('Etsy client_id not configured for this shop.');
+        }
+
         // Check if token is expired and refresh if needed
         if ($this->shop->etsy_token_expires_at && $this->shop->etsy_token_expires_at->isPast()) {
             $this->refreshShopToken();
@@ -182,7 +231,7 @@ class EtsyApiClient
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $this->shop->etsy_access_token,
-            'x-api-key' => config('etsy.client_id'),
+            'x-api-key' => $clientId,
         ])->$method($url, $data);
 
         if ($response->failed()) {
@@ -312,11 +361,16 @@ class EtsyApiClient
             return $this->getMockUserShops();
         }
 
+        $clientId = $this->getClientId();
+        if (!$clientId) {
+            throw new \Exception('Etsy client_id not configured.');
+        }
+
         $url = $this->apiUrl . "/application/users/{$userId}/shops";
 
         $response = Http::withHeaders([
             'Authorization' => 'Bearer ' . $accessToken,
-            'x-api-key' => config('etsy.client_id'),
+            'x-api-key' => $clientId,
         ])->get($url);
 
         if ($response->failed()) {

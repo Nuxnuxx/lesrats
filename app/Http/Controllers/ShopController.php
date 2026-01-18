@@ -137,12 +137,22 @@ class ShopController extends Controller
             'ai_description_prompt' => 'nullable|string|max:2000',
             'ai_image_prompt' => 'nullable|string|max:2000',
             'ai_image_enabled' => 'boolean',
+            'etsy_client_id' => 'nullable|string|max:500',
+            'etsy_client_secret' => 'nullable|string|max:500',
         ]);
 
         // Handle unchecked checkboxes
         $validated['is_active'] = $request->boolean('is_active');
         $validated['auto_sync_enabled'] = $request->boolean('auto_sync_enabled');
         $validated['ai_image_enabled'] = $request->boolean('ai_image_enabled');
+
+        // Only update Etsy credentials if new values provided (don't overwrite with empty)
+        if (empty($validated['etsy_client_id'])) {
+            unset($validated['etsy_client_id']);
+        }
+        if (empty($validated['etsy_client_secret'])) {
+            unset($validated['etsy_client_secret']);
+        }
 
         $shop->update($validated);
 
