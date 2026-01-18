@@ -20,7 +20,6 @@ class OrderItem extends Model
         'price',
         'cost',
         'profit',
-        'sku',
         'source_type',
         'source_url',
         'is_digital',
@@ -143,7 +142,6 @@ class OrderItem extends Model
     {
         $this->product_id = $product->id;
         $this->title = $product->title;
-        $this->sku = $product->sku;
         $this->cost = $product->cost_price ?? 0;
         $this->source_type = $product->source_type;
         $this->source_url = $product->source_url;

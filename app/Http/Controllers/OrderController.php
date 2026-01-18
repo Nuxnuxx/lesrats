@@ -236,7 +236,6 @@ class OrderController extends Controller
             'price' => $price,
             'cost' => $cost,
             'profit' => $price - $cost,
-            'sku' => $product?->sku,
             'source_type' => $product?->source_type,
             'source_url' => $product?->source_url,
             'is_digital' => $product?->is_digital ?? false,

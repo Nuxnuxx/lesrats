@@ -133,15 +133,20 @@ class ShopController extends Controller
             'currency' => 'required|string|size:3',
             'is_active' => 'boolean',
             'auto_sync_enabled' => 'boolean',
+            'ai_title_prompt' => 'nullable|string|max:2000',
+            'ai_description_prompt' => 'nullable|string|max:2000',
+            'ai_image_prompt' => 'nullable|string|max:2000',
+            'ai_image_enabled' => 'boolean',
         ]);
 
         // Handle unchecked checkboxes
         $validated['is_active'] = $request->boolean('is_active');
         $validated['auto_sync_enabled'] = $request->boolean('auto_sync_enabled');
+        $validated['ai_image_enabled'] = $request->boolean('ai_image_enabled');
 
         $shop->update($validated);
 
-        return redirect()->route('shops.show', $shop)
+        return redirect()->route('shops.edit', $shop)
             ->with('success', 'Parametres mis a jour avec succes !');
     }
 

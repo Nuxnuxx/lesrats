@@ -70,15 +70,7 @@
                                     @enderror
                                 </div>
 
-                                <div>
-                                    <label for="sku" class="block text-sm font-medium text-gray-700">SKU (optionnel)</label>
-                                    <input type="text" name="sku" id="sku" value="{{ old('sku', $product->sku) }}"
-                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-                                        placeholder="REF-001">
-                                    @error('sku')
-                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
+
                             </div>
                         </div>
 

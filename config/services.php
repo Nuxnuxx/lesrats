@@ -45,4 +45,8 @@ return [
         'base_url' => 'https://api.firecrawl.dev/v2',
     ],
 
+    'fal' => [
+        'api_key' => env('FAL_API_KEY'),
+    ],
+
 ];

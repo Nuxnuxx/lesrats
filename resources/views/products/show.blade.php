@@ -34,10 +34,6 @@
                             <dd class="mt-1 text-sm text-gray-900">{{ $product->title }}</dd>
                         </div>
                         <div>
-                            <dt class="text-sm font-medium text-gray-500">SKU</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $product->sku ?? 'N/A' }}</dd>
-                        </div>
-                        <div>
                             <dt class="text-sm font-medium text-gray-500">Prix</dt>
                             <dd class="mt-1 text-sm text-gray-900">{{ number_format($product->price, 2) }} {{ $product->shop->currency }}</dd>
                         </div>

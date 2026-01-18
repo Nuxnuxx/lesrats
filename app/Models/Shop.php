@@ -18,6 +18,10 @@ class Shop extends Model
         'currency',
         'is_active',
         'auto_sync_enabled',
+        'ai_title_prompt',
+        'ai_description_prompt',
+        'ai_image_prompt',
+        'ai_image_enabled',
         'total_revenue',
         'total_orders',
     ];
@@ -26,6 +30,7 @@ class Shop extends Model
         'etsy_token_expires_at' => 'datetime',
         'is_active' => 'boolean',
         'auto_sync_enabled' => 'boolean',
+        'ai_image_enabled' => 'boolean',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
     ];

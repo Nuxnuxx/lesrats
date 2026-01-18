@@ -18,8 +18,12 @@ class ContentOptimizerService
 
     /**
      * Optimize product title for Etsy.
+     *
+     * @param string $originalTitle The original product title
+     * @param string|null $context Context like '3D Print' for STL files
+     * @param string|null $customPrompt Custom prompt from shop settings (appended to system prompt)
      */
-    public function optimizeTitle(string $originalTitle, ?string $context = null): string
+    public function optimizeTitle(string $originalTitle, ?string $context = null, ?string $customPrompt = null): string
     {
         if (!$this->apiKey) {
             return $this->fallbackOptimizeTitle($originalTitle);
@@ -65,6 +69,11 @@ class ContentOptimizerService
                     . "Output only the title, no explanations or quotes.";
             }
 
+            // Append custom prompt if provided
+            if (!empty($customPrompt)) {
+                $systemPrompt .= "\n\nADDITIONAL SHOP INSTRUCTIONS:\n" . $customPrompt;
+            }
+
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->apiKey,
                 'Content-Type' => 'application/json',
@@ -96,8 +105,14 @@ class ContentOptimizerService
 
     /**
      * Optimize product description for Etsy.
+     *
+     * @param string $originalTitle The original product title
+     * @param string|null $originalDescription The original description (if any)
+     * @param array $specs Product specifications
+     * @param bool $is3DPrint Whether this is a 3D print/STL file
+     * @param string|null $customPrompt Custom prompt from shop settings (appended to system prompt)
      */
-    public function optimizeDescription(string $originalTitle, ?string $originalDescription = null, array $specs = [], bool $is3DPrint = false): string
+    public function optimizeDescription(string $originalTitle, ?string $originalDescription = null, array $specs = [], bool $is3DPrint = false, ?string $customPrompt = null): string
     {
         if (!$this->apiKey) {
             return $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs, $is3DPrint);
@@ -157,6 +172,11 @@ class ContentOptimizerService
                     . "Use a few emojis to make it attractive. Always write in English. "
                     . "CRITICAL: Base the description on the ACTUAL product - never write generic content. "
                     . "Focus on the real product keywords and features.";
+            }
+
+            // Append custom prompt if provided
+            if (!empty($customPrompt)) {
+                $systemPrompt .= "\n\nADDITIONAL SHOP INSTRUCTIONS:\n" . $customPrompt;
             }
 
             $response = Http::withHeaders([

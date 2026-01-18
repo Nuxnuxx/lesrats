@@ -41,8 +41,7 @@ class ProductController extends Controller
         // Search filter
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('title', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                $q->where('title', 'like', "%{$search}%");
             });
         }
 
@@ -100,7 +99,6 @@ class ProductController extends Controller
             'quantity' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'is_digital' => 'boolean',
-            'sku' => 'nullable|string|max:255',
             'aliexpress_url' => 'nullable|url',
             'is_active' => 'boolean',
             'auto_sync' => 'boolean',
@@ -149,7 +147,6 @@ class ProductController extends Controller
             'price' => 'required|numeric|min:0',
             'quantity' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
-            'sku' => 'nullable|string|max:255',
             'aliexpress_url' => 'nullable|url',
             'is_active' => 'boolean',
             'auto_sync' => 'boolean',
@@ -367,7 +364,6 @@ class ProductController extends Controller
                         'description' => $listing['description'] ?? '',
                         'price' => $listing['price']['amount'] / $listing['price']['divisor'],
                         'quantity' => $listing['quantity'],
-                        'sku' => $listing['sku'][0] ?? null,
                         'etsy_state' => $listing['state'],
                         'etsy_synced_at' => now(),
                         'is_active' => $listing['state'] === 'active',

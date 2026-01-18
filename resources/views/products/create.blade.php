@@ -508,15 +508,6 @@
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">SKU (optionnel)</label>
-                                <input type="text"
-                                       name="sku"
-                                       x-model="productData.sku"
-                                       class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
-                                       placeholder="REF-001">
-                            </div>
-
                             <div class="mt-6 space-y-4">
                                 <label class="flex items-center">
                                     <input type="checkbox" name="is_active" value="1" checked
@@ -624,8 +615,7 @@
                     images: [],
                     license: '',
                     attribution: '',
-                    author: '',
-                    sku: ''
+                    author: ''
                 },
                 
                 selectedImages: [],

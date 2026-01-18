@@ -95,10 +95,6 @@
             </h3>
         </a>
 
-        @if($product->sku)
-            <p class="text-xs text-gray-400 mt-1">SKU: {{ $product->sku }}</p>
-        @endif
-
         <div class="mt-3 flex items-center justify-between">
             <div>
                 <p class="text-lg font-bold text-gray-900">{{ number_format($product->price, 2) }} {{ $product->shop->currency }}</p>

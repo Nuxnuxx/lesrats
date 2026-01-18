@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'onboarding_completed',
+        'fal_api_key',
     ];
 
     /**
@@ -33,6 +34,7 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'fal_api_key',
     ];
 
     /**
@@ -46,6 +48,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'onboarding_completed' => 'boolean',
+            'fal_api_key' => 'encrypted',
         ];
     }
 

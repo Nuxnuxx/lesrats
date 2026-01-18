@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\ContentOptimizerService;
+use App\Services\FalImageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -40,15 +41,21 @@ class ExtensionController extends Controller
         try {
             // Trouver la boutique par défaut ou la première boutique
             $shop = null;
+            $user = null;
 
             // Si l'utilisateur est authentifié
             if (Auth::check()) {
-                $shop = Auth::user()->shops()->first();
+                $user = Auth::user();
+                $shop = $user->shops()->first();
             }
 
             // Sinon, utiliser la première boutique disponible
             if (!$shop) {
                 $shop = Shop::first();
+                // Essayer de récupérer un utilisateur lié à cette boutique
+                if ($shop) {
+                    $user = $shop->users()->first();
+                }
             }
 
             if (!$shop) {
@@ -86,6 +93,12 @@ class ExtensionController extends Controller
             $costPrice = $validated['price'] ?? 0;
             $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
 
+            // Récupérer les prompts personnalisés de la boutique
+            $titlePrompt = $shop->ai_title_prompt;
+            $descriptionPrompt = $shop->ai_description_prompt;
+            $imagePrompt = $shop->ai_image_prompt;
+            $imageEnabled = $shop->ai_image_enabled;
+
             // Optimiser le titre et la description avec l'IA
             $originalTitle = $validated['title'];
             $originalDescription = $validated['description'] ?? '';
@@ -94,17 +107,63 @@ class ExtensionController extends Controller
             try {
                 $optimizer = new ContentOptimizerService();
                 
-                // Optimiser le titre (traduction en anglais + SEO)
-                $optimizedTitle = $optimizer->optimizeTitle($originalTitle, $is3DPrint ? '3D Print' : null);
+                // Optimiser le titre (traduction en anglais + SEO) avec le prompt personnalisé
+                $optimizedTitle = $optimizer->optimizeTitle(
+                    $originalTitle, 
+                    $is3DPrint ? '3D Print' : null,
+                    $titlePrompt
+                );
                 Log::info('Optimized title', ['original' => $originalTitle, 'optimized' => $optimizedTitle]);
                 
-                // Générer une description optimisée
-                $description = $optimizer->optimizeDescription($originalTitle, $originalDescription, $validated['specifications'] ?? [], $is3DPrint);
+                // Générer une description optimisée avec le prompt personnalisé
+                $description = $optimizer->optimizeDescription(
+                    $originalTitle, 
+                    $originalDescription, 
+                    $validated['specifications'] ?? [], 
+                    $is3DPrint,
+                    $descriptionPrompt
+                );
                 Log::info('Generated description from title', ['title' => $originalTitle]);
             } catch (\Exception $e) {
                 Log::error('Failed to optimize content', ['error' => $e->getMessage()]);
                 $optimizedTitle = $originalTitle;
                 $description = $originalDescription;
+            }
+
+            // Transformer les images avec Fal.ai si activé et si un prompt est configuré
+            $images = $validated['images'] ?? [];
+            if ($imageEnabled && !empty($imagePrompt) && !empty($images)) {
+                try {
+                    // Récupérer la clé API Fal.ai de l'utilisateur ou utiliser celle par défaut
+                    $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
+                    
+                    if ($falApiKey) {
+                        $falService = new FalImageService($falApiKey);
+                        $transformedImages = [];
+                        
+                        // Transformer chaque image (limiter à 5 pour éviter les temps de traitement trop longs)
+                        foreach (array_slice($images, 0, 5) as $imageUrl) {
+                            $transformedPath = $falService->transformImage($imageUrl, $imagePrompt);
+                            if ($transformedPath) {
+                                $transformedImages[] = $transformedPath;
+                            } else {
+                                // Garder l'image originale si la transformation échoue
+                                $transformedImages[] = $imageUrl;
+                            }
+                        }
+                        
+                        // Ajouter les images restantes non transformées
+                        if (count($images) > 5) {
+                            $transformedImages = array_merge($transformedImages, array_slice($images, 5));
+                        }
+                        
+                        $images = $transformedImages;
+                        Log::info('Images transformed with Fal.ai', ['count' => count($transformedImages)]);
+                    }
+                } catch (\Exception $e) {
+                    Log::error('Failed to transform images', ['error' => $e->getMessage()]);
+                    // Garder les images originales en cas d'erreur
+                }
             }
 
             // Déterminer le stock et les paramètres selon le type de source
@@ -128,7 +187,7 @@ class ExtensionController extends Controller
                 'description' => $description,
                 'price' => $sellingPrice,
                 'cost_price' => $costPrice,
-                'images' => $validated['images'] ?? [],
+                'images' => $images,
                 'source_url' => $validated['source_url'],
                 'source_type' => $sourceType,
                 'aliexpress_product_id' => $validated['aliexpress_product_id'] ?? null,
@@ -142,7 +201,8 @@ class ExtensionController extends Controller
 
             Log::info('Product imported via extension', [
                 'product_id' => $product->id,
-                'title' => $product->title
+                'title' => $product->title,
+                'images_transformed' => $imageEnabled && !empty($imagePrompt)
             ]);
 
             return response()->json([

@@ -192,9 +192,6 @@
                                     <p class="text-sm font-medium text-gray-900">{{ $item->title }}</p>
                                     <p class="text-xs text-gray-500 mt-1">
                                         Qty: {{ $item->quantity }}
-                                        @if($item->sku)
-                                            | SKU: {{ $item->sku }}
-                                        @endif
                                     </p>
                                     
                                     {{-- Source link for dropship --}}

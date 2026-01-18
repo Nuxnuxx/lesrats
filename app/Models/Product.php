@@ -18,7 +18,6 @@ class Product extends Model
         'is_digital',
         'quantity',
         'low_stock_threshold',
-        'sku',
         'etsy_listing_id',
         'etsy_state',
         'etsy_synced_at',

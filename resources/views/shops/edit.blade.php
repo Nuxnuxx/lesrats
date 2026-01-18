@@ -76,6 +76,77 @@
                 </form>
             </div>
 
+            {{-- AI Settings --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Parametres IA</h3>
+                <p class="text-sm text-gray-500 mb-4">Personnalisez les prompts utilises pour generer les titres, descriptions et images de vos produits lors de l'import.</p>
+
+                <form method="POST" action="{{ route('shops.update', $shop) }}">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="name" value="{{ $shop->name }}">
+                    <input type="hidden" name="currency" value="{{ $shop->currency }}">
+                    <input type="hidden" name="is_active" value="{{ $shop->is_active ? '1' : '0' }}">
+                    <input type="hidden" name="auto_sync_enabled" value="{{ $shop->auto_sync_enabled ? '1' : '0' }}">
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="ai_title_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les titres</label>
+                            <textarea id="ai_title_prompt" name="ai_title_prompt" rows="3"
+                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
+                                placeholder="Ex: This shop sells vintage jewelry. Make titles elegant and romantic. Always mention the material (gold, silver, etc.)">{{ old('ai_title_prompt', $shop->ai_title_prompt) }}</textarea>
+                            <p class="mt-1 text-xs text-gray-500">Instructions supplementaires pour la generation des titres de produits.</p>
+                            @error('ai_title_prompt')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="ai_description_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les descriptions</label>
+                            <textarea id="ai_description_prompt" name="ai_description_prompt" rows="4"
+                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
+                                placeholder="Ex: Write descriptions for a luxury brand targeting women 25-45. Mention handcrafted quality and sustainability. Include care instructions.">{{ old('ai_description_prompt', $shop->ai_description_prompt) }}</textarea>
+                            <p class="mt-1 text-xs text-gray-500">Instructions supplementaires pour la generation des descriptions de produits.</p>
+                            @error('ai_description_prompt')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div class="pt-4 border-t border-gray-200">
+                            <div class="flex items-center justify-between mb-3">
+                                <div>
+                                    <label for="ai_image_enabled" class="text-sm font-medium text-gray-700">Transformation d'images IA</label>
+                                    <p class="text-xs text-gray-500">Transforme les images des produits lors de l'import (necessite une cle API Fal.ai)</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" name="ai_image_enabled" value="1" {{ old('ai_image_enabled', $shop->ai_image_enabled) ? 'checked' : '' }}
+                                        class="sr-only peer" id="ai_image_enabled">
+                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+                                </label>
+                            </div>
+
+                            <div>
+                                <label for="ai_image_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les images</label>
+                                <textarea id="ai_image_prompt" name="ai_image_prompt" rows="3"
+                                    class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
+                                    placeholder="Ex: Professional product photography on pure white background, studio lighting, high quality, commercial photography style">{{ old('ai_image_prompt', $shop->ai_image_prompt) }}</textarea>
+                                <p class="mt-1 text-xs text-gray-500">Style de transformation pour les images (img2img avec Fal.ai).</p>
+                                @error('ai_image_prompt')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end mt-6">
+                        <button type="submit" 
+                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                            Enregistrer les prompts IA
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             {{-- Etsy Connection --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Connexion Etsy</h3>

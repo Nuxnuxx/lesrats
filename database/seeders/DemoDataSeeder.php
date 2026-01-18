@@ -140,7 +140,6 @@ class DemoDataSeeder extends Seeder
                     'price' => $productData['price'],
                     'cost_price' => $productData['cost_price'] ?? 0,
                     'quantity' => $productData['quantity'] ?? 999,
-                    'sku' => strtoupper(substr(md5($productData['title']), 0, 8)),
                     'source_type' => $productData['source_type'],
                     'source_url' => $productData['source_type'] === 'aliexpress' 
                         ? 'https://www.aliexpress.com/item/' . rand(1000000000, 9999999999) . '.html'
@@ -249,7 +248,6 @@ class DemoDataSeeder extends Seeder
                     'price' => $price,
                     'cost' => $cost,
                     'profit' => $profit,
-                    'sku' => $product->sku,
                     'source_type' => $product->source_type,
                     'source_url' => $product->source_url,
                     'is_digital' => $product->is_digital,
