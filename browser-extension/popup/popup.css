@@ -210,3 +210,41 @@ footer p {
 #state-success .icon-large {
   color: #22c55e;
 }
+
+/* Shortcut info */
+.shortcut-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 15px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.shortcut-label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+kbd {
+  background: rgba(249, 115, 22, 0.2);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: monospace;
+  font-size: 11px;
+  color: #f97316;
+}
+
+.configure-link {
+  color: rgba(255, 255, 255, 0.5);
+  text-decoration: none;
+  font-size: 11px;
+}
+
+.configure-link:hover {
+  color: #f97316;
+  text-decoration: underline;
+}

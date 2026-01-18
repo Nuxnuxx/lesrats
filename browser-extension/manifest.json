@@ -1,12 +1,21 @@
 {
   "manifest_version": 3,
   "name": "LesRats - AliExpress Importer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Importez facilement des produits AliExpress vers votre boutique LesRats",
   "permissions": [
     "activeTab",
     "storage"
   ],
+  "commands": {
+    "quick-import": {
+      "suggested_key": {
+        "default": "Alt+Shift+I",
+        "mac": "Alt+Shift+I"
+      },
+      "description": "Importer rapidement le produit vers LesRats"
+    }
+  },
   "host_permissions": [
     "https://*.aliexpress.com/*",
     "https://fr.aliexpress.com/*",

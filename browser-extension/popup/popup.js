@@ -34,6 +34,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('api-url').addEventListener('change', saveSettings);
   document.getElementById('api-token').addEventListener('change', saveSettings);
 
+  // Configurer le raccourci clavier
+  document.getElementById('configure-shortcut').addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  });
+
   // Vérifier si on est sur AliExpress et extraire le produit
   checkCurrentPage();
 });

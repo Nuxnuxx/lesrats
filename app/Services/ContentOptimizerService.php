@@ -174,14 +174,14 @@ class ContentOptimizerService
 
             if ($response->successful()) {
                 $result = $response->json();
-                return trim($result['choices'][0]['message']['content'] ?? $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs));
+                return trim($result['choices'][0]['message']['content'] ?? $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs, $is3DPrint));
             }
 
-            return $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs);
+            return $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs, $is3DPrint);
 
         } catch (\Exception $e) {
             Log::error('Groq description optimization failed', ['error' => $e->getMessage()]);
-            return $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs);
+            return $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs, $is3DPrint);
         }
     }
 

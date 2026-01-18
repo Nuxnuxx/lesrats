@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Services\ContentOptimizerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -85,22 +86,57 @@ class ExtensionController extends Controller
             $costPrice = $validated['price'] ?? 0;
             $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
 
+            // Optimiser le titre et la description avec l'IA
+            $originalTitle = $validated['title'];
+            $originalDescription = $validated['description'] ?? '';
+            $is3DPrint = ($validated['source_type'] ?? 'aliexpress') === 'printables';
+            
+            try {
+                $optimizer = new ContentOptimizerService();
+                
+                // Optimiser le titre (traduction en anglais + SEO)
+                $optimizedTitle = $optimizer->optimizeTitle($originalTitle, $is3DPrint ? '3D Print' : null);
+                Log::info('Optimized title', ['original' => $originalTitle, 'optimized' => $optimizedTitle]);
+                
+                // Générer une description optimisée
+                $description = $optimizer->optimizeDescription($originalTitle, $originalDescription, $validated['specifications'] ?? [], $is3DPrint);
+                Log::info('Generated description from title', ['title' => $originalTitle]);
+            } catch (\Exception $e) {
+                Log::error('Failed to optimize content', ['error' => $e->getMessage()]);
+                $optimizedTitle = $originalTitle;
+                $description = $originalDescription;
+            }
+
+            // Déterminer le stock et les paramètres selon le type de source
+            $sourceType = $validated['source_type'] ?? 'aliexpress';
+            $isDigital = $sourceType === 'printables';
+            
+            if ($isDigital) {
+                // Produit digital (STL) = stock illimité
+                $quantity = 999;
+                $lowStockThreshold = 5;
+            } else {
+                // Produit physique (AliExpress) = stock limité par défaut
+                $quantity = 5;
+                $lowStockThreshold = 1;
+            }
+
             // Créer le produit
             $product = Product::create([
                 'shop_id' => $shop->id,
-                'title' => $validated['title'],
-                'description' => $validated['description'] ?? '',
+                'title' => $optimizedTitle,
+                'description' => $description,
                 'price' => $sellingPrice,
                 'cost_price' => $costPrice,
                 'images' => $validated['images'] ?? [],
                 'source_url' => $validated['source_url'],
-                'source_type' => $validated['source_type'] ?? 'aliexpress',
+                'source_type' => $sourceType,
                 'aliexpress_product_id' => $validated['aliexpress_product_id'] ?? null,
                 'aliexpress_url' => $validated['source_url'],
                 'is_active' => true,
-                'quantity' => 999, // Stock illimité par défaut (dropshipping)
-                'is_digital' => false,
-                'low_stock_threshold' => 5,
+                'quantity' => $quantity,
+                'is_digital' => $isDigital,
+                'low_stock_threshold' => $lowStockThreshold,
                 'etsy_sync_status' => Product::SYNC_STATUS_NOT_SYNCED,
             ]);
 
