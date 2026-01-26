@@ -15,42 +15,13 @@
                 </div>
             </div>
             <div class="flex items-center space-x-3">
-                @if($product->etsy_listing_id)
-                    <a href="https://www.etsy.com/listing/{{ $product->etsy_listing_id }}" 
-                       target="_blank"
-                       class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-gray-800">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                        </svg>
-                        Voir sur Etsy
-                    </a>
-                @endif
-                <x-ui.status-badge :status="$product->etsy_sync_status ?? 'not_synced'" type="sync" />
+                <x-ui.source-badge :type="$product->source_type ?? 'manual'" />
             </div>
         </div>
     </x-slot>
 
     <div class="py-8">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
-
-            {{-- Mode manuel notice --}}
-            @if($product->shop->mode === 'manual')
-                <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
-                    <p class="text-sm text-blue-700">
-                        <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        Mode manuel : Utilisez les boutons 📋 pour copier chaque champ dans Etsy
-                    </p>
-                </div>
-            @endif
-
-            {{-- Sync Error Alert --}}
-            @if($product->etsy_sync_status === 'error' && $product->etsy_sync_error)
-                <x-ui.flash-message type="error" :autoDismiss="false">
-                    <strong>Erreur de synchronisation Etsy:</strong> {{ $product->etsy_sync_error }}
-                </x-ui.flash-message>
-            @endif
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {{-- Main Form --}}
@@ -147,27 +118,85 @@
                                 </div>
                             </div>
 
-                            {{-- Profit Calculator --}}
+                            {{-- Margin Input --}}
                             @php
-                                $profit = $product->price - ($product->cost_price ?? 0);
-                                $margin = $product->price > 0 ? ($profit / $product->price) * 100 : 0;
+                                $initialProfit = $product->price - ($product->cost_price ?? 0);
+                                $initialMargin = $product->price > 0 ? (($product->price - ($product->cost_price ?? 0)) / $product->price) * 100 : 0;
                             @endphp
-                            <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm text-gray-600">Profit par vente</span>
-                                    <span class="text-lg font-bold {{ $profit >= 0 ? 'text-green-600' : 'text-red-600' }}">
-                                        {{ $profit >= 0 ? '+' : '' }}{{ number_format($profit, 2) }} {{ $product->shop->currency }}
-                                    </span>
+                            <div class="mt-4" x-data="{
+                                price: {{ $product->price }},
+                                cost: {{ $product->cost_price ?? 0 }},
+                                margin: {{ $initialMargin }},
+                                profit: {{ $initialProfit }},
+                                
+                                updateFromPrice() {
+                                    this.profit = this.price - this.cost;
+                                    this.margin = this.price > 0 ? ((this.price - this.cost) / this.price) * 100 : 0;
+                                },
+                                
+                                updateFromMargin() {
+                                    if (this.margin < 100) {
+                                        this.price = (this.cost * 100) / (100 - this.margin);
+                                        this.price = Math.round(this.price * 100) / 100;
+                                        this.profit = this.price - this.cost;
+                                        document.getElementById('price').value = this.price.toFixed(2);
+                                    }
+                                },
+                                
+                                setMargin(val) {
+                                    this.margin = val;
+                                    this.updateFromMargin();
+                                }
+                            }" x-init="
+                                document.getElementById('price').addEventListener('input', (e) => { price = parseFloat(e.target.value) || 0; updateFromPrice(); });
+                                document.getElementById('cost_price').addEventListener('input', (e) => { cost = parseFloat(e.target.value) || 0; updateFromPrice(); });
+                            ">
+                                <label for="margin_input" class="block text-sm font-medium text-gray-700">Marge souhaitee (%)</label>
+                                <div class="mt-1 flex items-center gap-3">
+                                    <div class="relative flex-1">
+                                        <input type="number" id="margin_input" step="1" min="0" max="100"
+                                               x-model.number="margin"
+                                               @input="updateFromMargin()"
+                                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-8">
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 text-sm">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex gap-1">
+                                        <button type="button" @click="setMargin(20)" 
+                                                class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
+                                                :class="Math.round(margin) === 20 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
+                                            20%
+                                        </button>
+                                        <button type="button" @click="setMargin(30)" 
+                                                class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
+                                                :class="Math.round(margin) === 30 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
+                                            30%
+                                        </button>
+                                        <button type="button" @click="setMargin(50)" 
+                                                class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
+                                                :class="Math.round(margin) === 50 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
+                                            50%
+                                        </button>
+                                    </div>
                                 </div>
-                                <div class="flex items-center justify-between mt-1">
-                                    <span class="text-sm text-gray-600">Marge</span>
-                                    <span class="text-sm font-medium {{ $margin >= 30 ? 'text-green-600' : ($margin >= 15 ? 'text-yellow-600' : 'text-red-600') }}">
-                                        {{ number_format($margin, 1) }}%
-                                    </span>
+
+                                {{-- Profit Calculator --}}
+                                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-sm text-gray-600">Profit par vente</span>
+                                        <span class="text-lg font-bold" 
+                                              :class="profit >= 0 ? 'text-green-600' : 'text-red-600'" 
+                                              x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                    </div>
+                                    <div class="flex items-center justify-between mt-1">
+                                        <span class="text-sm text-gray-600">Marge effective</span>
+                                        <span class="text-sm font-medium" 
+                                              :class="margin >= 30 ? 'text-green-600' : (margin >= 15 ? 'text-yellow-600' : 'text-red-600')" 
+                                              x-text="margin.toFixed(1) + '%'"></span>
+                                    </div>
+                                    <p x-show="margin < 15" class="mt-2 text-xs text-red-600">Attention: marge faible</p>
                                 </div>
-                                @if($margin < 15)
-                                    <p class="mt-2 text-xs text-red-600">Attention: marge faible</p>
-                                @endif
                             </div>
                         </div>
 
@@ -300,14 +329,7 @@
                                     </span>
                                 </label>
 
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="auto_sync" value="1" {{ old('auto_sync', $product->auto_sync) ? 'checked' : '' }}
-                                        class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
-                                    <span class="ml-3">
-                                        <span class="text-sm font-medium text-gray-900">Synchronisation automatique</span>
-                                        <span class="block text-xs text-gray-500">Mettre a jour automatiquement sur Etsy</span>
-                                    </span>
-                                </label>
+
                             </div>
                         </div>
                     </form>
@@ -452,35 +474,13 @@
                                 <span class="text-gray-500">Revenus</span>
                                 <span class="font-medium text-gray-900">{{ number_format($product->total_revenue ?? 0, 2) }} {{ $product->shop->currency }}</span>
                             </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-500">Derniere sync</span>
-                                <span class="font-medium text-gray-900">{{ $product->etsy_synced_at?->diffForHumans() ?? 'Jamais' }}</span>
-                            </div>
+
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-500">Cree le</span>
                                 <span class="font-medium text-gray-900">{{ $product->created_at->format('d/m/Y') }}</span>
                             </div>
                         </div>
                     </div>
-
-                    {{-- Etsy Actions --}}
-                    @if($product->shop->etsy_shop_id)
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <h3 class="text-sm font-semibold text-gray-900 mb-4">Actions Etsy</h3>
-                            
-                            <form action="{{ route('products.bulk-sync') }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="product_ids[]" value="{{ $product->id }}">
-                                <button type="submit" 
-                                        class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                    </svg>
-                                    Synchroniser avec Etsy
-                                </button>
-                            </form>
-                        </div>
-                    @endif
 
                     {{-- Danger Zone --}}
                     <div class="bg-white rounded-lg shadow-sm border border-red-200 p-6">
@@ -489,7 +489,7 @@
                         <x-ui.confirm-modal 
                             id="delete-product"
                             title="Supprimer ce produit"
-                            message="Cette action est irreversible. Le produit sera supprime de votre boutique mais restera sur Etsy si deja publie."
+                            message="Cette action est irreversible. Le produit sera supprime de votre boutique."
                             confirmLabel="Supprimer"
                             type="danger"
                             :formAction="route('products.destroy', $product)"
@@ -519,7 +519,7 @@
             navigator.clipboard.writeText(text).then(() => {
                 // Show simple toast notification
                 const toast = document.createElement('div');
-                toast.textContent = '✅ Copié';
+                toast.textContent = 'Copie';
                 toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
                 document.body.appendChild(toast);
                 setTimeout(() => toast.remove(), 2000);
@@ -527,6 +527,8 @@
                 alert('Erreur lors de la copie: ' + err);
             });
         }
+
+
     </script>
     @endpush
 </x-app-layout>

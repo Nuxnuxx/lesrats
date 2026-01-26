@@ -6,7 +6,6 @@ use App\Models\Product;
 use App\Models\Shop;
 use App\Services\AliExpressScraperService;
 use App\Services\ContentOptimizerService;
-use App\Services\EtsyApiClient;
 use App\Services\FalImageService;
 use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
@@ -24,13 +23,13 @@ class ProductController extends Controller
 
         if ($shops->isEmpty()) {
             return redirect()->route('dashboard')
-                ->with('error', 'Veuillez d\'abord connecter une boutique.');
+                ->with('error', 'Veuillez d\'abord creer une boutique.');
         }
 
         // Get selected shop or default to first/session
         $shopId = $request->get('shop_id', session('active_shop_id', $shops->first()->id));
         $shop = $shops->firstWhere('id', $shopId) ?? $shops->first();
-        
+
         // Update session
         session(['active_shop_id' => $shop->id]);
 
@@ -51,11 +50,6 @@ class ProductController extends Controller
             $query->where('source_type', $sourceType);
         }
 
-        // Sync status filter
-        if ($syncStatus = $request->get('sync_status')) {
-            $query->where('etsy_sync_status', $syncStatus);
-        }
-
         // Active status filter
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
@@ -64,9 +58,8 @@ class ProductController extends Controller
         // Stats for the current shop
         $stats = [
             'total' => $shop->products()->count(),
-            'synced' => $shop->products()->where('etsy_sync_status', 'synced')->count(),
-            'pending' => $shop->products()->where('etsy_sync_status', 'pending')->count(),
-            'errors' => $shop->products()->where('etsy_sync_status', 'error')->count(),
+            'active' => $shop->products()->where('is_active', true)->count(),
+            'inactive' => $shop->products()->where('is_active', false)->count(),
         ];
 
         $products = $query->latest()->paginate(24)->withQueryString();
@@ -102,7 +95,6 @@ class ProductController extends Controller
             'is_digital' => 'boolean',
             'aliexpress_url' => 'nullable|url',
             'is_active' => 'boolean',
-            'auto_sync' => 'boolean',
         ]);
 
         $validated['shop_id'] = $shop->id;
@@ -112,7 +104,7 @@ class ProductController extends Controller
         $product = Product::create($validated);
 
         return redirect()->route('products.show', $product)
-            ->with('success', 'Produit créé avec succès !');
+            ->with('success', 'Produit cree avec succes !');
     }
 
     /**
@@ -150,7 +142,6 @@ class ProductController extends Controller
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'aliexpress_url' => 'nullable|url',
             'is_active' => 'boolean',
-            'auto_sync' => 'boolean',
         ]);
 
         $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;
@@ -158,7 +149,7 @@ class ProductController extends Controller
         $product->update($validated);
 
         return redirect()->route('products.show', $product)
-            ->with('success', 'Produit mis à jour avec succès !');
+            ->with('success', 'Produit mis a jour avec succes !');
     }
 
     /**
@@ -171,82 +162,7 @@ class ProductController extends Controller
         $product->delete();
 
         return redirect()->route('products.index')
-            ->with('success', 'Produit supprimé avec succès !');
-    }
-
-    /**
-     * Bulk sync products to Etsy.
-     */
-    public function bulkSync(Request $request)
-    {
-        $request->validate([
-            'product_ids' => 'required|array',
-            'product_ids.*' => 'exists:products,id',
-        ]);
-
-        $products = Product::whereIn('id', $request->product_ids)->get();
-        $synced = 0;
-        $errors = [];
-
-        foreach ($products as $product) {
-            try {
-                Gate::authorize('update', $product->shop);
-
-                if (!$product->shop->etsy_shop_id) {
-                    $errors[] = "{$product->title}: Boutique non connectée à Etsy";
-                    continue;
-                }
-
-                $etsyClient = new EtsyApiClient($product->shop);
-
-                $listingData = [
-                    'title' => $product->title,
-                    'description' => $product->description ?? '',
-                    'price' => $product->price,
-                    'quantity' => $product->quantity,
-                    'who_made' => 'i_did',
-                    'when_made' => '2020_2023',
-                    'taxonomy_id' => 1,
-                ];
-
-                if ($product->etsy_listing_id) {
-                    $etsyClient->updateListing(
-                        $product->shop->etsy_shop_id,
-                        $product->etsy_listing_id,
-                        $listingData
-                    );
-                } else {
-                    $response = $etsyClient->createListing($product->shop->etsy_shop_id, $listingData);
-                    $product->etsy_listing_id = $response['listing_id'];
-                }
-
-                $product->update([
-                    'etsy_sync_status' => 'synced',
-                    'etsy_sync_error' => null,
-                    'etsy_synced_at' => now(),
-                ]);
-
-                $synced++;
-            } catch (\Exception $e) {
-                $product->update([
-                    'etsy_sync_status' => 'error',
-                    'etsy_sync_error' => $e->getMessage(),
-                ]);
-                $errors[] = "{$product->title}: {$e->getMessage()}";
-            }
-        }
-
-        $message = "{$synced} produit(s) synchronisé(s)";
-        if (!empty($errors)) {
-            $message .= ". " . count($errors) . " erreur(s).";
-        }
-
-        return response()->json([
-            'success' => $synced > 0,
-            'message' => $message,
-            'synced' => $synced,
-            'errors' => $errors,
-        ]);
+            ->with('success', 'Produit supprime avec succes !');
     }
 
     /**
@@ -274,113 +190,9 @@ class ProductController extends Controller
 
         return response()->json([
             'success' => $deleted > 0,
-            'message' => "{$deleted} produit(s) supprimé(s)",
+            'message' => "{$deleted} produit(s) supprime(s)",
             'deleted' => $deleted,
         ]);
-    }
-
-    /**
-     * Sync product to Etsy (create or update listing).
-     */
-    public function syncToEtsy(Product $product)
-    {
-        Gate::authorize('update', $product->shop);
-
-        $shop = $product->shop;
-
-        if (!$shop->etsy_shop_id) {
-            return redirect()->back()
-                ->with('error', 'La boutique n\'est pas connectée à Etsy.');
-        }
-
-        try {
-            $etsyClient = new EtsyApiClient($shop);
-
-            $listingData = [
-                'title' => $product->title,
-                'description' => $product->description ?? '',
-                'price' => $product->price,
-                'quantity' => $product->quantity,
-                'who_made' => 'i_did',
-                'when_made' => '2020_2023',
-                'taxonomy_id' => 1,
-            ];
-
-            if ($product->etsy_listing_id) {
-                // Update existing listing
-                $response = $etsyClient->updateListing(
-                    $shop->etsy_shop_id,
-                    $product->etsy_listing_id,
-                    $listingData
-                );
-            } else {
-                // Create new listing
-                $response = $etsyClient->createListing($shop->etsy_shop_id, $listingData);
-
-                $product->update([
-                    'etsy_listing_id' => $response['listing_id'],
-                ]);
-            }
-
-            $product->update([
-                'etsy_state' => $response['state'] ?? 'active',
-                'etsy_synced_at' => now(),
-            ]);
-
-            return redirect()->back()
-                ->with('success', 'Produit synchronisé avec Etsy avec succès !');
-
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Erreur lors de la synchronisation avec Etsy : ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Import products from Etsy.
-     */
-    public function importFromEtsy()
-    {
-        $shop = Shop::findOrFail(session('active_shop_id'));
-        Gate::authorize('update', $shop);
-
-        if (!$shop->etsy_shop_id) {
-            return redirect()->back()
-                ->with('error', 'La boutique n\'est pas connectée à Etsy.');
-        }
-
-        try {
-            $etsyClient = new EtsyApiClient($shop);
-            $listings = $etsyClient->getListings($shop->etsy_shop_id);
-
-            $imported = 0;
-            foreach ($listings['results'] ?? [] as $listing) {
-                $product = Product::updateOrCreate(
-                    [
-                        'shop_id' => $shop->id,
-                        'etsy_listing_id' => $listing['listing_id'],
-                    ],
-                    [
-                        'title' => $listing['title'],
-                        'description' => $listing['description'] ?? '',
-                        'price' => $listing['price']['amount'] / $listing['price']['divisor'],
-                        'quantity' => $listing['quantity'],
-                        'etsy_state' => $listing['state'],
-                        'etsy_synced_at' => now(),
-                        'is_active' => $listing['state'] === 'active',
-                    ]
-                );
-
-                $imported++;
-            }
-
-            return redirect()->route('products.index')
-                ->with('success', "{$imported} produit(s) importé(s) depuis Etsy !");
-
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Erreur lors de l\'importation depuis Etsy : ' . $e->getMessage());
-        }
     }
 
     /**
@@ -393,11 +205,11 @@ class ProductController extends Controller
         ]);
 
         try {
-            $scraper = new AliExpressScraperService();
-            $optimizer = new ContentOptimizerService();
+            $scraper = new AliExpressScraperService;
+            $optimizer = new ContentOptimizerService;
 
             // Validate URL
-            if (!$scraper->isValidAliExpressUrl($request->aliexpress_url)) {
+            if (! $scraper->isValidAliExpressUrl($request->aliexpress_url)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid AliExpress URL. Please provide a valid product link.',
@@ -408,7 +220,7 @@ class ProductController extends Controller
             $productData = $scraper->scrapeProduct($request->aliexpress_url);
 
             // Check if scraping got any useful data or hit CAPTCHA
-            if (empty($productData['title']) || 
+            if (empty($productData['title']) ||
                 stripos($productData['title'], 'captcha') !== false ||
                 stripos($productData['title'], 'recaptcha') !== false ||
                 stripos($productData['title'], 'verification') !== false) {
@@ -420,7 +232,7 @@ class ProductController extends Controller
                 ], 422);
             }
 
-            // Optimize content for Etsy
+            // Optimize content
             $optimizedTitle = $optimizer->optimizeTitle($productData['title']);
             $optimizedDescription = $optimizer->optimizeDescription(
                 $productData['title'],
@@ -428,7 +240,7 @@ class ProductController extends Controller
                 $productData['specs']
             );
 
-            // Generate 13 SEO tags for Etsy
+            // Generate SEO tags
             $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription);
 
             // Calculate suggested price with markup
@@ -448,7 +260,7 @@ class ProductController extends Controller
                     'original_price' => $productData['price'],
                     'specs' => $productData['specs'],
                 ],
-                'message' => 'Product analyzed successfully! Data has been optimized for Etsy.',
+                'message' => 'Product analyzed successfully!',
             ]);
 
         } catch (\Exception $e) {
@@ -469,11 +281,11 @@ class ProductController extends Controller
         ]);
 
         try {
-            $scraper = new PrintablesScraperService();
-            $optimizer = new ContentOptimizerService();
+            $scraper = new PrintablesScraperService;
+            $optimizer = new ContentOptimizerService;
 
             // Validate URL
-            if (!$scraper->isValidPrintablesUrl($request->printables_url)) {
+            if (! $scraper->isValidPrintablesUrl($request->printables_url)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid Printables URL. Please provide a valid model link (e.g., https://www.printables.com/model/123456).',
@@ -487,14 +299,14 @@ class ProductController extends Controller
             if (empty($productData['title'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Impossible d\'extraire les données du modèle Printables. Veuillez réessayer ou entrer les détails manuellement.',
+                    'message' => 'Impossible d\'extraire les donnees du modele Printables. Veuillez reessayer ou entrer les details manuellement.',
                 ], 422);
             }
 
             // Check license for commercial use
             $commercialAllowed = $scraper->isCommercialLicenseAllowed($productData['license'] ?? 'Unknown');
 
-            // Optimize content for Etsy (3D printing context)
+            // Optimize content (3D printing context)
             $optimizedTitle = $optimizer->optimizeTitle($productData['title'], '3D Print');
             $optimizedDescription = $optimizer->optimizeDescription(
                 $productData['title'],
@@ -503,7 +315,7 @@ class ProductController extends Controller
                 true // is3DPrint flag
             );
 
-            // Generate 13 SEO tags for Etsy (3D printing focused)
+            // Generate SEO tags (3D printing focused)
             $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription, true);
 
             // Generate attribution
@@ -525,7 +337,7 @@ class ProductController extends Controller
                     'downloads' => $productData['downloads'],
                     'likes' => $productData['likes'],
                 ],
-                'message' => 'Printables model analyzed successfully! Data has been optimized for Etsy.',
+                'message' => 'Printables model analyzed successfully!',
             ]);
 
         } catch (\Exception $e) {
@@ -548,16 +360,16 @@ class ProductController extends Controller
         ]);
 
         try {
-            $optimizer = new ContentOptimizerService();
+            $optimizer = new ContentOptimizerService;
 
-            // Optimize content for Etsy
+            // Optimize content
             $optimizedTitle = $optimizer->optimizeTitle($request->title);
             $optimizedDescription = $optimizer->optimizeDescription(
                 $request->title,
                 $request->description
             );
 
-            // Generate 13 SEO tags for Etsy
+            // Generate SEO tags
             $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription);
 
             // Calculate suggested price with markup if price provided
@@ -575,7 +387,7 @@ class ProductController extends Controller
                     'price' => $suggestedPrice,
                     'original_price' => $request->price,
                 ],
-                'message' => 'Content optimized successfully for Etsy!',
+                'message' => 'Content optimized successfully!',
             ]);
 
         } catch (\Exception $e) {
@@ -604,7 +416,7 @@ class ProductController extends Controller
 
         // Get current images
         $images = is_string($product->images) ? json_decode($product->images, true) : $product->images;
-        
+
         if (empty($images)) {
             return redirect()->back()
                 ->with('error', 'Ce produit n\'a pas d\'images a transformer.');
@@ -613,7 +425,7 @@ class ProductController extends Controller
         try {
             // Get Fal.ai API key
             $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
-            
+
             if (empty($falApiKey)) {
                 return redirect()->back()
                     ->with('error', 'Cle API Fal.ai non configuree. Ajoutez-la dans votre profil ou dans la configuration.');
@@ -622,7 +434,7 @@ class ProductController extends Controller
             $falService = new FalImageService($falApiKey);
             $transformedImages = [];
             $successCount = 0;
-            
+
             // Transform each image (limit to 5)
             foreach (array_slice($images, 0, 5) as $imageUrl) {
                 $transformedPath = $falService->transformImage($imageUrl, $shop->ai_image_prompt);
@@ -634,12 +446,12 @@ class ProductController extends Controller
                     $transformedImages[] = $imageUrl;
                 }
             }
-            
+
             // Add remaining untransformed images
             if (count($images) > 5) {
                 $transformedImages = array_merge($transformedImages, array_slice($images, 5));
             }
-            
+
             // Update product with new images
             $product->update(['images' => $transformedImages]);
 
@@ -653,56 +465,7 @@ class ProductController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Erreur lors de la generation des images: ' . $e->getMessage());
+                ->with('error', 'Erreur lors de la generation des images: '.$e->getMessage());
         }
-    }
-
-    /**
-     * Exporte les produits sélectionnés au format texte pour copier-coller Etsy
-     */
-    public function exportForEtsy(Request $request)
-    {
-        $validated = $request->validate([
-            'product_ids' => 'required|array',
-            'product_ids.*' => 'exists:products,id',
-        ]);
-
-        $products = Product::whereIn('id', $validated['product_ids'])
-            ->where('shop_id', session('current_shop_id'))
-            ->get();
-
-        $content = "EXPORT PRODUITS POUR ETSY\n";
-        $content .= "Généré le " . now()->format('d/m/Y à H:i') . "\n";
-        $content .= str_repeat('=', 80) . "\n\n";
-
-        foreach ($products as $i => $product) {
-            $content .= "PRODUIT #" . ($i + 1) . " - " . strtoupper($product->title) . "\n";
-            $content .= str_repeat('-', 80) . "\n\n";
-
-            $content .= "TITRE (" . strlen($product->title) . "/140):\n";
-            $content .= $product->title . "\n\n";
-
-            $content .= "DESCRIPTION:\n";
-            $content .= $product->description . "\n\n";
-
-            $content .= "TAGS (" . count($product->tags ?? []) . "/13):\n";
-            $content .= implode(', ', $product->tags ?? []) . "\n\n";
-
-            $content .= "PRIX: $" . number_format($product->price, 2) . "\n";
-            $content .= "COÛT: $" . number_format($product->cost_price ?? 0, 2) . "\n";
-            $content .= "STOCK: " . $product->quantity . "\n";
-            $content .= "TYPE: " . ($product->is_digital ? 'Digital' : 'Physical') . "\n\n";
-
-            $content .= "IMAGES (" . count($product->images ?? []) . "/10):\n";
-            foreach ($product->images ?? [] as $j => $img) {
-                $content .= ($j + 1) . ". " . $img . "\n";
-            }
-
-            $content .= "\n" . str_repeat('=', 80) . "\n\n";
-        }
-
-        return response($content)
-            ->header('Content-Type', 'text/plain; charset=UTF-8')
-            ->header('Content-Disposition', 'attachment; filename="etsy-export-' . now()->format('Y-m-d') . '.txt"');
     }
 }

@@ -28,17 +28,6 @@
                 </div>
             </div>
             <div class="flex items-center space-x-3">
-                @if($shop->etsy_shop_id)
-                    <form action="{{ route('products.import-etsy') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-white border border-orange-500 text-orange-600 rounded-lg text-sm font-medium hover:bg-orange-50">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                            </svg>
-                            Importer Etsy
-                        </button>
-                    </form>
-                @endif
                 <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
@@ -53,29 +42,11 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
             {{-- Stats Bar --}}
-            @if($shop->mode === 'connected')
-                <!-- Stats pour mode connecté -->
-                <div class="grid grid-cols-4 gap-4 mb-6">
-                    <x-ui.stat-card label="Total" :value="$stats['total']" />
-                    <x-ui.stat-card label="Synchronises" :value="$stats['synced']" color="green" />
-                    <x-ui.stat-card label="En attente" :value="$stats['pending']" color="blue" />
-                    <x-ui.stat-card label="Erreurs" :value="$stats['errors']" color="red" />
-                </div>
-            @else
-                <!-- Stats pour mode manuel -->
-                <div class="grid grid-cols-3 gap-4 mb-6">
-                    <x-ui.stat-card label="Total produits" :value="$stats['total']" />
-                    <x-ui.stat-card label="Prets a copier" :value="$stats['total']" color="green" />
-                    <div class="bg-blue-50 p-4 rounded-lg shadow-sm border border-blue-200">
-                        <p class="text-blue-600 text-sm font-medium">Mode manuel</p>
-                        <p class="text-xs text-blue-800 mt-1">
-                            <a href="{{ route('shops.edit', $shop) }}" class="underline hover:text-blue-900">
-                                Connecter Etsy pour sync auto
-                            </a>
-                        </p>
-                    </div>
-                </div>
-            @endif
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <x-ui.stat-card label="Total produits" :value="$stats['total']" />
+                <x-ui.stat-card label="Actifs" :value="$stats['active']" color="green" />
+                <x-ui.stat-card label="Inactifs" :value="$stats['inactive']" color="gray" />
+            </div>
 
             {{-- Filters & Bulk Actions Bar --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
@@ -104,12 +75,11 @@
                         <option value="manual" {{ request('source_type') === 'manual' ? 'selected' : '' }}>Manuel</option>
                     </select>
 
-                    {{-- Sync Status Filter --}}
-                    <select name="sync_status" class="border border-gray-300 rounded-lg text-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                    {{-- Active Status Filter --}}
+                    <select name="is_active" class="border border-gray-300 rounded-lg text-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
                         <option value="">Tous statuts</option>
-                        <option value="synced" {{ request('sync_status') === 'synced' ? 'selected' : '' }}>Synchronise</option>
-                        <option value="pending" {{ request('sync_status') === 'pending' ? 'selected' : '' }}>En attente</option>
-                        <option value="error" {{ request('sync_status') === 'error' ? 'selected' : '' }}>Erreur</option>
+                        <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>Actifs</option>
+                        <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>Inactifs</option>
                     </select>
 
                     {{-- Filter Button --}}
@@ -120,7 +90,7 @@
                         Filtrer
                     </button>
 
-                    @if(request('search') || request('source_type') || request('sync_status'))
+                    @if(request('search') || request('source_type') || request('is_active'))
                         <a href="{{ route('products.index', ['shop_id' => $shop->id]) }}" class="text-sm text-gray-500 hover:text-gray-700">
                             Effacer
                         </a>
@@ -135,14 +105,6 @@
                         <span x-text="selectedProducts.length"></span> produit(s) selectionne(s)
                     </span>
                     <div class="flex items-center space-x-3">
-                        <button @click="bulkSync()" 
-                                :disabled="syncing"
-                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700 disabled:opacity-50">
-                            <svg class="w-4 h-4 mr-2" :class="{ 'animate-spin': syncing }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
-                            <span x-text="syncing ? 'Synchronisation...' : 'Synchroniser Etsy'"></span>
-                        </button>
                         <button @click="bulkDelete()" 
                                 :disabled="deleting"
                                 class="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 disabled:opacity-50">
@@ -163,13 +125,13 @@
                 <x-ui.empty-state 
                     icon="products"
                     title="Aucun produit"
-                    :description="request('search') || request('source_type') || request('sync_status') 
+                    :description="request('search') || request('source_type') || request('is_active') 
                         ? 'Aucun produit ne correspond a vos filtres.' 
                         : 'Commencez par ajouter votre premier produit.'"
-                    :actionUrl="!(request('search') || request('source_type') || request('sync_status')) ? route('products.create') : null"
-                    :actionLabel="!(request('search') || request('source_type') || request('sync_status')) ? 'Nouveau produit' : null"
-                    :secondaryActionUrl="request('search') || request('source_type') || request('sync_status') ? route('products.index', ['shop_id' => $shop->id]) : null"
-                    :secondaryActionLabel="request('search') || request('source_type') || request('sync_status') ? 'Effacer les filtres' : null"
+                    :actionUrl="!(request('search') || request('source_type') || request('is_active')) ? route('products.create') : null"
+                    :actionLabel="!(request('search') || request('source_type') || request('is_active')) ? 'Nouveau produit' : null"
+                    :secondaryActionUrl="request('search') || request('source_type') || request('is_active') ? route('products.index', ['shop_id' => $shop->id]) : null"
+                    :secondaryActionLabel="request('search') || request('source_type') || request('is_active') ? 'Effacer les filtres' : null"
                 />
             @else
                 {{-- Select All --}}
@@ -204,7 +166,6 @@
         function productList() {
             return {
                 selectedProducts: [],
-                syncing: false,
                 deleting: false,
 
                 init() {
@@ -227,35 +188,6 @@
                         checkbox.checked = event.target.checked;
                         checkbox.dispatchEvent(new Event('change', { bubbles: true }));
                     });
-                },
-
-                async bulkSync() {
-                    if (this.selectedProducts.length === 0) return;
-                    if (!confirm('Synchroniser ' + this.selectedProducts.length + ' produit(s) avec Etsy ?')) return;
-
-                    this.syncing = true;
-                    try {
-                        const response = await fetch('{{ route('products.bulk-sync') }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Accept': 'application/json',
-                            },
-                            body: JSON.stringify({ product_ids: this.selectedProducts })
-                        });
-
-                        const result = await response.json();
-                        alert(result.message);
-                        
-                        if (result.success) {
-                            window.location.reload();
-                        }
-                    } catch (error) {
-                        alert('Erreur lors de la synchronisation');
-                    } finally {
-                        this.syncing = false;
-                    }
                 },
 
                 async bulkDelete() {

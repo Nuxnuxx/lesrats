@@ -28,18 +28,6 @@
                 </div>
             </div>
             <div class="flex items-center space-x-3">
-                @if($shop->etsy_shop_id)
-                    <form action="{{ route('orders.import-etsy') }}" method="POST">
-                        @csrf
-                        <input type="hidden" name="shop_id" value="{{ $shop->id }}">
-                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                            </svg>
-                            Importer depuis Etsy
-                        </button>
-                    </form>
-                @endif
             </div>
         </div>
     </x-slot>
@@ -117,23 +105,11 @@
                     title="Aucune commande"
                     :description="request('search') || request('status') || request('date') 
                         ? 'Aucune commande ne correspond a vos filtres.' 
-                        : 'Importez vos commandes depuis Etsy pour commencer.'"
+                        : 'Aucune commande pour le moment.'"
                     :secondaryActionUrl="request('search') || request('status') || request('date') ? route('orders.index', ['shop_id' => $shop->id]) : null"
                     :secondaryActionLabel="request('search') || request('status') || request('date') ? 'Effacer les filtres' : null"
-                >
-                    @if(!request('search') && !request('status') && !request('date') && $shop->etsy_shop_id)
-                        <form action="{{ route('orders.import-etsy') }}" method="POST" class="inline">
-                            @csrf
-                            <input type="hidden" name="shop_id" value="{{ $shop->id }}">
-                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                                </svg>
-                                Importer depuis Etsy
-                            </button>
-                        </form>
-                    @endif
-                </x-ui.empty-state>
+                />
+
             @else
                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                     <table class="min-w-full divide-y divide-gray-200">
@@ -152,7 +128,7 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="text-sm font-medium text-gray-900">
-                                            #{{ $order->etsy_receipt_id }}
+                                            #{{ $order->order_number }}
                                         </div>
                                         <div class="text-xs text-gray-500">
                                             {{ $order->created_at->format('d/m/Y H:i') }}

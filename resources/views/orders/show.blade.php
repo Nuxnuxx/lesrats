@@ -9,7 +9,7 @@
                 </a>
                 <div>
                     <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                        Commande #{{ $order->etsy_receipt_id }}
+                        Commande #{{ $order->order_number }}
                     </h2>
                     <p class="text-sm text-gray-500">{{ $order->created_at->format('d/m/Y H:i') }} - {{ $order->shop->name }}</p>
                 </div>

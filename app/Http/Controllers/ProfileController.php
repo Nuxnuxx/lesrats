@@ -3,23 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
-use App\Services\EtsyApiClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Redirect;
-use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    protected EtsyApiClient $etsyClient;
-
-    public function __construct(EtsyApiClient $etsyClient)
-    {
-        $this->etsyClient = $etsyClient;
-    }
-
     /**
      * Display the user's profile form.
      */
@@ -57,10 +48,10 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-        
+
         // Only update if a non-empty value is provided
         // Empty string = keep existing, new value = replace
-        if (!empty($validated['fal_api_key'])) {
+        if (! empty($validated['fal_api_key'])) {
             $user->fal_api_key = $validated['fal_api_key'];
             $user->save();
         }
@@ -87,44 +78,5 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
-    }
-
-    /**
-     * Handle Etsy credentials submission and redirect to OAuth to add a new shop.
-     */
-    public function connectEtsy(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'etsy_client_id' => 'required|string|max:255',
-            'etsy_client_secret' => 'required|string|max:255',
-        ]);
-
-        // Generate unique state for CSRF protection
-        $state = Str::random(40);
-        
-        // Store credentials and OAuth state in session
-        session([
-            'etsy_oauth_state' => $state,
-            'etsy_oauth_add_new_shop' => true,
-            'etsy_pending_client_id' => $validated['etsy_client_id'],
-            'etsy_pending_client_secret' => $validated['etsy_client_secret'],
-        ]);
-
-        // Create a temporary Shop model (not persisted) to use its credentials
-        $tempShop = new \App\Models\Shop([
-            'etsy_client_id' => $validated['etsy_client_id'],
-            'etsy_client_secret' => $validated['etsy_client_secret'],
-        ]);
-
-        // Set the temp shop on the API client so it uses these credentials
-        $this->etsyClient->setShop($tempShop);
-        
-        try {
-            $authUrl = $this->etsyClient->getAuthorizationUrl($state);
-            return redirect($authUrl);
-        } catch (\Exception $e) {
-            return redirect()->route('profile.edit')
-                ->with('error', 'Erreur lors de la connexion : ' . $e->getMessage());
-        }
     }
 }

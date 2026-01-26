@@ -3,10 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\Product;
 use App\Models\Shop;
-use App\Services\EtsyApiClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
@@ -22,7 +19,7 @@ class OrderController extends Controller
 
         if ($shops->isEmpty()) {
             return redirect()->route('dashboard')
-                ->with('error', 'Veuillez d\'abord connecter une boutique.');
+                ->with('error', 'Veuillez d\'abord creer une boutique.');
         }
 
         // Get selected shop or default to first/session
@@ -60,8 +57,8 @@ class OrderController extends Controller
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('customer_name', 'like', "%{$search}%")
-                  ->orWhere('customer_email', 'like', "%{$search}%")
-                  ->orWhere('etsy_receipt_id', 'like', "%{$search}%");
+                    ->orWhere('customer_email', 'like', "%{$search}%")
+                    ->orWhere('order_number', 'like', "%{$search}%");
             });
         }
 
@@ -106,7 +103,7 @@ class OrderController extends Controller
         Gate::authorize('update', $order->shop);
 
         $request->validate([
-            'status' => 'required|in:' . implode(',', Order::statuses()),
+            'status' => 'required|in:'.implode(',', Order::statuses()),
         ]);
 
         $newStatus = $request->status;
@@ -133,113 +130,6 @@ class OrderController extends Controller
 
         return redirect()->back()
             ->with('success', 'Statut mis a jour avec succes !');
-    }
-
-    /**
-     * Import orders from Etsy.
-     */
-    public function importFromEtsy(Request $request)
-    {
-        $shop = Shop::findOrFail($request->get('shop_id', session('active_shop_id')));
-        Gate::authorize('update', $shop);
-
-        if (!$shop->etsy_shop_id) {
-            return redirect()->back()
-                ->with('error', 'La boutique n\'est pas connectee a Etsy.');
-        }
-
-        try {
-            $etsyClient = new EtsyApiClient($shop);
-            $receipts = $etsyClient->getShopReceipts($shop->etsy_shop_id);
-
-            $imported = 0;
-            $updated = 0;
-
-            foreach ($receipts['results'] ?? [] as $receipt) {
-                $existingOrder = Order::where('etsy_receipt_id', $receipt['receipt_id'])->first();
-
-                $orderData = [
-                    'shop_id' => $shop->id,
-                    'customer_name' => $receipt['name'] ?? 'Client Etsy',
-                    'customer_email' => $receipt['buyer_email'] ?? null,
-                    'total_price' => ($receipt['grandtotal']['amount'] ?? 0) / ($receipt['grandtotal']['divisor'] ?? 100),
-                    'currency' => $receipt['grandtotal']['currency_code'] ?? 'EUR',
-                    'shipping_address' => [
-                        'name' => $receipt['name'] ?? '',
-                        'first_line' => $receipt['first_line'] ?? '',
-                        'second_line' => $receipt['second_line'] ?? '',
-                        'city' => $receipt['city'] ?? '',
-                        'state' => $receipt['state'] ?? '',
-                        'zip' => $receipt['zip'] ?? '',
-                        'country_name' => $receipt['country_name'] ?? '',
-                    ],
-                    'etsy_data' => $receipt,
-                ];
-
-                if ($existingOrder) {
-                    $existingOrder->update($orderData);
-                    $updated++;
-                } else {
-                    $order = Order::create(array_merge($orderData, [
-                        'etsy_receipt_id' => $receipt['receipt_id'],
-                        'status' => Order::STATUS_NEW,
-                    ]));
-
-                    // Import order items (transactions)
-                    foreach ($receipt['transactions'] ?? [] as $transaction) {
-                        $this->createOrderItem($order, $transaction, $shop);
-                    }
-
-                    // Recalculate totals
-                    $order->recalculateTotals();
-                    $imported++;
-                }
-            }
-
-            // Update shop stats
-            $shop->updateCachedStats();
-
-            $message = "{$imported} commande(s) importee(s)";
-            if ($updated > 0) {
-                $message .= ", {$updated} mise(s) a jour";
-            }
-
-            return redirect()->route('orders.index', ['shop_id' => $shop->id])
-                ->with('success', $message);
-
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Erreur lors de l\'importation: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Create order item from Etsy transaction.
-     */
-    private function createOrderItem(Order $order, array $transaction, Shop $shop): OrderItem
-    {
-        // Try to find matching product
-        $product = Product::where('shop_id', $shop->id)
-            ->where('etsy_listing_id', $transaction['listing_id'] ?? null)
-            ->first();
-
-        $price = ($transaction['price']['amount'] ?? 0) / ($transaction['price']['divisor'] ?? 100);
-        $cost = $product?->cost_price ?? 0;
-
-        return OrderItem::create([
-            'order_id' => $order->id,
-            'product_id' => $product?->id,
-            'etsy_listing_id' => $transaction['listing_id'] ?? null,
-            'etsy_transaction_id' => $transaction['transaction_id'] ?? null,
-            'title' => $transaction['title'] ?? 'Produit Etsy',
-            'quantity' => $transaction['quantity'] ?? 1,
-            'price' => $price,
-            'cost' => $cost,
-            'profit' => $price - $cost,
-            'source_type' => $product?->source_type,
-            'source_url' => $product?->source_url,
-            'is_digital' => $product?->is_digital ?? false,
-        ]);
     }
 
     /**

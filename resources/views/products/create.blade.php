@@ -375,7 +375,7 @@
                     <div class="space-y-6">
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <label class="block text-sm font-medium text-gray-700">Titre (optimise pour Etsy)</label>
+                                <label class="block text-sm font-medium text-gray-700">Titre</label>
                                 <button type="button"
                                         @click="copyToClipboard(productData.title, 'Titre copie!')"
                                         class="text-gray-400 hover:text-blue-600 transition-colors"
@@ -412,7 +412,7 @@
 
                         <div>
                             <div class="flex items-center justify-between mb-2">
-                                <label class="block text-sm font-medium text-gray-700">Tags Etsy (13 max)</label>
+                                <label class="block text-sm font-medium text-gray-700">Tags (13 max)</label>
                                 <button type="button"
                                         @click="copyToClipboard(productData.tags_string, 'Tags copies!')"
                                         class="text-gray-400 hover:text-blue-600 transition-colors"
@@ -590,7 +590,7 @@
                                     <input type="checkbox" name="auto_sync" value="1"
                                            class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
                                     <span class="ml-3">
-                                        <span class="text-sm font-medium text-gray-900">Synchronisation automatique Etsy</span>
+                                        <span class="text-sm font-medium text-gray-900">Produit actif a la creation</span>
                                     </span>
                                 </label>
                             </div>

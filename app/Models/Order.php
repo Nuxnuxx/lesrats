@@ -13,14 +13,18 @@ class Order extends Model
 
     // Status constants
     public const STATUS_NEW = 'new';
+
     public const STATUS_ORDERED = 'ordered';
+
     public const STATUS_SHIPPED = 'shipped';
+
     public const STATUS_DELIVERED = 'delivered';
+
     public const STATUS_COMPLETED = 'completed';
 
     protected $fillable = [
         'shop_id',
-        'etsy_receipt_id',
+        'order_number',
         'customer_name',
         'customer_email',
         'total_price',
@@ -32,7 +36,6 @@ class Order extends Model
         'shipped_at',
         'delivered_at',
         'completed_at',
-        'etsy_data',
         'shipping_address',
         'notes',
     ];
@@ -45,7 +48,6 @@ class Order extends Model
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
         'completed_at' => 'datetime',
-        'etsy_data' => 'array',
         'shipping_address' => 'array',
     ];
 
@@ -94,7 +96,7 @@ class Order extends Model
      */
     public function getFormattedTotalAttribute(): string
     {
-        return number_format($this->total_price, 2) . ' ' . $this->currency;
+        return number_format($this->total_price, 2).' '.$this->currency;
     }
 
     /**
@@ -103,7 +105,8 @@ class Order extends Model
     public function getFormattedProfitAttribute(): string
     {
         $prefix = $this->total_profit >= 0 ? '+' : '';
-        return $prefix . number_format($this->total_profit, 2) . ' ' . $this->currency;
+
+        return $prefix.number_format($this->total_profit, 2).' '.$this->currency;
     }
 
     /**
@@ -163,7 +166,7 @@ class Order extends Model
      */
     public function getFormattedAddressAttribute(): string
     {
-        if (!$this->shipping_address) {
+        if (! $this->shipping_address) {
             return '';
         }
 
@@ -268,5 +271,17 @@ class Order extends Model
             'status' => self::STATUS_COMPLETED,
             'completed_at' => now(),
         ]);
+    }
+
+    /**
+     * Generate a unique order number
+     */
+    public static function generateOrderNumber(): string
+    {
+        $prefix = 'ORD';
+        $date = now()->format('ymd');
+        $random = strtoupper(substr(uniqid(), -4));
+
+        return "{$prefix}-{$date}-{$random}";
     }
 }

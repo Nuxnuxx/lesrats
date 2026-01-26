@@ -12,7 +12,7 @@ class DashboardController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        
+
         // Get all shops for the user with eager loading
         $shops = $user->shops()
             ->withCount(['products', 'orders'])
@@ -20,7 +20,7 @@ class DashboardController extends Controller
 
         // Aggregate stats across all shops
         $shopIds = $shops->pluck('id');
-        
+
         $totalStats = [
             'total_products' => Product::whereIn('shop_id', $shopIds)->count(),
             'total_orders' => Order::whereIn('shop_id', $shopIds)->count(),
@@ -38,22 +38,24 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
-        // Get products needing attention
-        // - Sync errors
-        // - Not synced to Etsy (pending)
+        // Get products needing attention (low stock or inactive)
         // Note: No stock tracking for dropship (aliexpress) or digital (printables)
         //       Stock only matters for manual physical products
         $productsNeedingAttention = Product::whereIn('shop_id', $shopIds)
             ->where(function ($query) {
-                $query->where('etsy_sync_status', 'error')
-                    ->orWhere('etsy_sync_status', 'pending');
+                // Low stock products (not digital, not unlimited)
+                $query->where('is_digital', false)
+                    ->where('quantity', '<', 10)
+                    ->where('quantity', '>', 0);
+            })
+            ->orWhere(function ($query) use ($shopIds) {
+                // Out of stock products
+                $query->whereIn('shop_id', $shopIds)
+                    ->where('is_digital', false)
+                    ->where('quantity', '<=', 0);
             })
             ->with('shop')
-            ->orderByRaw("CASE 
-                WHEN etsy_sync_status = 'error' THEN 1 
-                WHEN etsy_sync_status = 'pending' THEN 2
-                ELSE 3 
-            END")
+            ->orderBy('quantity', 'asc')
             ->limit(10)
             ->get();
 

@@ -12,11 +12,8 @@
                         {{ $shop->name }}
                     </h2>
                     <div class="flex items-center mt-1 space-x-2">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                            {{ $shop->connection_status_color === 'green' ? 'bg-green-100 text-green-800' : '' }}
-                            {{ $shop->connection_status_color === 'red' ? 'bg-red-100 text-red-800' : '' }}
-                            {{ $shop->connection_status_color === 'gray' ? 'bg-gray-100 text-gray-800' : '' }}">
-                            {{ $shop->connection_status_label }}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $shop->is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                            {{ $shop->is_active ? 'Active' : 'Inactive' }}
                         </span>
                         <span class="text-sm text-gray-500">{{ $shop->currency }}</span>
                     </div>
@@ -60,14 +57,9 @@
                             </svg>
                         </div>
                     </div>
-                    @if($stats['pending_sync'] > 0 || $stats['sync_errors'] > 0)
-                        <div class="mt-2 flex items-center space-x-2 text-xs">
-                            @if($stats['sync_errors'] > 0)
-                                <span class="text-red-600">{{ $stats['sync_errors'] }} erreur(s)</span>
-                            @endif
-                            @if($stats['pending_sync'] > 0)
-                                <span class="text-blue-600">{{ $stats['pending_sync'] }} en attente</span>
-                            @endif
+                    @if($stats['active_products'] < $stats['total_products'])
+                        <div class="mt-2 text-xs text-gray-500">
+                            {{ $stats['active_products'] }} actif(s)
                         </div>
                     @endif
                 </div>
@@ -232,17 +224,13 @@
                                                 </p>
                                             </div>
                                             <div class="ml-4">
-                                                @if($product->etsy_sync_status === 'synced')
+                                                @if($product->is_active)
                                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
-                                                        Synchro
+                                                        Actif
                                                     </span>
-                                                @elseif($product->etsy_sync_status === 'pending')
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                                                        En attente
-                                                    </span>
-                                                @elseif($product->etsy_sync_status === 'error')
-                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-700">
-                                                        Erreur
+                                                @else
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                                                        Inactif
                                                     </span>
                                                 @endif
                                             </div>
@@ -301,85 +289,31 @@
 
             </div>
 
-            {{-- Shop Info & Etsy Connection --}}
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {{-- Shop Information --}}
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="font-semibold text-gray-900 mb-4">Informations</h3>
-                    <dl class="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <dt class="text-gray-500">ID Etsy</dt>
-                            <dd class="font-medium text-gray-900 mt-1">{{ $shop->etsy_shop_id ?? 'Non connecte' }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-gray-500">Devise</dt>
-                            <dd class="font-medium text-gray-900 mt-1">{{ $shop->currency }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-gray-500">Cree le</dt>
-                            <dd class="font-medium text-gray-900 mt-1">{{ $shop->created_at->format('d/m/Y') }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-gray-500">Sync auto</dt>
-                            <dd class="mt-1">
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $shop->auto_sync_enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                                    {{ $shop->auto_sync_enabled ? 'Active' : 'Desactive' }}
-                                </span>
-                            </dd>
-                        </div>
-                    </dl>
-                </div>
-
-                {{-- Etsy Connection --}}
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <h3 class="font-semibold text-gray-900 mb-4">Connexion Etsy</h3>
-                    
-                    @if($shop->etsy_shop_id)
-                        <div class="flex items-start space-x-4">
-                            <div class="flex-shrink-0 w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                                <svg class="w-6 h-6 text-orange-600" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M8.559 3.89c0-.458.442-.706.906-.706h5.07c.464 0 .906.248.906.706 0 .459-.442.707-.906.707h-5.07c-.464 0-.906-.248-.906-.707zm7.559 5.657c0 1.888-1.529 3.418-3.418 3.418H9.282c-.464 0-.906-.248-.906-.707s.442-.706.906-.706H12.7c1.107 0 2.006-.899 2.006-2.005 0-1.107-.899-2.006-2.006-2.006H9.282c-.464 0-.906-.247-.906-.706s.442-.707.906-.707H12.7c1.889 0 3.418 1.53 3.418 3.419z"/>
-                                </svg>
-                            </div>
-                            <div class="flex-1">
-                                <p class="text-sm text-gray-900">
-                                    <span class="font-medium">Boutique connectee</span>
-                                </p>
-                                <p class="text-xs text-gray-500 mt-1">
-                                    Token expire le {{ $shop->etsy_token_expires_at?->format('d/m/Y H:i') ?? 'N/A' }}
-                                </p>
-                                @if($shop->connection_status === 'expired')
-                                    <p class="text-xs text-red-600 mt-1">Token expire - reconnexion necessaire</p>
-                                @endif
-                            </div>
-                        </div>
-                        <div class="mt-4 flex space-x-3">
-                            @if($shop->connection_status === 'expired')
-                                <a href="{{ route('etsy.connect', $shop) }}" class="inline-flex items-center px-3 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700">
-                                    Reconnecter
-                                </a>
-                            @endif
-                            <form action="{{ route('etsy.disconnect', $shop) }}" method="POST" onsubmit="return confirm('Deconnecter cette boutique d\'Etsy ?');">
-                                @csrf
-                                <button type="submit" class="inline-flex items-center px-3 py-2 bg-red-100 text-red-700 text-sm rounded-lg hover:bg-red-200">
-                                    Deconnecter
-                                </button>
-                            </form>
-                        </div>
-                    @else
-                        <div class="text-center py-4">
-                            <div class="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-                                </svg>
-                            </div>
-                            <p class="text-sm text-gray-500 mb-3">Boutique non connectee a Etsy</p>
-                            <a href="{{ route('etsy.connect', $shop) }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700">
-                                Connecter a Etsy
-                            </a>
-                        </div>
-                    @endif
-                </div>
+            {{-- Shop Information --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="font-semibold text-gray-900 mb-4">Informations</h3>
+                <dl class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                        <dt class="text-gray-500">Statut</dt>
+                        <dd class="mt-1">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $shop->is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                                {{ $shop->is_active ? 'Active' : 'Inactive' }}
+                            </span>
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Devise</dt>
+                        <dd class="font-medium text-gray-900 mt-1">{{ $shop->currency }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Cree le</dt>
+                        <dd class="font-medium text-gray-900 mt-1">{{ $shop->created_at->format('d/m/Y') }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-gray-500">Membres</dt>
+                        <dd class="font-medium text-gray-900 mt-1">{{ $shop->members->count() }}</dd>
+                    </div>
+                </dl>
             </div>
 
             {{-- Members Section --}}

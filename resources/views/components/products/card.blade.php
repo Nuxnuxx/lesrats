@@ -40,15 +40,12 @@
             @endif
         </div>
 
-        {{-- Sync Status Badge --}}
+        {{-- Active Status Badge --}}
         <div class="absolute top-2 right-2">
-            @if($product->etsy_sync_status && $product->etsy_sync_status !== 'not_synced')
-                <x-ui.status-badge 
-                    :status="$product->etsy_sync_status" 
-                    type="sync" 
-                    class="rounded-full"
-                    :title="$product->etsy_sync_status === 'error' ? $product->etsy_sync_error : null"
-                />
+            @if(!$product->is_active)
+                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
+                    Inactif
+                </span>
             @endif
         </div>
 

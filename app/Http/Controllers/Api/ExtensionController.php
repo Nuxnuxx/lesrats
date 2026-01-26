@@ -20,7 +20,7 @@ class ExtensionController extends Controller
         // Log de la requête pour debug
         Log::info('Extension import request', [
             'data' => $request->all(),
-            'headers' => $request->headers->all()
+            'headers' => $request->headers->all(),
         ]);
 
         // Validation des données
@@ -49,7 +49,7 @@ class ExtensionController extends Controller
             }
 
             // Sinon, utiliser la première boutique disponible
-            if (!$shop) {
+            if (! $shop) {
                 $shop = Shop::first();
                 // Essayer de récupérer un utilisateur lié à cette boutique
                 if ($shop) {
@@ -57,22 +57,22 @@ class ExtensionController extends Controller
                 }
             }
 
-            if (!$shop) {
+            if (! $shop) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Aucune boutique trouvée. Créez une boutique d\'abord.'
+                    'message' => 'Aucune boutique trouvée. Créez une boutique d\'abord.',
                 ], 400);
             }
 
             // Vérifier si le produit existe déjà (par aliexpress_product_id ou source_url)
             $existingProduct = null;
-            if (!empty($validated['aliexpress_product_id'])) {
+            if (! empty($validated['aliexpress_product_id'])) {
                 $existingProduct = Product::where('shop_id', $shop->id)
                     ->where('aliexpress_product_id', $validated['aliexpress_product_id'])
                     ->first();
             }
 
-            if (!$existingProduct && !empty($validated['source_url'])) {
+            if (! $existingProduct && ! empty($validated['source_url'])) {
                 $existingProduct = Product::where('shop_id', $shop->id)
                     ->where('source_url', $validated['source_url'])
                     ->first();
@@ -84,7 +84,7 @@ class ExtensionController extends Controller
                     'message' => 'Produit déjà importé',
                     'product_id' => $existingProduct->id,
                     'product_url' => route('products.edit', $existingProduct),
-                    'is_existing' => true
+                    'is_existing' => true,
                 ]);
             }
 
@@ -100,23 +100,23 @@ class ExtensionController extends Controller
             $originalTitle = $validated['title'];
             $originalDescription = $validated['description'] ?? '';
             $is3DPrint = ($validated['source_type'] ?? 'aliexpress') === 'printables';
-            
+
             try {
-                $optimizer = new ContentOptimizerService();
-                
+                $optimizer = new ContentOptimizerService;
+
                 // Optimiser le titre (traduction en anglais + SEO) avec le prompt personnalisé
                 $optimizedTitle = $optimizer->optimizeTitle(
-                    $originalTitle, 
+                    $originalTitle,
                     $is3DPrint ? '3D Print' : null,
                     $titlePrompt
                 );
                 Log::info('Optimized title', ['original' => $originalTitle, 'optimized' => $optimizedTitle]);
-                
+
                 // Générer une description optimisée avec le prompt personnalisé
                 $description = $optimizer->optimizeDescription(
-                    $originalTitle, 
-                    $originalDescription, 
-                    $validated['specifications'] ?? [], 
+                    $originalTitle,
+                    $originalDescription,
+                    $validated['specifications'] ?? [],
                     $is3DPrint,
                     $descriptionPrompt
                 );
@@ -134,7 +134,7 @@ class ExtensionController extends Controller
             // Déterminer le stock et les paramètres selon le type de source
             $sourceType = $validated['source_type'] ?? 'aliexpress';
             $isDigital = $sourceType === 'printables';
-            
+
             if ($isDigital) {
                 // Produit digital (STL) = stock illimité
                 $quantity = 999;
@@ -161,12 +161,11 @@ class ExtensionController extends Controller
                 'quantity' => $quantity,
                 'is_digital' => $isDigital,
                 'low_stock_threshold' => $lowStockThreshold,
-                'etsy_sync_status' => Product::SYNC_STATUS_NOT_SYNCED,
             ]);
 
             Log::info('Product imported via extension', [
                 'product_id' => $product->id,
-                'title' => $product->title
+                'title' => $product->title,
             ]);
 
             return response()->json([
@@ -174,17 +173,17 @@ class ExtensionController extends Controller
                 'message' => 'Produit importé avec succès!',
                 'product_id' => $product->id,
                 'product_url' => route('products.edit', $product),
-                'is_existing' => false
+                'is_existing' => false,
             ]);
         } catch (\Exception $e) {
             Log::error('Extension import error', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Erreur lors de l\'import: ' . $e->getMessage()
+                'message' => 'Erreur lors de l\'import: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -197,7 +196,7 @@ class ExtensionController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'LesRats API is running',
-            'version' => '1.0.0'
+            'version' => '1.0.0',
         ]);
     }
 }

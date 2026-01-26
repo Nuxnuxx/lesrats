@@ -24,7 +24,6 @@ class DemoDataSeeder extends Seeder
                 'name' => 'Demo User',
                 'password' => Hash::make('password'),
                 'email_verified_at' => now(),
-                'onboarding_completed' => true,
             ]
         );
 
@@ -38,8 +37,8 @@ class DemoDataSeeder extends Seeder
             $shop->updateCachedStats();
         }
 
-        $this->command->info("Demo data created successfully!");
-        $this->command->info("Login: demo@lesrats.fr / password");
+        $this->command->info('Demo data created successfully!');
+        $this->command->info('Login: demo@lesrats.fr / password');
     }
 
     private function createShops(User $user): array
@@ -47,45 +46,33 @@ class DemoDataSeeder extends Seeder
         $shopsData = [
             [
                 'name' => 'LesRats3D',
-                'etsy_shop_id' => '12345678',
-                'etsy_user_id' => 'etsy_user_1',
                 'currency' => 'EUR',
                 'is_active' => true,
-                'auto_sync_enabled' => true,
-                'etsy_token_expires_at' => now()->addDays(30),
             ],
             [
                 'name' => 'PrintablesParadise',
-                'etsy_shop_id' => '87654321',
-                'etsy_user_id' => 'etsy_user_2',
                 'currency' => 'EUR',
                 'is_active' => true,
-                'auto_sync_enabled' => true,
-                'etsy_token_expires_at' => now()->addDays(15),
             ],
             [
                 'name' => 'DropshipKing',
-                'etsy_shop_id' => '11223344',
-                'etsy_user_id' => 'etsy_user_3',
                 'currency' => 'EUR',
                 'is_active' => true,
-                'auto_sync_enabled' => false,
-                'etsy_token_expires_at' => now()->subDays(5), // Expired!
             ],
         ];
 
         $shops = [];
         foreach ($shopsData as $data) {
             $shop = Shop::firstOrCreate(
-                ['etsy_shop_id' => $data['etsy_shop_id']],
+                ['name' => $data['name']],
                 $data
             );
-            
+
             // Attach user if not already
-            if (!$shop->users()->where('user_id', $user->id)->exists()) {
+            if (! $shop->users()->where('user_id', $user->id)->exists()) {
                 $shop->users()->attach($user->id, ['role' => 'owner']);
             }
-            
+
             $shops[] = $shop;
         }
 
@@ -121,36 +108,29 @@ class DemoDataSeeder extends Seeder
         ];
 
         $allProducts = array_merge($printablesProducts, $aliexpressProducts, $manualProducts);
-        
+
         // Randomize which products go to which shop
         shuffle($allProducts);
         $productsForShop = array_slice($allProducts, 0, rand(8, 14));
 
         foreach ($productsForShop as $index => $productData) {
-            $syncStatuses = ['synced', 'synced', 'synced', 'synced', 'pending', 'error'];
-            $syncStatus = $syncStatuses[array_rand($syncStatuses)];
-            
             Product::firstOrCreate(
                 [
                     'shop_id' => $shop->id,
                     'title' => $productData['title'],
                 ],
                 [
-                    'description' => 'Description pour ' . $productData['title'] . '. Produit de haute qualite.',
+                    'description' => 'Description pour '.$productData['title'].'. Produit de haute qualite.',
                     'price' => $productData['price'],
                     'cost_price' => $productData['cost_price'] ?? 0,
                     'quantity' => $productData['quantity'] ?? 999,
                     'source_type' => $productData['source_type'],
-                    'source_url' => $productData['source_type'] === 'aliexpress' 
-                        ? 'https://www.aliexpress.com/item/' . rand(1000000000, 9999999999) . '.html'
-                        : ($productData['source_type'] === 'printables' 
-                            ? 'https://www.printables.com/model/' . rand(100000, 999999)
+                    'source_url' => $productData['source_type'] === 'aliexpress'
+                        ? 'https://www.aliexpress.com/item/'.rand(1000000000, 9999999999).'.html'
+                        : ($productData['source_type'] === 'printables'
+                            ? 'https://www.printables.com/model/'.rand(100000, 999999)
                             : null),
                     'is_digital' => $productData['is_digital'],
-                    'etsy_listing_id' => rand(1000000000, 9999999999),
-                    'etsy_sync_status' => $syncStatus,
-                    'etsy_sync_error' => $syncStatus === 'error' ? 'Erreur de connexion API Etsy' : null,
-                    'etsy_synced_at' => $syncStatus === 'synced' ? now()->subHours(rand(1, 72)) : null,
                     'is_active' => true,
                 ]
             );
@@ -161,24 +141,24 @@ class DemoDataSeeder extends Seeder
     {
         $firstNames = ['Jean', 'Marie', 'Pierre', 'Sophie', 'Lucas', 'Emma', 'Thomas', 'Lea', 'Nicolas', 'Camille', 'Antoine', 'Julie', 'Maxime', 'Sarah', 'Alexandre'];
         $lastNames = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia'];
-        
+
         $products = $shop->products;
-        
+
         if ($products->isEmpty()) {
             return;
         }
 
         // Create orders over the last 30 days
         $numOrders = rand(15, 40);
-        
+
         for ($i = 0; $i < $numOrders; $i++) {
             $daysAgo = rand(0, 30);
             $createdAt = now()->subDays($daysAgo)->subHours(rand(0, 23))->subMinutes(rand(0, 59));
-            
+
             $firstName = $firstNames[array_rand($firstNames)];
             $lastName = $lastNames[array_rand($lastNames)];
-            $customerName = $firstName . ' ' . $lastName;
-            
+            $customerName = $firstName.' '.$lastName;
+
             $statuses = [
                 Order::STATUS_NEW,
                 Order::STATUS_NEW,
@@ -188,7 +168,7 @@ class DemoDataSeeder extends Seeder
                 Order::STATUS_COMPLETED,
                 Order::STATUS_COMPLETED,
             ];
-            
+
             // Today's orders are more likely to be NEW
             if ($daysAgo === 0) {
                 $status = rand(0, 10) > 3 ? Order::STATUS_NEW : Order::STATUS_ORDERED;
@@ -198,15 +178,15 @@ class DemoDataSeeder extends Seeder
 
             $order = Order::create([
                 'shop_id' => $shop->id,
-                'etsy_receipt_id' => 'ETSY-' . strtoupper(substr(md5(uniqid()), 0, 12)),
+                'order_number' => 'ORD-'.strtoupper(substr(md5(uniqid()), 0, 8)),
                 'customer_name' => $customerName,
-                'customer_email' => strtolower($firstName) . '.' . strtolower($lastName) . '@example.com',
+                'customer_email' => strtolower($firstName).'.'.strtolower($lastName).'@example.com',
                 'total_price' => 0,
                 'total_cost' => 0,
                 'total_profit' => 0,
                 'currency' => 'EUR',
                 'status' => $status,
-                'ordered_at' => in_array($status, [Order::STATUS_ORDERED, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED, Order::STATUS_COMPLETED]) 
+                'ordered_at' => in_array($status, [Order::STATUS_ORDERED, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED, Order::STATUS_COMPLETED])
                     ? $createdAt->copy()->addHours(rand(1, 24)) : null,
                 'shipped_at' => in_array($status, [Order::STATUS_SHIPPED, Order::STATUS_DELIVERED, Order::STATUS_COMPLETED])
                     ? $createdAt->copy()->addDays(rand(1, 3)) : null,
@@ -216,7 +196,7 @@ class DemoDataSeeder extends Seeder
                     ? $createdAt->copy()->addDays(rand(7, 20)) : null,
                 'shipping_address' => [
                     'name' => $customerName,
-                    'first_line' => rand(1, 150) . ' Rue ' . $lastNames[array_rand($lastNames)],
+                    'first_line' => rand(1, 150).' Rue '.$lastNames[array_rand($lastNames)],
                     'city' => ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Bordeaux', 'Nice', 'Nantes', 'Lille'][array_rand(['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Bordeaux', 'Nice', 'Nantes', 'Lille'])],
                     'zip' => str_pad(rand(10000, 99999), 5, '0', STR_PAD_LEFT),
                     'country_name' => 'France',
@@ -228,7 +208,7 @@ class DemoDataSeeder extends Seeder
             // Add 1-3 items per order
             $numItems = rand(1, 3);
             $orderProducts = $products->random(min($numItems, $products->count()));
-            
+
             $totalPrice = 0;
             $totalCost = 0;
 
@@ -241,8 +221,6 @@ class DemoDataSeeder extends Seeder
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $product->id,
-                    'etsy_listing_id' => $product->etsy_listing_id,
-                    'etsy_transaction_id' => 'TXN-' . strtoupper(substr(md5(uniqid()), 0, 10)),
                     'title' => $product->title,
                     'quantity' => $quantity,
                     'price' => $price,

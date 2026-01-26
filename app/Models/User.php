@@ -22,7 +22,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'onboarding_completed',
         'fal_api_key',
     ];
 
@@ -47,7 +46,6 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'onboarding_completed' => 'boolean',
             'fal_api_key' => 'encrypted',
         ];
     }

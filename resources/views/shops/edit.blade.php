@@ -32,56 +32,6 @@
                         @enderror
                     </div>
 
-                    {{-- Mode Selection --}}
-                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-                        <label class="block text-sm font-medium text-gray-700 mb-3">Mode de fonctionnement</label>
-
-                        <div class="space-y-3">
-                            <label class="flex items-start p-3 border rounded-lg cursor-pointer {{ old('mode', $shop->mode ?? 'manual') === 'manual' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400' }}">
-                                <input type="radio" name="mode" value="manual"
-                                       {{ old('mode', $shop->mode ?? 'manual') === 'manual' ? 'checked' : '' }}
-                                       class="mt-0.5 mr-3">
-                                <div>
-                                    <p class="font-medium text-gray-900">Mode manuel</p>
-                                    <p class="text-sm text-gray-600 mt-1">
-                                        Creez des produits optimises et copiez-les manuellement dans Etsy. Aucune synchronisation automatique.
-                                    </p>
-                                </div>
-                            </label>
-
-                            <label class="flex items-start p-3 border rounded-lg cursor-pointer {{ old('mode', $shop->mode ?? 'manual') === 'connected' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400' }}">
-                                <input type="radio" name="mode" value="connected"
-                                       {{ old('mode', $shop->mode ?? 'manual') === 'connected' ? 'checked' : '' }}
-                                       class="mt-0.5 mr-3">
-                                <div>
-                                    <p class="font-medium text-gray-900">Mode synchronise</p>
-                                    <p class="text-sm text-gray-600 mt-1">
-                                        Synchronisation automatique avec Etsy via l'API. Necessite une connexion Etsy active.
-                                    </p>
-                                </div>
-                            </label>
-                        </div>
-
-                        @error('mode')
-                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-
-                        @if($shop->mode === 'manual' || !$shop->etsy_shop_id)
-                            <p class="mt-3 text-sm text-blue-600 flex items-start">
-                                <svg class="w-5 h-5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <span>
-                                    @if(!$shop->etsy_shop_id)
-                                        Connectez votre boutique Etsy ci-dessous pour activer le mode synchronise.
-                                    @else
-                                        Vous pouvez activer la synchronisation automatique maintenant que votre boutique est connectee.
-                                    @endif
-                                </span>
-                            </p>
-                        @endif
-                    </div>
-
                     <div class="mb-4">
                         <label for="currency" class="block text-sm font-medium text-gray-700">Devise</label>
                         <select id="currency" name="currency" required
@@ -102,15 +52,6 @@
                                 class="rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-500 focus:ring-orange-500">
                             <span class="ml-2 text-sm text-gray-700">Boutique active</span>
                         </label>
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="flex items-center">
-                            <input type="checkbox" name="auto_sync_enabled" value="1" {{ old('auto_sync_enabled', $shop->auto_sync_enabled) ? 'checked' : '' }}
-                                class="rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-500 focus:ring-orange-500">
-                            <span class="ml-2 text-sm text-gray-700">Synchronisation automatique avec Etsy</span>
-                        </label>
-                        <p class="mt-1 text-xs text-gray-500 ml-6">Les nouveaux produits seront automatiquement publies sur Etsy</p>
                     </div>
 
                     <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
@@ -137,7 +78,6 @@
                     <input type="hidden" name="name" value="{{ $shop->name }}">
                     <input type="hidden" name="currency" value="{{ $shop->currency }}">
                     <input type="hidden" name="is_active" value="{{ $shop->is_active ? '1' : '0' }}">
-                    <input type="hidden" name="auto_sync_enabled" value="{{ $shop->auto_sync_enabled ? '1' : '0' }}">
 
                     <div class="space-y-4">
                         <div>
@@ -195,150 +135,6 @@
                         </button>
                     </div>
                 </form>
-            </div>
-
-            {{-- Etsy API Credentials --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Identifiants API Etsy</h3>
-                <p class="text-sm text-gray-500 mb-4">
-                    Entrez vos identifiants API Etsy pour connecter cette boutique. 
-                    <a href="https://www.etsy.com/developers/your-apps" target="_blank" class="text-orange-600 hover:underline">Creer une application Etsy</a>
-                </p>
-
-                <form method="POST" action="{{ route('shops.update', $shop) }}">
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="name" value="{{ $shop->name }}">
-                    <input type="hidden" name="currency" value="{{ $shop->currency }}">
-                    <input type="hidden" name="is_active" value="{{ $shop->is_active ? '1' : '0' }}">
-                    <input type="hidden" name="auto_sync_enabled" value="{{ $shop->auto_sync_enabled ? '1' : '0' }}">
-
-                    <div class="space-y-4">
-                        <div>
-                            <label for="etsy_client_id" class="block text-sm font-medium text-gray-700">Client ID (Keystring)</label>
-                            <input type="text" id="etsy_client_id" name="etsy_client_id"
-                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm"
-                                placeholder="{{ $shop->etsy_client_id ? 'Client ID configure (laisser vide pour garder)' : 'Votre Client ID Etsy' }}">
-                            @if($shop->etsy_client_id)
-                                <p class="mt-1 text-xs text-green-600">
-                                    <svg class="inline w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Client ID configure
-                                </p>
-                            @endif
-                            @error('etsy_client_id')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="etsy_client_secret" class="block text-sm font-medium text-gray-700">Client Secret</label>
-                            <input type="password" id="etsy_client_secret" name="etsy_client_secret"
-                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm"
-                                placeholder="{{ $shop->etsy_client_secret ? 'Client Secret configure (laisser vide pour garder)' : 'Votre Client Secret Etsy' }}">
-                            @if($shop->etsy_client_secret)
-                                <p class="mt-1 text-xs text-green-600">
-                                    <svg class="inline w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Client Secret configure
-                                </p>
-                            @endif
-                            @error('etsy_client_secret')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-end mt-6">
-                        <button type="submit" 
-                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                            Enregistrer les identifiants
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {{-- Etsy Connection --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Connexion Etsy</h3>
-
-                @if(!$shop->etsy_client_id || !$shop->etsy_client_secret)
-                    <div class="text-center py-6">
-                        <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
-                        </div>
-                        <p class="text-gray-600 mb-2">Identifiants API Etsy requis</p>
-                        <p class="text-sm text-gray-500">Veuillez d'abord configurer vos identifiants API Etsy (Client ID et Client Secret) ci-dessus.</p>
-                    </div>
-                @elseif($shop->etsy_shop_id)
-                    <div class="flex items-start space-x-4 mb-4">
-                        <div class="flex-shrink-0 w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                            <svg class="w-6 h-6 text-orange-600" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M8.559 3.89c0-.458.442-.706.906-.706h5.07c.464 0 .906.248.906.706 0 .459-.442.707-.906.707h-5.07c-.464 0-.906-.248-.906-.707zm7.559 5.657c0 1.888-1.529 3.418-3.418 3.418H9.282c-.464 0-.906-.248-.906-.707s.442-.706.906-.706H12.7c1.107 0 2.006-.899 2.006-2.005 0-1.107-.899-2.006-2.006-2.006H9.282c-.464 0-.906-.247-.906-.706s.442-.707.906-.707H12.7c1.889 0 3.418 1.53 3.418 3.419z"/>
-                            </svg>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center space-x-2">
-                                <span class="font-medium text-gray-900">Boutique connectee</span>
-                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                    {{ $shop->connection_status_color === 'green' ? 'bg-green-100 text-green-800' : '' }}
-                                    {{ $shop->connection_status_color === 'red' ? 'bg-red-100 text-red-800' : '' }}
-                                    {{ $shop->connection_status_color === 'gray' ? 'bg-gray-100 text-gray-800' : '' }}">
-                                    {{ $shop->connection_status_label }}
-                                </span>
-                            </div>
-                            <p class="text-sm text-gray-500 mt-1">
-                                ID: {{ $shop->etsy_shop_id }}
-                            </p>
-                            <p class="text-xs text-gray-400 mt-1">
-                                Token expire le {{ $shop->etsy_token_expires_at?->format('d/m/Y H:i') ?? 'N/A' }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div class="flex space-x-3">
-                        @if($shop->connection_status === 'expired')
-                            <a href="{{ route('etsy.connect', $shop) }}" 
-                               class="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                                </svg>
-                                Reconnecter
-                            </a>
-                        @endif
-                        <form action="{{ route('etsy.disconnect', $shop) }}" method="POST" 
-                              onsubmit="return confirm('Etes-vous sur de vouloir deconnecter cette boutique d\'Etsy ?');">
-                            @csrf
-                            <button type="submit" 
-                                    class="inline-flex items-center px-4 py-2 bg-red-100 text-red-700 text-sm rounded-lg hover:bg-red-200">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                                </svg>
-                                Deconnecter
-                            </button>
-                        </form>
-                    </div>
-                @else
-                    <div class="text-center py-6">
-                        <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-                            </svg>
-                        </div>
-                        <p class="text-gray-600 mb-4">Cette boutique n'est pas connectee a Etsy</p>
-                        <a href="{{ route('etsy.connect', $shop) }}" 
-                           class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700">
-                            <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M8.559 3.89c0-.458.442-.706.906-.706h5.07c.464 0 .906.248.906.706 0 .459-.442.707-.906.707h-5.07c-.464 0-.906-.248-.906-.707zm7.559 5.657c0 1.888-1.529 3.418-3.418 3.418H9.282c-.464 0-.906-.248-.906-.707s.442-.706.906-.706H12.7c1.107 0 2.006-.899 2.006-2.005 0-1.107-.899-2.006-2.006-2.006H9.282c-.464 0-.906-.247-.906-.706s.442-.707.906-.707H12.7c1.889 0 3.418 1.53 3.418 3.419z"/>
-                            </svg>
-                            Connecter a Etsy
-                        </a>
-                    </div>
-                @endif
             </div>
 
             {{-- Danger Zone --}}

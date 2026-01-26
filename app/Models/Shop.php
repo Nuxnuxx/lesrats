@@ -10,17 +10,8 @@ class Shop extends Model
 {
     protected $fillable = [
         'name',
-        'mode',
-        'etsy_client_id',
-        'etsy_client_secret',
-        'etsy_shop_id',
-        'etsy_user_id',
-        'etsy_access_token',
-        'etsy_refresh_token',
-        'etsy_token_expires_at',
         'currency',
         'is_active',
-        'auto_sync_enabled',
         'ai_title_prompt',
         'ai_description_prompt',
         'ai_image_prompt',
@@ -30,21 +21,10 @@ class Shop extends Model
     ];
 
     protected $casts = [
-        'etsy_client_id' => 'encrypted',
-        'etsy_client_secret' => 'encrypted',
-        'etsy_token_expires_at' => 'datetime',
         'is_active' => 'boolean',
-        'auto_sync_enabled' => 'boolean',
         'ai_image_enabled' => 'boolean',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
-    ];
-
-    protected $hidden = [
-        'etsy_client_id',
-        'etsy_client_secret',
-        'etsy_access_token',
-        'etsy_refresh_token',
     ];
 
     // ============================================
@@ -76,56 +56,6 @@ class Shop extends Model
     // ============================================
     // ACCESSORS
     // ============================================
-
-    /**
-     * Get the Etsy connection status.
-     */
-    public function getConnectionStatusAttribute(): string
-    {
-        if (!$this->etsy_shop_id) {
-            return 'not_connected';
-        }
-
-        if ($this->etsy_token_expires_at && $this->etsy_token_expires_at->isPast()) {
-            return 'expired';
-        }
-
-        return 'connected';
-    }
-
-    /**
-     * Get the connection status label in French.
-     */
-    public function getConnectionStatusLabelAttribute(): string
-    {
-        return match ($this->connection_status) {
-            'connected' => 'Connecté',
-            'expired' => 'Expiré',
-            'not_connected' => 'Non connecté',
-            default => 'Inconnu',
-        };
-    }
-
-    /**
-     * Get the connection status color for UI.
-     */
-    public function getConnectionStatusColorAttribute(): string
-    {
-        return match ($this->connection_status) {
-            'connected' => 'green',
-            'expired' => 'red',
-            'not_connected' => 'gray',
-            default => 'gray',
-        };
-    }
-
-    /**
-     * Check if shop is connected to Etsy.
-     */
-    public function isConnectedToEtsy(): bool
-    {
-        return $this->connection_status === 'connected';
-    }
 
     /**
      * Get products count for this shop.
@@ -198,7 +128,7 @@ class Shop extends Model
     public function getRevenueChartData(int $days = 30): array
     {
         $startDate = now()->subDays($days - 1)->startOfDay();
-        
+
         $revenues = $this->orders()
             ->where('created_at', '>=', $startDate)
             ->selectRaw('DATE(created_at) as date, SUM(total_price) as revenue')

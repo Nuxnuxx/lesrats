@@ -12,8 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('shops', function (Blueprint $table) {
-            $table->boolean('auto_sync_enabled')->default(false)->after('is_active');
-            $table->decimal('total_revenue', 12, 2)->default(0)->after('auto_sync_enabled');
+            $table->decimal('total_revenue', 12, 2)->default(0)->after('is_active');
             $table->unsignedInteger('total_orders')->default(0)->after('total_revenue');
         });
     }
@@ -24,7 +23,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('shops', function (Blueprint $table) {
-            $table->dropColumn(['auto_sync_enabled', 'total_revenue', 'total_orders']);
+            $table->dropColumn(['total_revenue', 'total_orders']);
         });
     }
 };

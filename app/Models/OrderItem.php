@@ -13,8 +13,6 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
-        'etsy_listing_id',
-        'etsy_transaction_id',
         'title',
         'quantity',
         'price',

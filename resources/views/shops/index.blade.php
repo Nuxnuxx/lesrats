@@ -4,12 +4,12 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 Mes Boutiques
             </h2>
-            <a href="{{ route('profile.edit') }}#etsy-connections" 
+            <a href="{{ route('shops.create') }}" 
                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                 </svg>
-                Connecter une boutique
+                Nouvelle boutique
             </a>
         </div>
     </x-slot>
@@ -38,13 +38,13 @@
                         </svg>
                     </div>
                     <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune boutique</h3>
-                    <p class="text-gray-500 mb-6">Connectez votre boutique Etsy pour commencer a vendre.</p>
-                    <a href="{{ route('profile.edit') }}#etsy-connections" 
+                    <p class="text-gray-500 mb-6">Creez votre premiere boutique pour commencer.</p>
+                    <a href="{{ route('shops.create') }}" 
                        class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700">
-                        <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M8.559 3.89c0-.458.442-.706.906-.706h5.07c.464 0 .906.248.906.706 0 .459-.442.707-.906.707h-5.07c-.464 0-.906-.248-.906-.707zm7.559 5.657c0 1.888-1.529 3.418-3.418 3.418H9.282c-.464 0-.906-.248-.906-.707s.442-.706.906-.706H12.7c1.107 0 2.006-.899 2.006-2.005 0-1.107-.899-2.006-2.006-2.006H9.282c-.464 0-.906-.247-.906-.706s.442-.707.906-.707H12.7c1.889 0 3.418 1.53 3.418 3.419z"/>
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
                         </svg>
-                        Connecter Etsy
+                        Creer une boutique
                     </a>
                 </div>
             @else
@@ -59,30 +59,18 @@
                                             {{ $shop->name }}
                                         </h3>
                                         <div class="flex items-center mt-1 space-x-2">
-                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium
-                                                {{ $shop->connection_status_color === 'green' ? 'bg-green-100 text-green-800' : '' }}
-                                                {{ $shop->connection_status_color === 'red' ? 'bg-red-100 text-red-800' : '' }}
-                                                {{ $shop->connection_status_color === 'gray' ? 'bg-gray-100 text-gray-800' : '' }}">
-                                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                                    @if($shop->connection_status === 'connected')
-                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                                    @elseif($shop->connection_status === 'expired')
-                                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                                    @else
-                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                                    @endif
-                                                </svg>
-                                                {{ $shop->connection_status_label }}
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $shop->is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                                                {{ $shop->is_active ? 'Active' : 'Inactive' }}
                                             </span>
                                             <span class="text-xs text-gray-500">{{ $shop->currency }}</span>
                                         </div>
                                     </div>
                                     
-                                    {{-- Etsy icon --}}
+                                    {{-- Shop icon --}}
                                     <div class="flex-shrink-0 ml-3">
                                         <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                                            <svg class="w-6 h-6 text-orange-600" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M8.559 3.89c0-.458.442-.706.906-.706h5.07c.464 0 .906.248.906.706 0 .459-.442.707-.906.707h-5.07c-.464 0-.906-.248-.906-.707zm7.559 5.657c0 1.888-1.529 3.418-3.418 3.418H9.282c-.464 0-.906-.248-.906-.707s.442-.706.906-.706H12.7c1.107 0 2.006-.899 2.006-2.005 0-1.107-.899-2.006-2.006-2.006H9.282c-.464 0-.906-.247-.906-.706s.442-.707.906-.707H12.7c1.889 0 3.418 1.53 3.418 3.419z"/>
+                                            <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                             </svg>
                                         </div>
                                     </div>
@@ -166,27 +154,6 @@
                                     @endcan
                                 </div>
                             </div>
-
-                            {{-- Connection warning --}}
-                            @if($shop->connection_status === 'expired')
-                                <div class="px-6 py-3 bg-red-50 border-t border-red-100">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-red-600">Token expire - reconnexion necessaire</span>
-                                        <a href="{{ route('etsy.connect', $shop) }}" class="text-sm font-medium text-red-700 hover:text-red-800">
-                                            Reconnecter
-                                        </a>
-                                    </div>
-                                </div>
-                            @elseif($shop->connection_status === 'not_connected')
-                                <div class="px-6 py-3 bg-gray-50 border-t border-gray-100">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-gray-600">Non connecte a Etsy</span>
-                                        <a href="{{ route('etsy.connect', $shop) }}" class="text-sm font-medium text-orange-600 hover:text-orange-700">
-                                            Connecter
-                                        </a>
-                                    </div>
-                                </div>
-                            @endif
                         </div>
                     @endforeach
                 </div>

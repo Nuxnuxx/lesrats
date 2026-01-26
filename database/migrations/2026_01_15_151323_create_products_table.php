@@ -20,14 +20,8 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->decimal('price', 10, 2);
             $table->integer('quantity')->default(0);
-            $table->string('sku')->nullable();
 
-            // Etsy integration
-            $table->string('etsy_listing_id')->nullable()->unique();
-            $table->string('etsy_state')->nullable(); // active, inactive, draft
-            $table->timestamp('etsy_synced_at')->nullable();
-
-            // AliExpress integration (for future use)
+            // AliExpress integration
             $table->string('aliexpress_product_id')->nullable();
             $table->string('aliexpress_url')->nullable();
 
@@ -36,13 +30,11 @@ return new class extends Migration
 
             // Product status
             $table->boolean('is_active')->default(true);
-            $table->boolean('auto_sync')->default(false); // Auto sync with Etsy
 
             $table->timestamps();
 
             // Indexes
             $table->index(['shop_id', 'is_active']);
-            $table->index('etsy_listing_id');
         });
     }
 

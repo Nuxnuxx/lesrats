@@ -40,7 +40,7 @@
             <div>
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold text-gray-900">Mes boutiques</h3>
-                    <a href="{{ route('profile.edit') }}#etsy-connections" 
+                    <a href="{{ route('shops.create') }}" 
                        class="text-sm text-orange-600 hover:text-orange-700 font-medium">
                         + Ajouter une boutique
                     </a>
@@ -50,9 +50,9 @@
                     <x-ui.empty-state 
                         icon="shop"
                         title="Aucune boutique"
-                        description="Connectez votre boutique Etsy pour commencer."
-                        :actionUrl="route('profile.edit') . '#etsy-connections'"
-                        actionLabel="Connecter Etsy"
+                        description="Creez votre premiere boutique pour commencer."
+                        :actionUrl="route('shops.create')"
+                        actionLabel="Creer une boutique"
                     />
                 @else
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -155,7 +155,7 @@
                                                 </p>
                                             </div>
                                             <div class="ml-4 flex-shrink-0">
-                                                <x-ui.status-badge :status="$product->etsy_sync_status" type="sync" />
+                                                <x-ui.source-badge :type="$product->source_type ?? 'manual'" />
                                             </div>
                                         </a>
                                     </li>

@@ -38,7 +38,7 @@
                             <dd class="mt-1 text-sm text-gray-900">{{ number_format($product->price, 2) }} {{ $product->shop->currency }}</dd>
                         </div>
                         <div>
-                            <dt class="text-sm font-medium text-gray-500">Quantité</dt>
+                            <dt class="text-sm font-medium text-gray-500">Quantite</dt>
                             <dd class="mt-1 text-sm text-gray-900">{{ $product->quantity }}</dd>
                         </div>
                         <div>
@@ -46,14 +46,6 @@
                             <dd class="mt-1">
                                 <span class="px-2 py-1 text-xs font-semibold rounded {{ $product->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                     {{ $product->is_active ? 'Actif' : 'Inactif' }}
-                                </span>
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-sm font-medium text-gray-500">Auto-sync Etsy</dt>
-                            <dd class="mt-1">
-                                <span class="px-2 py-1 text-xs font-semibold rounded {{ $product->auto_sync ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800' }}">
-                                    {{ $product->auto_sync ? 'Activé' : 'Désactivé' }}
                                 </span>
                             </dd>
                         </div>
@@ -65,76 +57,16 @@
                 </div>
             </div>
 
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Intégration Etsy</h3>
-
-                    <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                            <dt class="text-sm font-medium text-gray-500">ID Listing Etsy</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $product->etsy_listing_id ?? 'Non synchronisé' }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-sm font-medium text-gray-500">État Etsy</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $product->etsy_state ?? 'N/A' }}</dd>
-                        </div>
-                        <div>
-                            <dt class="text-sm font-medium text-gray-500">Dernière sync</dt>
-                            <dd class="mt-1 text-sm text-gray-900">
-                                {{ $product->etsy_synced_at ? $product->etsy_synced_at->format('d/m/Y H:i') : 'Jamais' }}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="text-sm font-medium text-gray-500">Statut de synchronisation</dt>
-                            <dd class="mt-1">
-                                @if($product->isSyncedWithEtsy())
-                                    @if($product->needsSync())
-                                        <span class="px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800">
-                                            Mise à jour requise
-                                        </span>
-                                    @else
-                                        <span class="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
-                                            À jour
-                                        </span>
-                                    @endif
-                                @else
-                                    <span class="px-2 py-1 text-xs font-semibold rounded bg-gray-100 text-gray-800">
-                                        Non synchronisé
-                                    </span>
-                                @endif
-                            </dd>
-                        </div>
-                    </dl>
-
-                    @if($product->shop->etsy_shop_id)
-                        <div class="mt-4">
-                            <form action="{{ route('products.sync-etsy', $product) }}" method="POST" class="inline">
-                                @csrf
-                                <button type="submit" class="inline-flex items-center px-4 py-2 bg-orange-500 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-orange-600">
-                                    {{ $product->isSyncedWithEtsy() ? 'Resynchroniser avec Etsy' : 'Publier sur Etsy' }}
-                                </button>
-                            </form>
-                        </div>
-                    @else
-                        <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                            <p class="text-sm text-yellow-800">
-                                Connectez votre boutique à Etsy pour synchroniser ce produit.
-                            </p>
-                        </div>
-                    @endif
-                </div>
-            </div>
-
-            @if($product->aliexpress_url)
+            @if($product->source_url)
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6">
-                        <h3 class="text-lg font-semibold text-gray-900 mb-4">AliExpress</h3>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Source</h3>
                         <dl class="grid grid-cols-1 gap-4">
                             <div>
                                 <dt class="text-sm font-medium text-gray-500">URL du produit</dt>
                                 <dd class="mt-1 text-sm">
-                                    <a href="{{ $product->aliexpress_url }}" target="_blank" class="text-blue-600 hover:text-blue-900">
-                                        {{ $product->aliexpress_url }}
+                                    <a href="{{ $product->source_url }}" target="_blank" class="text-blue-600 hover:text-blue-900">
+                                        {{ $product->source_url }}
                                     </a>
                                 </dd>
                             </div>
@@ -152,7 +84,7 @@
                                 Modifier le produit
                             </a>
 
-                            <form action="{{ route('products.destroy', $product) }}" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');">
+                            <form action="{{ route('products.destroy', $product) }}" method="POST" onsubmit="return confirm('Etes-vous sur de vouloir supprimer ce produit ?');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="inline-flex items-center px-4 py-2 bg-red-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-red-700">

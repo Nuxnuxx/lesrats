@@ -14,7 +14,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             \App\Http\Middleware\SetActiveShop::class,
-            \App\Http\Middleware\EnsureOnboardingCompleted::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

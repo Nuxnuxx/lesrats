@@ -50,7 +50,7 @@ class ShopController extends Controller
         $shop->users()->attach(auth()->id(), ['role' => 'owner']);
 
         return redirect()->route('shops.index')
-            ->with('success', 'Boutique créée avec succès !');
+            ->with('success', 'Boutique creee avec succes !');
     }
 
     /**
@@ -65,6 +65,7 @@ class ShopController extends Controller
         // Calculate stats
         $stats = [
             'total_products' => $shop->products()->count(),
+            'active_products' => $shop->products()->where('is_active', true)->count(),
             'total_orders' => $shop->orders()->count(),
             'total_revenue' => $shop->orders()->sum('total_price'),
             'total_profit' => $shop->orders()->sum('total_profit'),
@@ -72,8 +73,6 @@ class ShopController extends Controller
             'today_revenue' => $shop->orders()->today()->sum('total_price'),
             'this_month_orders' => $shop->orders()->thisMonth()->count(),
             'this_month_revenue' => $shop->orders()->thisMonth()->sum('total_price'),
-            'pending_sync' => $shop->products()->where('etsy_sync_status', 'pending')->count(),
-            'sync_errors' => $shop->products()->where('etsy_sync_status', 'error')->count(),
         ];
 
         // Get revenue chart data (last 30 days)
@@ -130,37 +129,17 @@ class ShopController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'mode' => 'required|in:manual,connected',
             'currency' => 'required|string|size:3',
             'is_active' => 'boolean',
-            'auto_sync_enabled' => 'boolean',
             'ai_title_prompt' => 'nullable|string|max:2000',
             'ai_description_prompt' => 'nullable|string|max:2000',
             'ai_image_prompt' => 'nullable|string|max:2000',
             'ai_image_enabled' => 'boolean',
-            'etsy_client_id' => 'nullable|string|max:500',
-            'etsy_client_secret' => 'nullable|string|max:500',
         ]);
-
-        // Validate mode: cannot switch to connected without Etsy credentials
-        if ($validated['mode'] === 'connected' && !$shop->etsy_shop_id) {
-            return redirect()->back()
-                ->withErrors(['mode' => 'Vous devez connecter votre boutique Etsy pour activer le mode synchronise'])
-                ->withInput();
-        }
 
         // Handle unchecked checkboxes
         $validated['is_active'] = $request->boolean('is_active');
-        $validated['auto_sync_enabled'] = $request->boolean('auto_sync_enabled');
         $validated['ai_image_enabled'] = $request->boolean('ai_image_enabled');
-
-        // Only update Etsy credentials if new values provided (don't overwrite with empty)
-        if (empty($validated['etsy_client_id'])) {
-            unset($validated['etsy_client_id']);
-        }
-        if (empty($validated['etsy_client_secret'])) {
-            unset($validated['etsy_client_secret']);
-        }
 
         $shop->update($validated);
 
@@ -178,7 +157,7 @@ class ShopController extends Controller
         $shop->delete();
 
         return redirect()->route('shops.index')
-            ->with('success', 'Boutique supprimée avec succès !');
+            ->with('success', 'Boutique supprimee avec succes !');
     }
 
     /**
@@ -191,6 +170,6 @@ class ShopController extends Controller
         session(['active_shop_id' => $shop->id]);
 
         return redirect()->back()
-            ->with('success', "Boutique active changée vers : {$shop->name}");
+            ->with('success', "Boutique active changee vers : {$shop->name}");
     }
 }
