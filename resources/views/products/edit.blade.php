@@ -33,6 +33,18 @@
     <div class="py-8">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
+            {{-- Mode manuel notice --}}
+            @if($product->shop->mode === 'manual')
+                <div class="bg-blue-50 border-l-4 border-blue-400 p-3">
+                    <p class="text-sm text-blue-700">
+                        <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Mode manuel : Utilisez les boutons 📋 pour copier chaque champ dans Etsy
+                    </p>
+                </div>
+            @endif
+
             {{-- Sync Error Alert --}}
             @if($product->etsy_sync_status === 'error' && $product->etsy_sync_error)
                 <x-ui.flash-message type="error" :autoDismiss="false">
@@ -53,18 +65,38 @@
 
                             <div class="space-y-4">
                                 <div>
-                                    <label for="title" class="block text-sm font-medium text-gray-700">Titre du produit</label>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label for="title" class="block text-sm font-medium text-gray-700">Titre du produit</label>
+                                        <button type="button"
+                                                onclick="copyToClipboard('{{ addslashes($product->title) }}')"
+                                                class="text-gray-400 hover:text-blue-600 transition-colors"
+                                                title="Copier le titre">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
                                     <input type="text" name="title" id="title" value="{{ old('title', $product->title) }}" required
-                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
                                     @error('title')
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
 
                                 <div>
-                                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                                        <button type="button"
+                                                onclick="copyToClipboard(`{{ addslashes($product->description) }}`)"
+                                                class="text-gray-400 hover:text-blue-600 transition-colors"
+                                                title="Copier la description">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
                                     <textarea name="description" id="description" rows="5"
-                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">{{ old('description', $product->description) }}</textarea>
+                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">{{ old('description', $product->description) }}</textarea>
                                     @error('description')
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
@@ -304,20 +336,61 @@
                         
                         @php
                             $images = is_string($product->images) ? json_decode($product->images, true) : $product->images;
-                            $firstImage = is_array($images) && !empty($images) ? $images[0] : null;
+                            $images = is_array($images) ? $images : [];
                         @endphp
-                        
-                        <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
-                            @if($firstImage)
-                                <img src="{{ $firstImage }}" alt="{{ $product->title }}" class="w-full h-full object-cover">
-                            @else
-                                <div class="w-full h-full flex items-center justify-center">
-                                    <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
+
+                        @if(count($images) > 0)
+                            <div class="relative mb-4" x-data="{ currentImageIndex: 0 }">
+                                <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                                    @foreach($images as $index => $image)
+                                        <img x-show="currentImageIndex === {{ $index }}"
+                                             src="{{ $image }}"
+                                             alt="{{ $product->title }}"
+                                             class="w-full h-full object-cover">
+                                    @endforeach
                                 </div>
-                            @endif
-                        </div>
+
+                                @if(count($images) > 1)
+                                    {{-- Navigation Arrows --}}
+                                    <button type="button"
+                                            @click="currentImageIndex = currentImageIndex > 0 ? currentImageIndex - 1 : {{ count($images) - 1 }}"
+                                            class="absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg transition-all">
+                                        <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                        </svg>
+                                    </button>
+
+                                    <button type="button"
+                                            @click="currentImageIndex = currentImageIndex < {{ count($images) - 1 }} ? currentImageIndex + 1 : 0"
+                                            class="absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-2 shadow-lg transition-all">
+                                        <svg class="w-4 h-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </button>
+
+                                    {{-- Indicator Dots --}}
+                                    <div class="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                                        @foreach($images as $index => $image)
+                                            <button type="button"
+                                                    @click="currentImageIndex = {{ $index }}"
+                                                    :class="currentImageIndex === {{ $index }} ? 'bg-white w-6' : 'bg-white/50 w-2 hover:bg-white/75'"
+                                                    class="h-2 rounded-full transition-all"></button>
+                                        @endforeach
+                                    </div>
+
+                                    {{-- Image Counter --}}
+                                    <div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs font-medium">
+                                        <span x-text="currentImageIndex + 1"></span>/{{ count($images) }}
+                                    </div>
+                                @endif
+                            </div>
+                        @else
+                            <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4 flex items-center justify-center">
+                                <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                        @endif
 
                         <p class="text-sm font-medium text-gray-900 line-clamp-2">{{ $product->title }}</p>
                         <p class="text-lg font-bold text-gray-900 mt-1">{{ number_format($product->price, 2) }} {{ $product->shop->currency }}</p>
@@ -438,4 +511,22 @@
 
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        // Simple discrete copy function
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show simple toast notification
+                const toast = document.createElement('div');
+                toast.textContent = '✅ Copié';
+                toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 2000);
+            }).catch(err => {
+                alert('Erreur lors de la copie: ' + err);
+            });
+        }
+    </script>
+    @endpush
 </x-app-layout>

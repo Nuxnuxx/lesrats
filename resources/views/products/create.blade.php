@@ -306,26 +306,65 @@
                             <span x-text="selectedImages.length"></span>/10 selectionnees
                         </span>
                     </div>
-                    <p class="text-sm text-gray-500 mb-4">Cliquez sur les images a inclure dans votre listing Etsy (max 10).</p>
-                    
-                    <div class="grid grid-cols-3 md:grid-cols-5 gap-3">
-                        <template x-for="(img, index) in productData.images" :key="index">
-                            <div @click="toggleImage(img)" 
-                                 class="relative aspect-square rounded-lg overflow-hidden cursor-pointer border-2 transition-all"
-                                 :class="selectedImages.includes(img) ? 'border-orange-500 ring-2 ring-orange-200' : 'border-gray-200 hover:border-gray-300'">
-                                <img :src="img" class="w-full h-full object-cover">
-                                <div x-show="selectedImages.includes(img)" class="absolute inset-0 bg-orange-500 bg-opacity-20"></div>
-                                <div class="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
-                                     :class="selectedImages.includes(img) ? 'bg-orange-500 text-white' : 'bg-white border border-gray-300 text-gray-500'">
-                                    <span x-show="selectedImages.includes(img)">
-                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <p class="text-sm text-gray-500 mb-4">Cliquez sur l'image pour la selectionner/deselectionner (max 10).</p>
+
+                    {{-- Image Carousel --}}
+                    <div class="relative" x-data="{ currentImageIndex: 0 }">
+                        <div class="overflow-hidden rounded-lg">
+                            <template x-for="(img, index) in productData.images" :key="index">
+                                <div x-show="currentImageIndex === index"
+                                     @click="toggleImage(img)"
+                                     class="relative cursor-pointer">
+                                    <img :src="img"
+                                         class="w-full h-96 object-contain bg-gray-50 rounded-lg border-4 transition-all"
+                                         :class="selectedImages.includes(img) ? 'border-orange-500' : 'border-gray-200'"
+                                         alt="Product image">
+                                    <div x-show="selectedImages.includes(img)"
+                                         class="absolute inset-0 bg-orange-500 bg-opacity-10 rounded-lg pointer-events-none"></div>
+                                    <div class="absolute top-4 right-4 px-3 py-1 rounded-full flex items-center gap-2 font-medium"
+                                         :class="selectedImages.includes(img) ? 'bg-orange-500 text-white' : 'bg-white border-2 border-gray-300 text-gray-700'">
+                                        <svg x-show="selectedImages.includes(img)" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                                         </svg>
-                                    </span>
-                                    <span x-show="!selectedImages.includes(img)" x-text="index + 1"></span>
+                                        <span x-text="selectedImages.includes(img) ? 'Selectionnee' : 'Cliquez pour selectionner'"></span>
+                                    </div>
                                 </div>
-                            </div>
-                        </template>
+                            </template>
+                        </div>
+
+                        {{-- Navigation Arrows --}}
+                        <button type="button"
+                                x-show="productData.images && productData.images.length > 1"
+                                @click="currentImageIndex = currentImageIndex > 0 ? currentImageIndex - 1 : productData.images.length - 1"
+                                class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-3 shadow-lg transition-all hover:scale-110">
+                            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+
+                        <button type="button"
+                                x-show="productData.images && productData.images.length > 1"
+                                @click="currentImageIndex = currentImageIndex < productData.images.length - 1 ? currentImageIndex + 1 : 0"
+                                class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white rounded-full p-3 shadow-lg transition-all hover:scale-110">
+                            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+
+                        {{-- Indicator Dots --}}
+                        <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/20 backdrop-blur-sm px-3 py-2 rounded-full">
+                            <template x-for="(img, index) in productData.images" :key="index">
+                                <button type="button"
+                                        @click="currentImageIndex = index"
+                                        :class="currentImageIndex === index ? 'bg-white w-8' : 'bg-white/50 w-2 hover:bg-white/75'"
+                                        class="h-2 rounded-full transition-all"></button>
+                            </template>
+                        </div>
+
+                        {{-- Image Counter --}}
+                        <div class="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium">
+                            <span x-text="currentImageIndex + 1"></span>/<span x-text="productData.images ? productData.images.length : 0"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -335,8 +374,18 @@
 
                     <div class="space-y-6">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Titre (optimise pour Etsy)</label>
-                            <input type="text" 
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-sm font-medium text-gray-700">Titre (optimise pour Etsy)</label>
+                                <button type="button"
+                                        @click="copyToClipboard(productData.title, 'Titre copie!')"
+                                        class="text-gray-400 hover:text-blue-600 transition-colors"
+                                        title="Copier le titre">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <input type="text"
                                    x-model="productData.title"
                                    class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
                                    placeholder="Titre accrocheur pour votre produit...">
@@ -344,7 +393,17 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-sm font-medium text-gray-700">Description</label>
+                                <button type="button"
+                                        @click="copyToClipboard(productData.description, 'Description copiee!')"
+                                        class="text-gray-400 hover:text-blue-600 transition-colors"
+                                        title="Copier la description">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
+                            </div>
                             <textarea x-model="productData.description"
                                       rows="6"
                                       class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
@@ -352,8 +411,18 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Tags Etsy (13 max)</label>
-                            <input type="text" 
+                            <div class="flex items-center justify-between mb-2">
+                                <label class="block text-sm font-medium text-gray-700">Tags Etsy (13 max)</label>
+                                <button type="button"
+                                        @click="copyToClipboard(productData.tags_string, 'Tags copies!')"
+                                        class="text-gray-400 hover:text-blue-600 transition-colors"
+                                        title="Copier les tags">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <input type="text"
                                    x-model="productData.tags_string"
                                    class="w-full rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500"
                                    placeholder="tag1, tag2, tag3...">
@@ -388,7 +457,7 @@
                         <button type="button" @click="prevStep()" class="text-gray-500 hover:text-gray-700 font-medium">
                             Retour
                         </button>
-                        <button type="button" 
+                        <button type="button"
                                 @click="nextStep()"
                                 :disabled="!productData.title"
                                 class="inline-flex items-center px-6 py-3 bg-orange-600 text-white rounded-lg font-medium hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
@@ -794,7 +863,28 @@
                         this.selectedImages.push(img);
                     }
                 },
-                
+
+                copyToClipboard(text, successMessage = 'Copie!') {
+                    if (!text) {
+                        alert('Aucun contenu a copier');
+                        return;
+                    }
+
+                    navigator.clipboard.writeText(text).then(() => {
+                        this.statusMessage = `<strong>${successMessage}</strong> Le contenu est dans votre presse-papier.`;
+                        this.statusType = 'success';
+
+                        // Clear message after 3 seconds
+                        setTimeout(() => {
+                            if (this.statusType === 'success') {
+                                this.statusMessage = '';
+                            }
+                        }, 3000);
+                    }).catch(err => {
+                        alert('Erreur lors de la copie: ' + err);
+                    });
+                },
+
                 submitForm() {
                     this.submitting = true;
                 }

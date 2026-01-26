@@ -130,6 +130,7 @@ class ShopController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'mode' => 'required|in:manual,connected',
             'currency' => 'required|string|size:3',
             'is_active' => 'boolean',
             'auto_sync_enabled' => 'boolean',
@@ -140,6 +141,13 @@ class ShopController extends Controller
             'etsy_client_id' => 'nullable|string|max:500',
             'etsy_client_secret' => 'nullable|string|max:500',
         ]);
+
+        // Validate mode: cannot switch to connected without Etsy credentials
+        if ($validated['mode'] === 'connected' && !$shop->etsy_shop_id) {
+            return redirect()->back()
+                ->withErrors(['mode' => 'Vous devez connecter votre boutique Etsy pour activer le mode synchronise'])
+                ->withInput();
+        }
 
         // Handle unchecked checkboxes
         $validated['is_active'] = $request->boolean('is_active');

@@ -32,6 +32,56 @@
                         @enderror
                     </div>
 
+                    {{-- Mode Selection --}}
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Mode de fonctionnement</label>
+
+                        <div class="space-y-3">
+                            <label class="flex items-start p-3 border rounded-lg cursor-pointer {{ old('mode', $shop->mode ?? 'manual') === 'manual' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400' }}">
+                                <input type="radio" name="mode" value="manual"
+                                       {{ old('mode', $shop->mode ?? 'manual') === 'manual' ? 'checked' : '' }}
+                                       class="mt-0.5 mr-3">
+                                <div>
+                                    <p class="font-medium text-gray-900">Mode manuel</p>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Creez des produits optimises et copiez-les manuellement dans Etsy. Aucune synchronisation automatique.
+                                    </p>
+                                </div>
+                            </label>
+
+                            <label class="flex items-start p-3 border rounded-lg cursor-pointer {{ old('mode', $shop->mode ?? 'manual') === 'connected' ? 'border-orange-500 bg-orange-50' : 'border-gray-300 hover:border-gray-400' }}">
+                                <input type="radio" name="mode" value="connected"
+                                       {{ old('mode', $shop->mode ?? 'manual') === 'connected' ? 'checked' : '' }}
+                                       class="mt-0.5 mr-3">
+                                <div>
+                                    <p class="font-medium text-gray-900">Mode synchronise</p>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        Synchronisation automatique avec Etsy via l'API. Necessite une connexion Etsy active.
+                                    </p>
+                                </div>
+                            </label>
+                        </div>
+
+                        @error('mode')
+                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+
+                        @if($shop->mode === 'manual' || !$shop->etsy_shop_id)
+                            <p class="mt-3 text-sm text-blue-600 flex items-start">
+                                <svg class="w-5 h-5 mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>
+                                    @if(!$shop->etsy_shop_id)
+                                        Connectez votre boutique Etsy ci-dessous pour activer le mode synchronise.
+                                    @else
+                                        Vous pouvez activer la synchronisation automatique maintenant que votre boutique est connectee.
+                                    @endif
+                                </span>
+                            </p>
+                        @endif
+                    </div>
+
                     <div class="mb-4">
                         <label for="currency" class="block text-sm font-medium text-gray-700">Devise</label>
                         <select id="currency" name="currency" required

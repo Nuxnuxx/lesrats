@@ -53,12 +53,29 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
             {{-- Stats Bar --}}
-            <div class="grid grid-cols-4 gap-4 mb-6">
-                <x-ui.stat-card label="Total" :value="$stats['total']" />
-                <x-ui.stat-card label="Synchronises" :value="$stats['synced']" color="green" />
-                <x-ui.stat-card label="En attente" :value="$stats['pending']" color="blue" />
-                <x-ui.stat-card label="Erreurs" :value="$stats['errors']" color="red" />
-            </div>
+            @if($shop->mode === 'connected')
+                <!-- Stats pour mode connecté -->
+                <div class="grid grid-cols-4 gap-4 mb-6">
+                    <x-ui.stat-card label="Total" :value="$stats['total']" />
+                    <x-ui.stat-card label="Synchronises" :value="$stats['synced']" color="green" />
+                    <x-ui.stat-card label="En attente" :value="$stats['pending']" color="blue" />
+                    <x-ui.stat-card label="Erreurs" :value="$stats['errors']" color="red" />
+                </div>
+            @else
+                <!-- Stats pour mode manuel -->
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <x-ui.stat-card label="Total produits" :value="$stats['total']" />
+                    <x-ui.stat-card label="Prets a copier" :value="$stats['total']" color="green" />
+                    <div class="bg-blue-50 p-4 rounded-lg shadow-sm border border-blue-200">
+                        <p class="text-blue-600 text-sm font-medium">Mode manuel</p>
+                        <p class="text-xs text-blue-800 mt-1">
+                            <a href="{{ route('shops.edit', $shop) }}" class="underline hover:text-blue-900">
+                                Connecter Etsy pour sync auto
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            @endif
 
             {{-- Filters & Bulk Actions Bar --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">

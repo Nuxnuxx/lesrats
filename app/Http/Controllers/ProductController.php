@@ -656,4 +656,53 @@ class ProductController extends Controller
                 ->with('error', 'Erreur lors de la generation des images: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Exporte les produits sélectionnés au format texte pour copier-coller Etsy
+     */
+    public function exportForEtsy(Request $request)
+    {
+        $validated = $request->validate([
+            'product_ids' => 'required|array',
+            'product_ids.*' => 'exists:products,id',
+        ]);
+
+        $products = Product::whereIn('id', $validated['product_ids'])
+            ->where('shop_id', session('current_shop_id'))
+            ->get();
+
+        $content = "EXPORT PRODUITS POUR ETSY\n";
+        $content .= "Généré le " . now()->format('d/m/Y à H:i') . "\n";
+        $content .= str_repeat('=', 80) . "\n\n";
+
+        foreach ($products as $i => $product) {
+            $content .= "PRODUIT #" . ($i + 1) . " - " . strtoupper($product->title) . "\n";
+            $content .= str_repeat('-', 80) . "\n\n";
+
+            $content .= "TITRE (" . strlen($product->title) . "/140):\n";
+            $content .= $product->title . "\n\n";
+
+            $content .= "DESCRIPTION:\n";
+            $content .= $product->description . "\n\n";
+
+            $content .= "TAGS (" . count($product->tags ?? []) . "/13):\n";
+            $content .= implode(', ', $product->tags ?? []) . "\n\n";
+
+            $content .= "PRIX: $" . number_format($product->price, 2) . "\n";
+            $content .= "COÛT: $" . number_format($product->cost_price ?? 0, 2) . "\n";
+            $content .= "STOCK: " . $product->quantity . "\n";
+            $content .= "TYPE: " . ($product->is_digital ? 'Digital' : 'Physical') . "\n\n";
+
+            $content .= "IMAGES (" . count($product->images ?? []) . "/10):\n";
+            foreach ($product->images ?? [] as $j => $img) {
+                $content .= ($j + 1) . ". " . $img . "\n";
+            }
+
+            $content .= "\n" . str_repeat('=', 80) . "\n\n";
+        }
+
+        return response($content)
+            ->header('Content-Type', 'text/plain; charset=UTF-8')
+            ->header('Content-Disposition', 'attachment; filename="etsy-export-' . now()->format('Y-m-d') . '.txt"');
+    }
 }

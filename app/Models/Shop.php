@@ -10,6 +10,7 @@ class Shop extends Model
 {
     protected $fillable = [
         'name',
+        'mode',
         'etsy_client_id',
         'etsy_client_secret',
         'etsy_shop_id',

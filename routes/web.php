@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/bulk-sync', [ProductController::class, 'bulkSync'])->name('products.bulk-sync');
     Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
     Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])->name('products.generate-ai-images');
+    Route::post('/products/export-etsy', [ProductController::class, 'exportForEtsy'])->name('products.export-etsy');
 
     // Order management routes
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
