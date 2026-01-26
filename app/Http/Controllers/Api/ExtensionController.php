@@ -262,7 +262,16 @@ class ExtensionController extends Controller
             // Ensure we have exactly 13 tags (Etsy max)
             $tags = array_slice($tags, 0, 13);
 
-            // Get images as array
+            // Get images as array - prefer real_images (AI generated) over original images
+            $realImages = $product->real_images;
+            if (is_string($realImages)) {
+                $realImages = json_decode($realImages, true) ?? [];
+            }
+            if (! is_array($realImages)) {
+                $realImages = [];
+            }
+
+            // Fall back to original images if no real_images
             $images = $product->images;
             if (is_string($images)) {
                 $images = json_decode($images, true) ?? [];
@@ -270,6 +279,9 @@ class ExtensionController extends Controller
             if (! is_array($images)) {
                 $images = [];
             }
+
+            // Use real_images if available, otherwise use original images
+            $imagesToUse = ! empty($realImages) ? $realImages : $images;
 
             // Get category info from shop's etsy_categories
             $categoryData = null;
@@ -290,7 +302,7 @@ class ExtensionController extends Controller
                     'description' => $product->description,
                     'price' => (float) $product->price,
                     'tags' => $tags,
-                    'images' => $images,
+                    'images' => $imagesToUse,
                     'quantity' => $product->quantity ?? 999,
                     'is_digital' => (bool) $product->is_digital,
                     'shop_name' => $product->shop->name,

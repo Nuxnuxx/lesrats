@@ -399,17 +399,23 @@
 
                 {{-- Sidebar --}}
                 <div class="space-y-6">
-                    {{-- Product Preview --}}
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    {{-- Product Preview with AI Edit --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" 
+                         x-data="aiImageEditor({
+                            images: {{ json_encode(is_array($product->images) ? $product->images : json_decode($product->images, true) ?? []) }},
+                            realImages: {{ json_encode($product->real_images ?? []) }},
+                            productId: {{ $product->id }},
+                            defaultPrompt: {{ json_encode($product->shop->getEffectiveAiImagePrompt()) }},
+                            csrfToken: '{{ csrf_token() }}'
+                         })">
                         <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
                         
                         @php
-                            $images = is_string($product->images) ? json_decode($product->images, true) : $product->images;
-                            $images = is_array($images) ? $images : [];
+                            $images = is_array($product->images) ? $product->images : json_decode($product->images, true) ?? [];
                         @endphp
 
                         @if(count($images) > 0)
-                            <div class="relative mb-4" x-data="{ currentImageIndex: 0 }">
+                            <div class="relative mb-4 group">
                                 <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                                     @foreach($images as $index => $image)
                                         <img x-show="currentImageIndex === {{ $index }}"
@@ -418,6 +424,16 @@
                                              class="w-full h-full object-cover">
                                     @endforeach
                                 </div>
+
+                                {{-- AI Edit Button (appears on hover) --}}
+                                <button type="button"
+                                        @click="openModal()"
+                                        class="absolute top-2 left-2 bg-purple-600 hover:bg-purple-700 text-white rounded-full p-2 shadow-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                        title="Modifier avec l'IA">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                                    </svg>
+                                </button>
 
                                 @if(count($images) > 1)
                                     {{-- Navigation Arrows --}}
@@ -463,6 +479,221 @@
 
                         <p class="text-sm font-medium text-gray-900 line-clamp-2">{{ $product->title }}</p>
                         <p class="text-lg font-bold text-gray-900 mt-1">{{ number_format($product->price, 2) }} {{ $product->shop->currency }}</p>
+
+                        {{-- AI Image Edit Modal --}}
+                        <div x-show="showModal" 
+                             x-cloak
+                             class="fixed inset-0 z-50 overflow-y-auto"
+                             x-transition:enter="ease-out duration-300"
+                             x-transition:enter-start="opacity-0"
+                             x-transition:enter-end="opacity-100"
+                             x-transition:leave="ease-in duration-200"
+                             x-transition:leave-start="opacity-100"
+                             x-transition:leave-end="opacity-0">
+                            {{-- Backdrop --}}
+                            <div class="fixed inset-0 bg-gray-500/75" @click="closeModal()"></div>
+                            
+                            {{-- Modal Content --}}
+                            <div class="flex min-h-full items-center justify-center p-4">
+                                <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl"
+                                     x-transition:enter="ease-out duration-300"
+                                     x-transition:enter-start="opacity-0 scale-95"
+                                     x-transition:enter-end="opacity-100 scale-100"
+                                     x-transition:leave="ease-in duration-200"
+                                     x-transition:leave-start="opacity-100 scale-100"
+                                     x-transition:leave-end="opacity-0 scale-95"
+                                     @click.away="closeModal()">
+                                    
+                                    {{-- Modal Header --}}
+                                    <div class="flex items-center justify-between p-4 border-b border-gray-200">
+                                        <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                                            <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                                            </svg>
+                                            <span x-text="step === 'select' ? 'Modifier l\'image avec l\'IA' : 'Resultat'"></span>
+                                        </h3>
+                                        <button type="button" @click="closeModal()" class="text-gray-400 hover:text-gray-600">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    {{-- Modal Body --}}
+                                    <div class="p-6">
+                                        {{-- Step 1: Select Image & Configure --}}
+                                        <div x-show="step === 'select'">
+                                            {{-- Image Selection --}}
+                                            <div class="mb-6">
+                                                <label class="block text-sm font-medium text-gray-700 mb-3">Selectionnez l'image source:</label>
+                                                <div class="grid grid-cols-4 gap-2">
+                                                    <template x-for="(img, index) in images" :key="index">
+                                                        <button type="button"
+                                                                @click="selectedImageIndex = index"
+                                                                :class="selectedImageIndex === index ? 'ring-2 ring-purple-500 ring-offset-2' : 'hover:opacity-75'"
+                                                                class="aspect-square rounded-lg overflow-hidden bg-gray-100 transition-all">
+                                                            <img :src="img" class="w-full h-full object-cover">
+                                                        </button>
+                                                    </template>
+                                                </div>
+                                            </div>
+
+                                            {{-- Prompt Input --}}
+                                            <div class="mb-6">
+                                                <label for="ai-prompt" class="block text-sm font-medium text-gray-700 mb-2">Prompt de transformation:</label>
+                                                <textarea id="ai-prompt"
+                                                          x-model="prompt"
+                                                          rows="4"
+                                                          class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm"
+                                                          placeholder="Decrivez comment transformer l'image..."></textarea>
+                                            </div>
+
+                                            {{-- Strength Slider --}}
+                                            <div class="mb-6">
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <label class="block text-sm font-medium text-gray-700">Intensite de transformation:</label>
+                                                    <span class="text-sm text-purple-600 font-medium" x-text="Math.round(strength * 100) + '%'"></span>
+                                                </div>
+                                                <input type="range" 
+                                                       x-model="strength"
+                                                       min="0.1" max="0.95" step="0.05"
+                                                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
+                                                <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                                    <span>Proche de l'original</span>
+                                                    <span>Tres different</span>
+                                                </div>
+                                            </div>
+
+                                            {{-- Error Message --}}
+                                            <div x-show="errorMessage" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                                <p class="text-sm text-red-600" x-text="errorMessage"></p>
+                                            </div>
+                                        </div>
+
+                                        {{-- Step 2: Show Result --}}
+                                        <div x-show="step === 'result'">
+                                            <div class="grid grid-cols-2 gap-4 mb-6">
+                                                {{-- Original --}}
+                                                <div>
+                                                    <p class="text-xs font-medium text-gray-500 mb-2 text-center">Original</p>
+                                                    <div class="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                                        <img :src="images[selectedImageIndex]" class="w-full h-full object-cover">
+                                                    </div>
+                                                </div>
+                                                {{-- Generated --}}
+                                                <div>
+                                                    <p class="text-xs font-medium text-gray-500 mb-2 text-center">Generee par IA</p>
+                                                    <div class="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                                        <img :src="generatedImage" class="w-full h-full object-cover">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
+                                                <p class="text-sm text-green-700">Image ajoutee aux "Images reelles" avec succes!</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Modal Footer --}}
+                                    <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                                        <template x-if="step === 'select'">
+                                            <div class="flex items-center gap-3 w-full justify-end">
+                                                <button type="button" 
+                                                        @click="closeModal()"
+                                                        class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
+                                                    Annuler
+                                                </button>
+                                                <button type="button"
+                                                        @click="generateImage()"
+                                                        :disabled="isGenerating || !prompt.trim()"
+                                                        class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                                    <template x-if="isGenerating">
+                                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                        </svg>
+                                                    </template>
+                                                    <template x-if="!isGenerating">
+                                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                                                        </svg>
+                                                    </template>
+                                                    <span x-text="isGenerating ? 'Generation en cours...' : 'Generer l\'image'"></span>
+                                                </button>
+                                            </div>
+                                        </template>
+                                        <template x-if="step === 'result'">
+                                            <div class="flex items-center gap-3 w-full justify-end">
+                                                <button type="button"
+                                                        @click="step = 'select'; generatedImage = null;"
+                                                        class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
+                                                    Generer une autre
+                                                </button>
+                                                <button type="button"
+                                                        @click="closeModal()"
+                                                        class="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                    </svg>
+                                                    Terminer
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Real Images Section (AI Generated) --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-purple-200 p-6"
+                         x-data="realImagesManager({
+                            images: {{ json_encode($product->real_images ?? []) }},
+                            productId: {{ $product->id }},
+                            csrfToken: '{{ csrf_token() }}'
+                         })">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-purple-600 flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                                </svg>
+                                Images reelles (IA)
+                            </h3>
+                            <span class="text-xs text-gray-500" x-text="images.length + ' image(s)'"></span>
+                        </div>
+                        
+                        <template x-if="images.length === 0">
+                            <div class="text-center py-6">
+                                <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <p class="text-sm text-gray-500">Aucune image reelle generee</p>
+                                <p class="text-xs text-gray-400 mt-1">Utilisez le bouton sur l'apercu pour creer des images IA</p>
+                            </div>
+                        </template>
+
+                        <template x-if="images.length > 0">
+                            <div class="grid grid-cols-3 gap-2">
+                                <template x-for="(img, index) in images" :key="index">
+                                    <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                        <img :src="img" class="w-full h-full object-cover">
+                                        <button type="button"
+                                                @click="removeImage(index)"
+                                                class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="Supprimer">
+                                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+
+                        <p class="text-xs text-gray-400 mt-3">
+                            Ces images seront envoyees a Etsy (pas les images AliExpress).
+                        </p>
                     </div>
 
                     {{-- Publish to Etsy --}}
@@ -585,6 +816,160 @@
 
     @push('scripts')
     <script>
+        // AI Image Editor Alpine.js Component
+        function aiImageEditor(config) {
+            return {
+                images: config.images || [],
+                realImages: config.realImages || [],
+                productId: config.productId,
+                defaultPrompt: config.defaultPrompt,
+                csrfToken: config.csrfToken,
+                
+                // State
+                showModal: false,
+                step: 'select', // 'select' or 'result'
+                currentImageIndex: 0,
+                selectedImageIndex: 0,
+                prompt: config.defaultPrompt || '',
+                strength: 0.65,
+                isGenerating: false,
+                generatedImage: null,
+                errorMessage: null,
+
+                openModal() {
+                    this.showModal = true;
+                    this.step = 'select';
+                    this.selectedImageIndex = this.currentImageIndex;
+                    this.prompt = this.defaultPrompt || '';
+                    this.strength = 0.65;
+                    this.generatedImage = null;
+                    this.errorMessage = null;
+                    document.body.classList.add('overflow-hidden');
+                },
+
+                closeModal() {
+                    this.showModal = false;
+                    document.body.classList.remove('overflow-hidden');
+                },
+
+                async generateImage() {
+                    if (!this.prompt.trim()) {
+                        this.errorMessage = 'Veuillez entrer un prompt de transformation.';
+                        return;
+                    }
+
+                    this.isGenerating = true;
+                    this.errorMessage = null;
+
+                    try {
+                        const response = await fetch(`/products/${this.productId}/transform-single-image`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                image_url: this.images[this.selectedImageIndex],
+                                prompt: this.prompt,
+                                strength: parseFloat(this.strength),
+                            }),
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.generatedImage = data.data.transformed_image;
+                            this.realImages = data.data.real_images;
+                            this.step = 'result';
+                            
+                            // Dispatch event to update real images section
+                            window.dispatchEvent(new CustomEvent('real-images-updated', { 
+                                detail: { images: data.data.real_images } 
+                            }));
+                        } else {
+                            this.errorMessage = data.message || 'Une erreur est survenue.';
+                        }
+                    } catch (error) {
+                        console.error('Error generating image:', error);
+                        this.errorMessage = 'Erreur de connexion. Veuillez reessayer.';
+                    } finally {
+                        this.isGenerating = false;
+                    }
+                },
+
+                async removeRealImage(index) {
+                    if (!confirm('Supprimer cette image?')) return;
+
+                    try {
+                        const response = await fetch(`/products/${this.productId}/remove-real-image`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ image_index: index }),
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.realImages = data.data.real_images;
+                        } else {
+                            alert(data.message || 'Erreur lors de la suppression.');
+                        }
+                    } catch (error) {
+                        console.error('Error removing image:', error);
+                        alert('Erreur de connexion.');
+                    }
+                }
+            };
+        }
+
+        // Real Images Manager Alpine.js Component
+        function realImagesManager(config) {
+            return {
+                images: config.images || [],
+                productId: config.productId,
+                csrfToken: config.csrfToken,
+
+                init() {
+                    // Listen for updates from the AI image editor
+                    window.addEventListener('real-images-updated', (event) => {
+                        this.images = event.detail.images;
+                    });
+                },
+
+                async removeImage(index) {
+                    if (!confirm('Supprimer cette image?')) return;
+
+                    try {
+                        const response = await fetch(`/products/${this.productId}/remove-real-image`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ image_index: index }),
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.images = data.data.real_images;
+                        } else {
+                            alert(data.message || 'Erreur lors de la suppression.');
+                        }
+                    } catch (error) {
+                        console.error('Error removing image:', error);
+                        alert('Erreur de connexion.');
+                    }
+                }
+            };
+        }
+
         // Simple discrete copy function
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => {
