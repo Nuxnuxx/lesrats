@@ -92,9 +92,8 @@ class ExtensionController extends Controller
             $costPrice = $validated['price'] ?? 0;
             $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
 
-            // Récupérer les prompts personnalisés de la boutique
-            $titlePrompt = $shop->ai_title_prompt;
-            $descriptionPrompt = $shop->ai_description_prompt;
+            // Récupérer les prompts personnalisés de la boutique (avec niche injectée)
+            $descriptionPrompt = $shop->getEffectiveAiDescriptionPrompt();
 
             // Optimiser le titre et la description avec l'IA
             $originalTitle = $validated['title'];
@@ -108,7 +107,7 @@ class ExtensionController extends Controller
                 $optimizedTitle = $optimizer->optimizeTitle(
                     $originalTitle,
                     $is3DPrint ? '3D Print' : null,
-                    $titlePrompt
+                    $descriptionPrompt
                 );
                 Log::info('Optimized title', ['original' => $originalTitle, 'optimized' => $optimizedTitle]);
 
@@ -198,5 +197,62 @@ class ExtensionController extends Controller
             'message' => 'LesRats API is running',
             'version' => '1.0.0',
         ]);
+    }
+
+    /**
+     * Get product data formatted for Etsy publishing.
+     */
+    public function getEtsyData($id)
+    {
+        try {
+            $product = Product::with('shop')->findOrFail($id);
+
+            // Get tags as array
+            $tags = $product->tags;
+            if (is_string($tags)) {
+                $tags = json_decode($tags, true) ?? [];
+            }
+            if (! is_array($tags)) {
+                $tags = [];
+            }
+
+            // Ensure we have exactly 13 tags (Etsy max)
+            $tags = array_slice($tags, 0, 13);
+
+            // Get images as array
+            $images = $product->images;
+            if (is_string($images)) {
+                $images = json_decode($images, true) ?? [];
+            }
+            if (! is_array($images)) {
+                $images = [];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $product->id,
+                    'title' => $product->title,
+                    'description' => $product->description,
+                    'price' => (float) $product->price,
+                    'tags' => $tags,
+                    'images' => $images,
+                    'quantity' => $product->quantity ?? 999,
+                    'is_digital' => (bool) $product->is_digital,
+                    'shop_name' => $product->shop->name,
+                    'shop_id' => $product->shop->id,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching Etsy data', [
+                'product_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found or error: '.$e->getMessage(),
+            ], 404);
+        }
     }
 }

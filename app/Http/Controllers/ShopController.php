@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class ShopController extends Controller
 {
@@ -41,15 +42,26 @@ class ShopController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
             'currency' => 'required|string|size:3',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
+
+        // Handle logo upload
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('shop-logos', 'public');
+            $validated['logo_path'] = $path;
+        }
+
+        // Remove 'logo' from validated as it's not a model field
+        unset($validated['logo']);
 
         $shop = Shop::create($validated);
 
         // Attach current user as owner
         $shop->users()->attach(auth()->id(), ['role' => 'owner']);
 
-        return redirect()->route('shops.index')
+        return redirect()->route('shops.show', $shop)
             ->with('success', 'Boutique creee avec succes !');
     }
 
@@ -129,17 +141,39 @@ class ShopController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
             'currency' => 'required|string|size:3',
             'is_active' => 'boolean',
-            'ai_title_prompt' => 'nullable|string|max:2000',
-            'ai_description_prompt' => 'nullable|string|max:2000',
-            'ai_image_prompt' => 'nullable|string|max:2000',
+            'ai_title_prompt' => 'nullable|string|max:5000',
+            'ai_description_prompt' => 'nullable|string|max:5000',
+            'ai_image_prompt' => 'nullable|string|max:5000',
             'ai_image_enabled' => 'boolean',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
         // Handle unchecked checkboxes
         $validated['is_active'] = $request->boolean('is_active');
         $validated['ai_image_enabled'] = $request->boolean('ai_image_enabled');
+
+        // Handle logo removal
+        if ($request->boolean('remove_logo') && $shop->logo_path) {
+            Storage::disk('public')->delete($shop->logo_path);
+            $validated['logo_path'] = null;
+        }
+
+        // Handle logo upload
+        if ($request->hasFile('logo')) {
+            // Delete old logo if exists
+            if ($shop->logo_path) {
+                Storage::disk('public')->delete($shop->logo_path);
+            }
+
+            $path = $request->file('logo')->store('shop-logos', 'public');
+            $validated['logo_path'] = $path;
+        }
+
+        // Remove 'logo' from validated as it's not a model field
+        unset($validated['logo']);
 
         $shop->update($validated);
 

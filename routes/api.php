@@ -21,4 +21,7 @@ Route::prefix('extension')->group(function () {
 
     // Import product (no auth required for simplicity - can add token auth later)
     Route::post('/import', [ExtensionController::class, 'import']);
+
+    // Get product data for Etsy publishing
+    Route::get('/product/{id}/etsy-data', [ExtensionController::class, 'getEtsyData']);
 });

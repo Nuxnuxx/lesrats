@@ -73,6 +73,30 @@
                                     @enderror
                                 </div>
 
+                                @php
+                                    $tagsArray = is_array($product->tags) ? $product->tags : (is_string($product->tags) ? json_decode($product->tags, true) : []);
+                                    $tagsString = is_array($tagsArray) ? implode(', ', $tagsArray) : '';
+                                @endphp
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <label for="tags" class="block text-sm font-medium text-gray-700">Tags (13 max pour Etsy)</label>
+                                        <button type="button"
+                                                onclick="copyToClipboard('{{ addslashes($tagsString) }}')"
+                                                class="text-gray-400 hover:text-blue-600 transition-colors"
+                                                title="Copier les tags">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <input type="text" name="tags" id="tags" value="{{ old('tags', $tagsString) }}"
+                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                                        placeholder="tag1, tag2, tag3...">
+                                    <p class="mt-1 text-xs text-gray-500">Separes par des virgules, 20 caracteres max par tag</p>
+                                    @error('tags')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
 
                             </div>
                         </div>
@@ -418,6 +442,30 @@
                         <p class="text-lg font-bold text-gray-900 mt-1">{{ number_format($product->price, 2) }} {{ $product->shop->currency }}</p>
                     </div>
 
+                    {{-- Publish to Etsy --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-orange-200 p-6">
+                        <h3 class="text-sm font-semibold text-orange-600 mb-4">Publier sur Etsy</h3>
+                        
+                        <p class="text-xs text-gray-500 mb-3">
+                            Ouvrez Etsy et remplissez automatiquement le formulaire avec les donnees de ce produit.
+                        </p>
+                        
+                        <button type="button" 
+                                data-product-id="{{ $product->id }}"
+                                data-shop-name="{{ $product->shop->name }}"
+                                onclick="publishToEtsy(this.dataset.productId, this.dataset.shopName)"
+                                class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            Ouvrir Etsy & Remplir
+                        </button>
+
+                        <p class="text-xs text-gray-400 mt-3">
+                            <strong>Rappel:</strong> Vous devrez ajouter les images et la categorie manuellement sur Etsy.
+                        </p>
+                    </div>
+
                     {{-- AI Image Generation --}}
                     @php
                         $hasImages = is_array($product->images) ? !empty($product->images) : !empty(json_decode($product->images, true));
@@ -528,6 +576,49 @@
             });
         }
 
+        // Publish to Etsy function
+        function publishToEtsy(productId, shopName) {
+            // Show toast that we're preparing
+            const toast = document.createElement('div');
+            toast.textContent = 'Ouverture d\'Etsy...';
+            toast.className = 'fixed bottom-4 right-4 bg-orange-500 text-white px-4 py-2 rounded shadow-lg z-50';
+            document.body.appendChild(toast);
+
+            // Try to communicate with extension via postMessage
+            // The extension will pick this up and store it
+            const message = {
+                type: 'LESRATS_PUBLISH_TO_ETSY',
+                productId: productId,
+                shopName: shopName,
+                apiUrl: window.location.origin
+            };
+
+            // Try localStorage as fallback for extension communication
+            localStorage.setItem('lesrats_pending_etsy', JSON.stringify({
+                productId: productId,
+                shopName: shopName,
+                apiUrl: window.location.origin,
+                timestamp: Date.now()
+            }));
+
+            // Open Etsy in new tab
+            const etsyUrl = 'https://www.etsy.com/your/shops/me/listing-editor/create';
+            
+            // Update toast and open Etsy
+            setTimeout(() => {
+                toast.textContent = 'Utilisez l\'extension LesRats sur la page Etsy pour remplir le formulaire!';
+                toast.className = 'fixed bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded shadow-lg z-50 max-w-sm';
+                
+                // Open Etsy
+                window.open(etsyUrl, '_blank');
+
+                // Remove toast after a longer delay
+                setTimeout(() => toast.remove(), 5000);
+            }, 500);
+
+            // Also try to trigger extension via custom event (if extension has content script on this page)
+            window.postMessage(message, '*');
+        }
 
     </script>
     @endpush

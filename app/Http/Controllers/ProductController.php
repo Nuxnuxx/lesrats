@@ -137,18 +137,29 @@ class ProductController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'tags' => 'nullable|string',
             'price' => 'required|numeric|min:0',
+            'cost_price' => 'nullable|numeric|min:0',
             'quantity' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
+            'source_url' => 'nullable|url',
             'aliexpress_url' => 'nullable|url',
             'is_active' => 'boolean',
         ]);
 
         $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;
 
+        // Convert tags string to array
+        if (isset($validated['tags']) && is_string($validated['tags'])) {
+            $tagsArray = array_map('trim', explode(',', $validated['tags']));
+            $tagsArray = array_filter($tagsArray); // Remove empty values
+            $tagsArray = array_slice($tagsArray, 0, 13); // Limit to 13 tags for Etsy
+            $validated['tags'] = $tagsArray;
+        }
+
         $product->update($validated);
 
-        return redirect()->route('products.show', $product)
+        return redirect()->route('products.edit', $product)
             ->with('success', 'Produit mis a jour avec succes !');
     }
 

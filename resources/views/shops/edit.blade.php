@@ -19,7 +19,7 @@
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Informations de la boutique</h3>
 
-                <form method="POST" action="{{ route('shops.update', $shop) }}">
+                <form method="POST" action="{{ route('shops.update', $shop) }}" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
 
@@ -28,6 +28,42 @@
                         <input id="name" type="text" name="name" value="{{ old('name', $shop->name) }}" required
                             class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm">
                         @error('name')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="description" class="block text-sm font-medium text-gray-700">Description / Niche</label>
+                        <textarea id="description" name="description" rows="3"
+                            class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
+                            placeholder="Ex: outdoor equipment and garden tools, 3D printed figurines, handmade jewelry...">{{ old('description', $shop->description) }}</textarea>
+                        <p class="mt-1 text-xs text-gray-500">Decrivez votre niche/specialite. Sera utilise dans les prompts IA pour personnaliser les contenus.</p>
+                        @error('description')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Logo de la boutique</label>
+                        <div class="flex items-start gap-4">
+                            @if($shop->logo_path)
+                                <div class="flex-shrink-0">
+                                    <img src="{{ $shop->logo_url }}" alt="Logo" class="w-20 h-20 object-contain rounded-lg border border-gray-200 bg-gray-50">
+                                </div>
+                            @endif
+                            <div class="flex-1">
+                                <input type="file" name="logo" id="logo" accept="image/*"
+                                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                                <p class="mt-1 text-xs text-gray-500">PNG ou JPG recommande. Sera utilise pour la generation d'images IA.</p>
+                                @if($shop->logo_path)
+                                    <label class="mt-2 inline-flex items-center text-sm text-red-600 cursor-pointer">
+                                        <input type="checkbox" name="remove_logo" value="1" class="rounded border-gray-300 text-red-600 mr-2">
+                                        Supprimer le logo actuel
+                                    </label>
+                                @endif
+                            </div>
+                        </div>
+                        @error('logo')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -70,7 +106,10 @@
             {{-- AI Settings --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Parametres IA</h3>
-                <p class="text-sm text-gray-500 mb-4">Personnalisez les prompts utilises pour generer les titres, descriptions et images de vos produits lors de l'import.</p>
+                <p class="text-sm text-gray-500 mb-4">
+                    Personnalisez les prompts utilises pour generer les titres, descriptions et images de vos produits.
+                    <br><span class="text-orange-600">Utilisez [SHOP_NICHE] pour inserer automatiquement la description de votre boutique.</span>
+                </p>
 
                 <form method="POST" action="{{ route('shops.update', $shop) }}">
                     @csrf
@@ -81,22 +120,21 @@
 
                     <div class="space-y-4">
                         <div>
-                            <label for="ai_title_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les titres</label>
-                            <textarea id="ai_title_prompt" name="ai_title_prompt" rows="3"
-                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
-                                placeholder="Ex: This shop sells vintage jewelry. Make titles elegant and romantic. Always mention the material (gold, silver, etc.)">{{ old('ai_title_prompt', $shop->ai_title_prompt) }}</textarea>
-                            <p class="mt-1 text-xs text-gray-500">Instructions supplementaires pour la generation des titres de produits.</p>
-                            @error('ai_title_prompt')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div>
-                            <label for="ai_description_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les descriptions</label>
-                            <textarea id="ai_description_prompt" name="ai_description_prompt" rows="4"
-                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
-                                placeholder="Ex: Write descriptions for a luxury brand targeting women 25-45. Mention handcrafted quality and sustainability. Include care instructions.">{{ old('ai_description_prompt', $shop->ai_description_prompt) }}</textarea>
-                            <p class="mt-1 text-xs text-gray-500">Instructions supplementaires pour la generation des descriptions de produits.</p>
+                            <div class="flex items-center justify-between mb-1">
+                                <label for="ai_description_prompt" class="block text-sm font-medium text-gray-700">Prompt pour titres/descriptions/tags</label>
+                                <button type="button" onclick="document.getElementById('ai_description_prompt').value = ''; this.closest('form').submit();"
+                                    class="text-xs text-orange-600 hover:text-orange-700">Restaurer par defaut</button>
+                            </div>
+                            <textarea id="ai_description_prompt" name="ai_description_prompt" rows="8"
+                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm font-mono"
+                                placeholder="Laissez vide pour utiliser le prompt par defaut...">{{ old('ai_description_prompt', $shop->ai_description_prompt) }}</textarea>
+                            <p class="mt-1 text-xs text-gray-500">
+                                @if(!$shop->ai_description_prompt)
+                                    <span class="text-green-600">Utilise le prompt par defaut (expert SEO Etsy)</span>
+                                @else
+                                    Prompt personnalise actif
+                                @endif
+                            </p>
                             @error('ai_description_prompt')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
@@ -116,11 +154,21 @@
                             </div>
 
                             <div>
-                                <label for="ai_image_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les images</label>
-                                <textarea id="ai_image_prompt" name="ai_image_prompt" rows="3"
-                                    class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
-                                    placeholder="Ex: Professional product photography on pure white background, studio lighting, high quality, commercial photography style">{{ old('ai_image_prompt', $shop->ai_image_prompt) }}</textarea>
-                                <p class="mt-1 text-xs text-gray-500">Style de transformation pour les images (img2img avec Fal.ai).</p>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label for="ai_image_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les images</label>
+                                    <button type="button" onclick="document.getElementById('ai_image_prompt').value = ''; this.closest('form').submit();"
+                                        class="text-xs text-orange-600 hover:text-orange-700">Restaurer par defaut</button>
+                                </div>
+                                <textarea id="ai_image_prompt" name="ai_image_prompt" rows="6"
+                                    class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm font-mono"
+                                    placeholder="Laissez vide pour utiliser le prompt par defaut...">{{ old('ai_image_prompt', $shop->ai_image_prompt) }}</textarea>
+                                <p class="mt-1 text-xs text-gray-500">
+                                    @if(!$shop->ai_image_prompt)
+                                        <span class="text-green-600">Utilise le prompt par defaut (generateur images Etsy)</span>
+                                    @else
+                                        Prompt personnalise actif
+                                    @endif
+                                </p>
                                 @error('ai_image_prompt')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror

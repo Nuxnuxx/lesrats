@@ -1,4 +1,4 @@
-// États de l'interface
+// États de l'interface - Import
 const states = {
   NOT_ALIEXPRESS: 'state-not-aliexpress',
   EXTRACTING: 'state-extracting',
@@ -8,13 +8,22 @@ const states = {
   ERROR: 'state-error'
 };
 
+// États de l'interface - Etsy
+const etsyStates = {
+  READY: 'state-etsy-ready',
+  LOADING: 'state-etsy-loading',
+  SUCCESS: 'state-etsy-success',
+  ERROR: 'state-etsy-error'
+};
+
 let currentProduct = null;
 let importedProductUrl = null;
+let currentTab = 'import';
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
   // Charger les paramètres sauvegardés
-  const saved = await chrome.storage.local.get(['apiUrl', 'apiToken']);
+  const saved = await chrome.storage.local.get(['apiUrl', 'apiToken', 'lastEtsyShopName']);
   if (saved.apiUrl) {
     document.getElementById('api-url').value = saved.apiUrl;
   } else {
@@ -23,16 +32,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (saved.apiToken) {
     document.getElementById('api-token').value = saved.apiToken;
   }
+  if (saved.lastEtsyShopName) {
+    document.getElementById('etsy-shop-name').value = saved.lastEtsyShopName;
+  }
 
-  // Event listeners
+  // Event listeners - Import
   document.getElementById('btn-import').addEventListener('click', importProduct);
   document.getElementById('btn-retry').addEventListener('click', retryExtraction);
   document.getElementById('btn-import-another').addEventListener('click', retryExtraction);
   document.getElementById('btn-view-product').addEventListener('click', viewProduct);
 
+  // Event listeners - Etsy
+  document.getElementById('btn-publish-etsy').addEventListener('click', publishToEtsy);
+  document.getElementById('btn-etsy-retry').addEventListener('click', resetEtsyState);
+  document.getElementById('btn-etsy-another').addEventListener('click', resetEtsyState);
+
+  // Event listeners - Tabs
+  document.getElementById('tab-import').addEventListener('click', () => switchTab('import'));
+  document.getElementById('tab-etsy').addEventListener('click', () => switchTab('etsy'));
+
   // Sauvegarder les paramètres quand ils changent
   document.getElementById('api-url').addEventListener('change', saveSettings);
   document.getElementById('api-token').addEventListener('change', saveSettings);
+  document.getElementById('etsy-shop-name').addEventListener('change', saveEtsySettings);
 
   // Configurer le raccourci clavier
   document.getElementById('configure-shortcut').addEventListener('click', (e) => {
@@ -52,12 +74,44 @@ async function saveSettings() {
   });
 }
 
-// Afficher un état
+// Sauvegarder les paramètres Etsy
+async function saveEtsySettings() {
+  await chrome.storage.local.set({
+    lastEtsyShopName: document.getElementById('etsy-shop-name').value
+  });
+}
+
+// Changer d'onglet
+function switchTab(tab) {
+  currentTab = tab;
+  
+  // Update tab buttons
+  document.getElementById('tab-import').classList.toggle('active', tab === 'import');
+  document.getElementById('tab-etsy').classList.toggle('active', tab === 'etsy');
+  
+  // Show/hide sections
+  document.getElementById('section-import').classList.toggle('hidden', tab !== 'import');
+  document.getElementById('section-etsy').classList.toggle('hidden', tab !== 'etsy');
+}
+
+// Afficher un état (Import section)
 function showState(stateId) {
   Object.values(states).forEach(id => {
-    document.getElementById(id).classList.add('hidden');
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
   });
-  document.getElementById(stateId).classList.remove('hidden');
+  const el = document.getElementById(stateId);
+  if (el) el.classList.remove('hidden');
+}
+
+// Afficher un état (Etsy section)
+function showEtsyState(stateId) {
+  Object.values(etsyStates).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  const el = document.getElementById(stateId);
+  if (el) el.classList.remove('hidden');
 }
 
 // Vérifier la page actuelle
@@ -167,4 +221,69 @@ function retryExtraction() {
 function showError(message) {
   document.getElementById('error-message').textContent = message;
   showState(states.ERROR);
+}
+
+// ============== ETSY FUNCTIONS ==============
+
+// Publier sur Etsy
+async function publishToEtsy() {
+  const productId = document.getElementById('etsy-product-id').value.trim();
+  const shopName = document.getElementById('etsy-shop-name').value.trim();
+  
+  if (!productId) {
+    showEtsyError('Veuillez entrer l\'ID du produit');
+    return;
+  }
+  
+  if (!shopName) {
+    showEtsyError('Veuillez entrer le nom de la boutique Etsy');
+    return;
+  }
+  
+  // Get API URL
+  const saved = await chrome.storage.local.get(['apiUrl']);
+  const apiUrl = saved.apiUrl || 'http://localhost:8000';
+  
+  showEtsyState(etsyStates.LOADING);
+  
+  try {
+    // First, verify the product exists by fetching its data
+    const response = await fetch(`${apiUrl}/api/extension/product/${productId}/etsy-data`);
+    const data = await response.json();
+    
+    if (!data.success) {
+      showEtsyError(`Produit non trouve: ${data.message}`);
+      return;
+    }
+    
+    // Store the pending product info in extension storage
+    await chrome.storage.local.set({
+      pendingEtsyProduct: productId,
+      pendingEtsyShopName: shopName,
+      apiUrl: apiUrl,
+      lastEtsyShopName: shopName
+    });
+    
+    // Open Etsy listing editor
+    const etsyUrl = 'https://www.etsy.com/your/shops/me/listing-editor/create';
+    chrome.tabs.create({ url: etsyUrl });
+    
+    showEtsyState(etsyStates.SUCCESS);
+    
+  } catch (error) {
+    console.error('Erreur Etsy:', error);
+    showEtsyError('Erreur de connexion. Verifiez que le serveur LesRats est demarre.');
+  }
+}
+
+// Afficher une erreur Etsy
+function showEtsyError(message) {
+  document.getElementById('etsy-error-message').textContent = message;
+  showEtsyState(etsyStates.ERROR);
+}
+
+// Reset Etsy state
+function resetEtsyState() {
+  document.getElementById('etsy-product-id').value = '';
+  showEtsyState(etsyStates.READY);
 }

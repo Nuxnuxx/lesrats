@@ -11,17 +11,25 @@
     <header>
       <div class="logo">🐀</div>
       <h1>LesRats</h1>
-      <p class="subtitle">AliExpress Importer</p>
+      <p class="subtitle">Import & Publish</p>
     </header>
 
-    <!-- État: Pas sur AliExpress -->
-    <div id="state-not-aliexpress" class="state">
-      <div class="icon-large">🔍</div>
-      <p>Naviguez vers une page produit AliExpress pour commencer l'import.</p>
-      <a href="https://fr.aliexpress.com" target="_blank" class="btn btn-secondary">
-        Aller sur AliExpress
-      </a>
+    <!-- Tabs for switching between modes -->
+    <div class="tabs">
+      <button id="tab-import" class="tab active">Import AliExpress</button>
+      <button id="tab-etsy" class="tab">Publier sur Etsy</button>
     </div>
+
+    <!-- ============== IMPORT SECTION ============== -->
+    <div id="section-import">
+      <!-- État: Pas sur AliExpress -->
+      <div id="state-not-aliexpress" class="state">
+        <div class="icon-large">🔍</div>
+        <p>Naviguez vers une page produit AliExpress pour commencer l'import.</p>
+        <a href="https://fr.aliexpress.com" target="_blank" class="btn btn-secondary">
+          Aller sur AliExpress
+        </a>
+      </div>
 
     <!-- État: Extraction en cours -->
     <div id="state-extracting" class="state hidden">
@@ -72,13 +80,66 @@
       </button>
     </div>
 
-    <!-- État: Erreur -->
-    <div id="state-error" class="state hidden">
-      <div class="icon-large">❌</div>
-      <p id="error-message">Une erreur est survenue</p>
-      <button id="btn-retry" class="btn btn-secondary">
-        Réessayer
-      </button>
+      <!-- État: Erreur -->
+      <div id="state-error" class="state hidden">
+        <div class="icon-large">❌</div>
+        <p id="error-message">Une erreur est survenue</p>
+        <button id="btn-retry" class="btn btn-secondary">
+          Réessayer
+        </button>
+      </div>
+    </div>
+
+    <!-- ============== ETSY SECTION ============== -->
+    <div id="section-etsy" class="hidden">
+      <!-- État: Etsy Ready -->
+      <div id="state-etsy-ready" class="state">
+        <div class="icon-large">🛒</div>
+        <p>Publiez un produit LesRats sur Etsy</p>
+        
+        <div class="form-group">
+          <label for="etsy-product-id">ID du produit LesRats:</label>
+          <input type="number" id="etsy-product-id" placeholder="Ex: 123">
+        </div>
+
+        <div class="form-group">
+          <label for="etsy-shop-name">Nom de la boutique Etsy:</label>
+          <input type="text" id="etsy-shop-name" placeholder="Ex: BloodstoneForgeFR">
+        </div>
+
+        <button id="btn-publish-etsy" class="btn btn-etsy">
+          🚀 Ouvrir Etsy & Remplir
+        </button>
+
+        <p class="help-text">
+          Le formulaire Etsy sera rempli automatiquement.<br>
+          Vous devrez ajouter les images et la categorie manuellement.
+        </p>
+      </div>
+
+      <!-- État: Etsy Loading -->
+      <div id="state-etsy-loading" class="state hidden">
+        <div class="spinner"></div>
+        <p>Ouverture d'Etsy...</p>
+      </div>
+
+      <!-- État: Etsy Success -->
+      <div id="state-etsy-success" class="state hidden">
+        <div class="icon-large">✅</div>
+        <p>Page Etsy ouverte! Le formulaire va etre rempli automatiquement.</p>
+        <button id="btn-etsy-another" class="btn btn-secondary">
+          Publier un autre produit
+        </button>
+      </div>
+
+      <!-- État: Etsy Error -->
+      <div id="state-etsy-error" class="state hidden">
+        <div class="icon-large">❌</div>
+        <p id="etsy-error-message">Une erreur est survenue</p>
+        <button id="btn-etsy-retry" class="btn btn-secondary">
+          Réessayer
+        </button>
+      </div>
     </div>
 
     <!-- Raccourci clavier -->
@@ -89,7 +150,7 @@
     </div>
 
     <footer>
-      <p>v1.0.1 • Made with 🧀 by LesRats</p>
+      <p>v1.1.0 • Made with 🧀 by LesRats</p>
     </footer>
   </div>
 

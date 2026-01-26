@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "LesRats - AliExpress Importer",
-  "version": "1.0.1",
-  "description": "Importez facilement des produits AliExpress vers votre boutique LesRats",
+  "name": "LesRats - AliExpress Importer & Etsy Publisher",
+  "version": "1.1.0",
+  "description": "Importez des produits AliExpress et publiez-les facilement sur Etsy",
   "permissions": [
     "activeTab",
     "storage"
@@ -19,6 +19,7 @@
   "host_permissions": [
     "https://*.aliexpress.com/*",
     "https://fr.aliexpress.com/*",
+    "https://*.etsy.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
   ],
@@ -44,6 +45,14 @@
         "https://fr.aliexpress.com/item/*.html*"
       ],
       "js": ["content/aliexpress.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.etsy.com/your/shops/*/listing-editor/*",
+        "https://www.etsy.com/your/shops/*/listing-editor/*"
+      ],
+      "js": ["content/etsy.js"],
       "run_at": "document_idle"
     }
   ],

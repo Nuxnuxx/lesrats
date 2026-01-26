@@ -39,6 +39,42 @@ h1 {
   margin-top: 4px;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.tab.active {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border-color: transparent;
+  color: #fff;
+}
+
+/* Hidden sections */
+.hidden {
+  display: none !important;
+}
+
 .state {
   text-align: center;
   padding: 20px 0;
@@ -247,4 +283,37 @@ kbd {
 .configure-link:hover {
   color: #f97316;
   text-decoration: underline;
+}
+
+/* Etsy Button */
+.btn-etsy {
+  background: linear-gradient(135deg, #F56400 0%, #D35400 100%);
+  color: #fff;
+}
+
+.btn-etsy:hover {
+  background: linear-gradient(135deg, #FF7518 0%, #F56400 100%);
+  transform: translateY(-1px);
+}
+
+/* Help text */
+.help-text {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* Etsy error state */
+#state-etsy-error .icon-large {
+  color: #ef4444;
+}
+
+#etsy-error-message {
+  color: #fca5a5;
+}
+
+/* Etsy success state */
+#state-etsy-success .icon-large {
+  color: #22c55e;
 }
