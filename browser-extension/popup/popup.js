@@ -19,6 +19,7 @@ const etsyStates = {
 let currentProduct = null;
 let importedProductUrl = null;
 let currentTab = 'import';
+let shops = [];
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
@@ -54,7 +55,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Sauvegarder les paramètres quand ils changent
   document.getElementById('api-url').addEventListener('change', saveSettings);
   document.getElementById('api-token').addEventListener('change', saveSettings);
+  document.getElementById('shop-select').addEventListener('change', saveSettings);
   document.getElementById('etsy-shop-name').addEventListener('change', saveEtsySettings);
+
+  // Load shops when API URL changes
+  document.getElementById('api-url').addEventListener('change', loadShops);
+
+  // Load shops on startup
+  loadShops();
 
   // Configurer le raccourci clavier
   document.getElementById('configure-shortcut').addEventListener('click', (e) => {
@@ -70,8 +78,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function saveSettings() {
   await chrome.storage.local.set({
     apiUrl: document.getElementById('api-url').value,
-    apiToken: document.getElementById('api-token').value
+    apiToken: document.getElementById('api-token').value,
+    selectedShopId: document.getElementById('shop-select').value
   });
+}
+
+// Charger la liste des boutiques
+async function loadShops() {
+  const apiUrl = document.getElementById('api-url').value.trim() || 'http://localhost:8000';
+  const shopSelect = document.getElementById('shop-select');
+  
+  shopSelect.innerHTML = '<option value="">Chargement...</option>';
+  
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'fetchShops',
+      apiUrl: apiUrl
+    });
+    
+    if (response.success && response.shops) {
+      shops = response.shops;
+      
+      // Get saved selection
+      const saved = await chrome.storage.local.get(['selectedShopId']);
+      
+      // Populate dropdown
+      shopSelect.innerHTML = shops.map(shop => 
+        `<option value="${shop.id}" ${saved.selectedShopId == shop.id ? 'selected' : ''}>${shop.name} (${shop.platform})</option>`
+      ).join('');
+      
+      // If no saved selection and shops exist, save the first one
+      if (!saved.selectedShopId && shops.length > 0) {
+        await chrome.storage.local.set({ selectedShopId: shops[0].id.toString() });
+      }
+    } else {
+      shopSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+    }
+  } catch (error) {
+    console.error('Error loading shops:', error);
+    shopSelect.innerHTML = '<option value="">Serveur inaccessible</option>';
+  }
 }
 
 // Sauvegarder les paramètres Etsy
@@ -165,9 +211,15 @@ async function importProduct() {
 
   const apiUrl = document.getElementById('api-url').value.trim();
   const apiToken = document.getElementById('api-token').value.trim();
+  const shopId = document.getElementById('shop-select').value;
 
   if (!apiUrl) {
     showError('Veuillez entrer l\'URL de votre serveur LesRats');
+    return;
+  }
+
+  if (!shopId) {
+    showError('Veuillez sélectionner une boutique');
     return;
   }
 
@@ -183,10 +235,16 @@ async function importProduct() {
       headers['Authorization'] = `Bearer ${apiToken}`;
     }
 
+    // Add shop_id to product data
+    const productData = {
+      ...currentProduct,
+      shop_id: parseInt(shopId)
+    };
+
     const response = await fetch(`${apiUrl}/api/extension/import`, {
       method: 'POST',
       headers: headers,
-      body: JSON.stringify(currentProduct)
+      body: JSON.stringify(productData)
     });
 
     const data = await response.json();
@@ -247,12 +305,15 @@ async function publishToEtsy() {
   showEtsyState(etsyStates.LOADING);
   
   try {
-    // First, verify the product exists by fetching its data
-    const response = await fetch(`${apiUrl}/api/extension/product/${productId}/etsy-data`);
-    const data = await response.json();
+    // First, verify the product exists by fetching its data via service worker
+    const data = await chrome.runtime.sendMessage({
+      action: 'fetchEtsyData',
+      apiUrl: apiUrl,
+      productId: productId
+    });
     
     if (!data.success) {
-      showEtsyError(`Produit non trouve: ${data.message}`);
+      showEtsyError(`Produit non trouve: ${data.message || data.error}`);
       return;
     }
     

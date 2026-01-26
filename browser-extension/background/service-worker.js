@@ -86,7 +86,176 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
+  
+  // Fetch Etsy product data (routed through service worker to avoid CORS)
+  if (request.action === 'fetchEtsyData') {
+    fetchEtsyData(request.apiUrl, request.productId)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  
+  // Fetch shops list
+  if (request.action === 'fetchShops') {
+    fetchShops(request.apiUrl)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  
+  // Download images from URLs (routed through service worker to avoid CORS)
+  if (request.action === 'downloadImages') {
+    downloadImages(request.imageUrls)
+      .then(result => sendResponse({ success: true, images: result }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  
+  // Download images and save to Downloads folder
+  if (request.action === 'downloadImagesAndSave') {
+    downloadAndSaveImages(request.imageUrls)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  
+  // Auto-upload images via native messaging host
+  if (request.action === 'autoUploadImages') {
+    autoUploadViaNativeHost(request.images)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
+
+// Native messaging host name
+const NATIVE_HOST = 'com.lesrats.host';
+
+// Auto-upload images via native messaging host
+async function autoUploadViaNativeHost(images) {
+  try {
+    // Send images to native host
+    const response = await chrome.runtime.sendNativeMessage(NATIVE_HOST, {
+      action: 'autoUpload',
+      images: images
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('🐀 Native messaging error:', error);
+    return { 
+      success: false, 
+      error: 'Native host not installed. Run install.sh in browser-extension/native-host/' 
+    };
+  }
+}
+
+// Fetch product data for Etsy publishing
+async function fetchEtsyData(apiUrl, productId) {
+  try {
+    const response = await fetch(`${apiUrl}/api/extension/product/${productId}/etsy-data`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('🐀 Error fetching Etsy data:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Fetch shops list
+async function fetchShops(apiUrl) {
+  try {
+    const response = await fetch(`${apiUrl}/api/extension/shops`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('🐀 Error fetching shops:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Download image from URL and convert to base64
+async function downloadImageAsBase64(imageUrl) {
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    const blob = await response.blob();
+    const base64 = await blobToBase64(blob);
+    
+    // Determine file extension from content-type or URL
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const extension = contentType.includes('png') ? 'png' : 
+                      contentType.includes('webp') ? 'webp' : 'jpg';
+    
+    return {
+      success: true,
+      base64: base64,
+      mimeType: contentType,
+      extension: extension
+    };
+  } catch (error) {
+    console.error('🐀 Error downloading image:', imageUrl, error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Convert blob to base64
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// Download multiple images
+async function downloadImages(imageUrls) {
+  const results = [];
+  for (let i = 0; i < imageUrls.length && i < 10; i++) { // Etsy max 10 images
+    const result = await downloadImageAsBase64(imageUrls[i]);
+    if (result.success) {
+      results.push({
+        base64: result.base64,
+        mimeType: result.mimeType,
+        extension: result.extension,
+        index: i
+      });
+    }
+    // Small delay between downloads to avoid rate limiting
+    await new Promise(r => setTimeout(r, 200));
+  }
+  return results;
+}
+
+// Download images and save to Downloads folder using chrome.downloads API
+async function downloadAndSaveImages(imageUrls) {
+  let count = 0;
+  
+  for (let i = 0; i < imageUrls.length && i < 10; i++) {
+    const url = imageUrls[i];
+    const filename = `lesrats_image_${String(i + 1).padStart(2, '0')}.jpg`;
+    
+    try {
+      // Use chrome.downloads to save to Downloads folder
+      await chrome.downloads.download({
+        url: url,
+        filename: filename,
+        saveAs: false // Don't prompt, save directly
+      });
+      count++;
+      console.log('🐀 Downloaded:', filename);
+      
+      // Small delay between downloads
+      await new Promise(r => setTimeout(r, 300));
+    } catch (e) {
+      console.error('🐀 Failed to download:', url, e);
+    }
+  }
+  
+  return { success: count > 0, count: count };
+}
 
 // Fonction d'import vers le serveur
 async function handleImport(productData, apiUrl, apiToken) {

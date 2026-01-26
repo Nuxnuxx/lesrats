@@ -138,6 +138,7 @@ class ProductController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'tags' => 'nullable|string',
+            'etsy_category' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
             'quantity' => 'required|integer|min:0',

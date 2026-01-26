@@ -18,6 +18,7 @@ class Shop extends Model
         'ai_description_prompt',
         'ai_image_prompt',
         'ai_image_enabled',
+        'etsy_categories',
         'total_revenue',
         'total_orders',
     ];
@@ -78,6 +79,7 @@ PROMPT;
     protected $casts = [
         'is_active' => 'boolean',
         'ai_image_enabled' => 'boolean',
+        'etsy_categories' => 'array',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
     ];

@@ -5,7 +5,9 @@
   "description": "Importez des produits AliExpress et publiez-les facilement sur Etsy",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "downloads",
+    "nativeMessaging"
   ],
   "commands": {
     "quick-import": {
@@ -49,10 +51,18 @@
     },
     {
       "matches": [
-        "https://*.etsy.com/your/shops/*/listing-editor/*",
-        "https://www.etsy.com/your/shops/*/listing-editor/*"
+        "https://*.etsy.com/*listing-editor*",
+        "https://www.etsy.com/*listing-editor*"
       ],
       "js": ["content/etsy.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["content/lesrats.js"],
       "run_at": "document_idle"
     }
   ],

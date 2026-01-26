@@ -7,7 +7,6 @@ use App\Models\Product;
 use App\Models\Shop;
 use App\Services\ContentOptimizerService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class ExtensionController extends Controller
@@ -35,26 +34,21 @@ class ExtensionController extends Controller
             'source_url' => 'required|string|url',
             'aliexpress_product_id' => 'nullable|string',
             'source_type' => 'nullable|string|in:aliexpress,printables,manual',
+            'shop_id' => 'nullable|integer|exists:shops,id',
         ]);
 
         try {
-            // Trouver la boutique par défaut ou la première boutique
+            // Trouver la boutique
             $shop = null;
-            $user = null;
 
-            // Si l'utilisateur est authentifié
-            if (Auth::check()) {
-                $user = Auth::user();
-                $shop = $user->shops()->first();
+            // Si un shop_id est fourni, l'utiliser
+            if (! empty($validated['shop_id'])) {
+                $shop = Shop::find($validated['shop_id']);
             }
 
             // Sinon, utiliser la première boutique disponible
             if (! $shop) {
                 $shop = Shop::first();
-                // Essayer de récupérer un utilisateur lié à cette boutique
-                if ($shop) {
-                    $user = $shop->users()->first();
-                }
             }
 
             if (! $shop) {
@@ -200,6 +194,34 @@ class ExtensionController extends Controller
     }
 
     /**
+     * Get list of shops for extension dropdown.
+     */
+    public function getShops()
+    {
+        try {
+            $shops = Shop::select('id', 'name', 'platform')->get();
+
+            return response()->json([
+                'success' => true,
+                'shops' => $shops->map(function ($shop) {
+                    return [
+                        'id' => $shop->id,
+                        'name' => $shop->name,
+                        'platform' => $shop->platform,
+                    ];
+                }),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error fetching shops', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching shops: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Get product data formatted for Etsy publishing.
      */
     public function getEtsyData($id)
@@ -228,6 +250,17 @@ class ExtensionController extends Controller
                 $images = [];
             }
 
+            // Get category info from shop's etsy_categories
+            $categoryData = null;
+            if ($product->etsy_category && $product->shop->etsy_categories) {
+                foreach ($product->shop->etsy_categories as $cat) {
+                    if ($cat['name'] === $product->etsy_category) {
+                        $categoryData = $cat;
+                        break;
+                    }
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -241,6 +274,7 @@ class ExtensionController extends Controller
                     'is_digital' => (bool) $product->is_digital,
                     'shop_name' => $product->shop->name,
                     'shop_id' => $product->shop->id,
+                    'etsy_category' => $categoryData,
                 ],
             ]);
         } catch (\Exception $e) {

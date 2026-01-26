@@ -1,0 +1,9 @@
+{
+  "name": "com.lesrats.host",
+  "description": "LesRats Native Messaging Host for file uploads",
+  "path": "/home/gaetan/personal/lesrats/browser-extension/native-host/lesrats_host.py",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/"
+  ]
+}

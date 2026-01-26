@@ -185,6 +185,102 @@
                 </form>
             </div>
 
+            {{-- Etsy Categories --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" x-data="etsyCategoriesManager()">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Categories Etsy</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    Definissez les categories Etsy disponibles pour cette boutique. Chaque categorie peut avoir des mots-cles pour l'auto-detection.
+                </p>
+
+                <form method="POST" action="{{ route('shops.update-categories', $shop) }}">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="space-y-3" id="categories-container">
+                        <template x-for="(category, index) in categories" :key="index">
+                            <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                <div class="flex items-start justify-between mb-3">
+                                    <span class="text-sm font-medium text-gray-700" x-text="'Categorie ' + (index + 1)"></span>
+                                    <button type="button" @click="removeCategory(index)" class="text-red-500 hover:text-red-700">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Nom (interne)</label>
+                                        <input type="text" x-model="category.name" 
+                                            class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                            placeholder="Ex: Fichiers 3D">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Nom Etsy (exact)</label>
+                                        <input type="text" x-model="category.etsy_name" 
+                                            class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                            placeholder="Ex: Fichiers pour imprimante 3D">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">ID Checkbox Etsy</label>
+                                        <input type="text" x-model="category.etsy_id" 
+                                            class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                            placeholder="Ex: category-12380">
+                                        <p class="mt-1 text-xs text-gray-400">Inspecter l'element sur Etsy pour trouver l'ID</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Mots-cles (auto-detect)</label>
+                                        <input type="text" x-model="category.keywords" 
+                                            class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                            placeholder="Ex: 3d, stl, print, figurine">
+                                        <p class="mt-1 text-xs text-gray-400">Separes par virgules</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <input type="hidden" name="etsy_categories" :value="JSON.stringify(categories)">
+
+                    <div class="mt-4 flex items-center justify-between">
+                        <button type="button" @click="addCategory()" 
+                            class="inline-flex items-center px-3 py-2 text-sm font-medium text-orange-600 hover:text-orange-700">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Ajouter une categorie
+                        </button>
+                        <button type="submit" 
+                            class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                            Enregistrer les categories
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            @push('scripts')
+            <script>
+                function etsyCategoriesManager() {
+                    return {
+                        categories: @json($shop->etsy_categories ?? []),
+                        
+                        addCategory() {
+                            this.categories.push({
+                                name: '',
+                                etsy_name: '',
+                                etsy_id: '',
+                                keywords: ''
+                            });
+                        },
+                        
+                        removeCategory(index) {
+                            this.categories.splice(index, 1);
+                        }
+                    }
+                }
+            </script>
+            @endpush
+
             {{-- Danger Zone --}}
             <div class="bg-white rounded-lg shadow-sm border border-red-200 p-6">
                 <h3 class="text-lg font-semibold text-red-600 mb-4">Zone dangereuse</h3>

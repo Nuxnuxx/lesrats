@@ -13,6 +13,7 @@ class Product extends Model
         'title',
         'description',
         'tags',
+        'etsy_category',
         'price',
         'cost_price',
         'is_digital',

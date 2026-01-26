@@ -98,6 +98,29 @@
                                     @enderror
                                 </div>
 
+                                {{-- Etsy Category --}}
+                                @php
+                                    $shopCategories = $product->shop->etsy_categories ?? [];
+                                @endphp
+                                @if(count($shopCategories) > 0)
+                                <div>
+                                    <label for="etsy_category" class="block text-sm font-medium text-gray-700 mb-1">Categorie Etsy</label>
+                                    <select name="etsy_category" id="etsy_category"
+                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500">
+                                        <option value="">-- Selectionnez une categorie --</option>
+                                        @foreach($shopCategories as $cat)
+                                            <option value="{{ $cat['name'] }}" {{ old('etsy_category', $product->etsy_category) == $cat['name'] ? 'selected' : '' }}>
+                                                {{ $cat['name'] }} ({{ $cat['etsy_name'] }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500">Utilisee lors de la publication sur Etsy</p>
+                                    @error('etsy_category')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                                @endif
+
                             </div>
                         </div>
 

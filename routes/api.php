@@ -19,6 +19,9 @@ Route::prefix('extension')->group(function () {
     // Health check
     Route::get('/ping', [ExtensionController::class, 'ping']);
 
+    // Get list of shops
+    Route::get('/shops', [ExtensionController::class, 'getShops']);
+
     // Import product (no auth required for simplicity - can add token auth later)
     Route::post('/import', [ExtensionController::class, 'import']);
 

@@ -206,4 +206,33 @@ class ShopController extends Controller
         return redirect()->back()
             ->with('success', "Boutique active changee vers : {$shop->name}");
     }
+
+    /**
+     * Update Etsy categories for a shop.
+     */
+    public function updateCategories(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $categoriesJson = $request->input('etsy_categories', '[]');
+        $categories = json_decode($categoriesJson, true) ?? [];
+
+        // Validate and clean categories
+        $cleanedCategories = [];
+        foreach ($categories as $cat) {
+            if (! empty($cat['name']) || ! empty($cat['etsy_name'])) {
+                $cleanedCategories[] = [
+                    'name' => $cat['name'] ?? '',
+                    'etsy_name' => $cat['etsy_name'] ?? '',
+                    'etsy_id' => $cat['etsy_id'] ?? '',
+                    'keywords' => $cat['keywords'] ?? '',
+                ];
+            }
+        }
+
+        $shop->update(['etsy_categories' => $cleanedCategories]);
+
+        return redirect()->route('shops.edit', $shop)
+            ->with('success', 'Categories Etsy mises a jour !');
+    }
 }
