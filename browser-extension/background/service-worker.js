@@ -113,7 +113,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   // Download images and save to Downloads folder
   if (request.action === 'downloadImagesAndSave') {
-    downloadAndSaveImages(request.imageUrls)
+    downloadAndSaveImages(request.imageUrls, request.productTitle)
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
@@ -230,12 +230,23 @@ async function downloadImages(imageUrls) {
 }
 
 // Download images and save to Downloads folder using chrome.downloads API
-async function downloadAndSaveImages(imageUrls) {
+async function downloadAndSaveImages(imageUrls, productTitle = '') {
   let count = 0;
+  
+  // Create a clean filename from product title (first 30 chars, no special chars)
+  let baseName = 'lesrats';
+  if (productTitle) {
+    baseName = productTitle
+      .substring(0, 30)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+    if (!baseName) baseName = 'lesrats';
+  }
   
   for (let i = 0; i < imageUrls.length && i < 10; i++) {
     const url = imageUrls[i];
-    const filename = `lesrats_image_${String(i + 1).padStart(2, '0')}.jpg`;
+    const filename = `${baseName}_${String(i + 1).padStart(2, '0')}.jpg`;
     
     try {
       // Use chrome.downloads to save to Downloads folder
@@ -254,7 +265,7 @@ async function downloadAndSaveImages(imageUrls) {
     }
   }
   
-  return { success: count > 0, count: count };
+  return { success: count > 0, count: count, filename: baseName };
 }
 
 // Fonction d'import vers le serveur

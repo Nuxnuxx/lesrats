@@ -235,4 +235,28 @@ class ShopController extends Controller
         return redirect()->route('shops.edit', $shop)
             ->with('success', 'Categories Etsy mises a jour !');
     }
+
+    /**
+     * Update available tags for a shop.
+     */
+    public function updateTags(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $tagsJson = $request->input('available_tags', '[]');
+        $tags = json_decode($tagsJson, true) ?? [];
+
+        // Clean tags: lowercase, trim, remove empty, remove duplicates
+        $cleanedTags = collect($tags)
+            ->map(fn ($tag) => strtolower(trim($tag)))
+            ->filter(fn ($tag) => ! empty($tag))
+            ->unique()
+            ->values()
+            ->toArray();
+
+        $shop->update(['available_tags' => $cleanedTags]);
+
+        return redirect()->route('shops.edit', $shop)
+            ->with('success', count($cleanedTags).' tags enregistres !');
+    }
 }

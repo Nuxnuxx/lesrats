@@ -114,10 +114,29 @@ class ExtensionController extends Controller
                     $descriptionPrompt
                 );
                 Log::info('Generated description from title', ['title' => $originalTitle]);
+
+                // Générer les tags (utilise la liste de tags de la boutique si disponible)
+                $tags = $optimizer->selectRelevantTags(
+                    $optimizedTitle,
+                    $description,
+                    $shop->available_tags ?? [],
+                    $is3DPrint
+                );
+                Log::info('Generated tags', ['count' => count($tags), 'tags' => $tags]);
+
+                // Sélectionner la catégorie Etsy (si des catégories sont définies)
+                $etsyCategory = $optimizer->selectCategory(
+                    $optimizedTitle,
+                    $description,
+                    $shop->etsy_categories ?? []
+                );
+                Log::info('Selected category', ['category' => $etsyCategory]);
             } catch (\Exception $e) {
                 Log::error('Failed to optimize content', ['error' => $e->getMessage()]);
                 $optimizedTitle = $originalTitle;
                 $description = $originalDescription;
+                $tags = [];
+                $etsyCategory = null;
             }
 
             // Images are kept as-is during import
@@ -146,6 +165,8 @@ class ExtensionController extends Controller
                 'price' => $sellingPrice,
                 'cost_price' => $costPrice,
                 'images' => $images,
+                'tags' => $tags ?? [],
+                'etsy_category' => $etsyCategory ?? null,
                 'source_url' => $validated['source_url'],
                 'source_type' => $sourceType,
                 'aliexpress_product_id' => $validated['aliexpress_product_id'] ?? null,

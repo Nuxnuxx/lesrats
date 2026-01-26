@@ -26,6 +26,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('shops', ShopController::class);
     Route::post('/shops/{shop}/switch', [ShopController::class, 'switch'])->name('shops.switch');
     Route::put('/shops/{shop}/categories', [ShopController::class, 'updateCategories'])->name('shops.update-categories');
+    Route::put('/shops/{shop}/tags', [ShopController::class, 'updateTags'])->name('shops.update-tags');
 
     // Product management routes
     Route::resource('products', ProductController::class);

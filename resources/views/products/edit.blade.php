@@ -133,7 +133,7 @@
                                     <label for="price" class="block text-sm font-medium text-gray-700">Prix de vente</label>
                                     <div class="mt-1 relative">
                                         <input type="number" name="price" id="price" step="0.01" min="0" 
-                                               value="{{ old('price', $product->price) }}" required
+                                               value="{{ old('price', number_format($product->price, 2, '.', '')) }}" required
                                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                             <span class="text-gray-500 text-sm">{{ $product->shop->currency }}</span>
@@ -150,7 +150,7 @@
                                     </label>
                                     <div class="mt-1 relative">
                                         <input type="number" name="cost_price" id="cost_price" step="0.01" min="0" 
-                                               value="{{ old('cost_price', $product->cost_price ?? 0) }}"
+                                               value="{{ old('cost_price', number_format($product->cost_price ?? 0, 2, '.', '')) }}"
                                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                                             <span class="text-gray-500 text-sm">{{ $product->shop->currency }}</span>
@@ -167,18 +167,18 @@
 
                             {{-- Margin Input --}}
                             @php
-                                $initialProfit = $product->price - ($product->cost_price ?? 0);
-                                $initialMargin = $product->price > 0 ? (($product->price - ($product->cost_price ?? 0)) / $product->price) * 100 : 0;
+                                $initialProfit = round($product->price - ($product->cost_price ?? 0), 2);
+                                $initialMargin = $product->price > 0 ? round((($product->price - ($product->cost_price ?? 0)) / $product->price) * 100, 1) : 0;
                             @endphp
                             <div class="mt-4" x-data="{
-                                price: {{ $product->price }},
-                                cost: {{ $product->cost_price ?? 0 }},
+                                price: {{ round($product->price, 2) }},
+                                cost: {{ round($product->cost_price ?? 0, 2) }},
                                 margin: {{ $initialMargin }},
                                 profit: {{ $initialProfit }},
                                 
                                 updateFromPrice() {
-                                    this.profit = this.price - this.cost;
-                                    this.margin = this.price > 0 ? ((this.price - this.cost) / this.price) * 100 : 0;
+                                    this.profit = Math.round((this.price - this.cost) * 100) / 100;
+                                    this.margin = this.price > 0 ? Math.round(((this.price - this.cost) / this.price) * 1000) / 10 : 0;
                                 },
                                 
                                 updateFromMargin() {

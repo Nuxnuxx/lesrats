@@ -463,14 +463,14 @@ async function fillEtsyForm(product) {
   
   // Upload images if available
   if (product.images && product.images.length > 0) {
-    await uploadImages(product.images);
+    await uploadImages(product.images, product.title);
   }
   
   console.log('🐀 Form filling complete!');
 }
 
 // Upload images to Etsy - download and show drag helper
-async function uploadImages(imageUrls) {
+async function uploadImages(imageUrls, productTitle = '') {
   if (!imageUrls || imageUrls.length === 0) {
     console.log('🐀 No images to upload');
     return;
@@ -480,21 +480,22 @@ async function uploadImages(imageUrls) {
   console.log('🐀 Downloading', count, 'images...');
   showNotification(`Telechargement de ${count} images...`, 'info');
   
-  // Download images to Downloads folder
+  // Download images to Downloads folder with product name
   const result = await chrome.runtime.sendMessage({
     action: 'downloadImagesAndSave',
-    imageUrls: imageUrls.slice(0, 10)
+    imageUrls: imageUrls.slice(0, 10),
+    productTitle: productTitle
   });
   
   if (result.success) {
-    showDownloadDragHelper(result.count);
+    showDownloadDragHelper(result.count, result.filename);
   } else {
     showError('Erreur telechargement: ' + (result.error || 'Inconnue'));
   }
 }
 
 // Show helper for dragging from downloads
-function showDownloadDragHelper(imageCount) {
+function showDownloadDragHelper(imageCount, filename = 'lesrats') {
   // Remove existing
   const existing = document.getElementById('lesrats-image-panel');
   if (existing) existing.remove();
@@ -541,7 +542,7 @@ function showDownloadDragHelper(imageCount) {
         <div style="font-size: 13px; color: #333; line-height: 1.6;">
           <strong>Pour ajouter les images:</strong><br><br>
           1. Cliquez sur l'icone <strong>Telechargements</strong> (↓) en haut a droite<br>
-          2. Glissez <strong>lesrats_image_01.jpg</strong> vers la zone d'upload<br>
+          2. Glissez <strong>${filename}_01.jpg</strong> vers la zone d'upload<br>
           3. Repetez pour les autres images
         </div>
         <div style="margin-top: 12px; padding: 10px; background: #FFF7ED; border-radius: 8px; font-size: 12px; color: #9A3412;">
@@ -890,27 +891,92 @@ async function fillPrice(price) {
   }
 }
 
-// Fill tags (Etsy has a special tag input system)
+// Fill tags - put comma-separated in input and click Ajouter
 async function fillTags(tags) {
   if (!tags || tags.length === 0) return;
   
-  const input = document.querySelector('#listing-tags-input');
-  const addButton = document.querySelector('#listing-tags-button');
+  // Limit to 13 tags (Etsy max)
+  const tagsToFill = tags.slice(0, 13).map(t => t.trim()).filter(t => t);
   
-  if (input && addButton) {
-    // Add each tag by typing and clicking the "Ajouter" button
-    for (let i = 0; i < Math.min(tags.length, 13); i++) {
-      const tag = tags[i].trim();
-      if (tag) {
-        await setInputValue(input, tag);
-        await sleep(100);
-        addButton.click();
-        await sleep(300); // Wait between tags
+  // Join as comma-separated string
+  const tagsString = tagsToFill.join(', ');
+  
+  // Try multiple selectors for the tags input
+  const selectors = [
+    '#listing-tags-input',
+    'input[name="tags"]',
+    'input[placeholder*="tag"]',
+    'input[placeholder*="Tag"]',
+    '[data-field="tags"] input',
+    '#tags input',
+    '.wt-tag-input input',
+    'input[aria-label*="tag"]',
+    'input[aria-label*="Tag"]'
+  ];
+  
+  let input = null;
+  for (const selector of selectors) {
+    input = document.querySelector(selector);
+    if (input) {
+      console.log('🐀 Found tags input with selector:', selector);
+      break;
+    }
+  }
+  
+  if (input) {
+    // Focus and set value directly
+    input.focus();
+    input.value = tagsString;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await sleep(300);
+    
+    // Click "Ajouter" button
+    const addButtonSelectors = [
+      '#listing-tags-button',
+      'button[data-selector="add-tag-button"]',
+      '[data-field="tags"] button',
+      'button.wt-btn--small'
+    ];
+    
+    // Also try finding button by text "Ajouter"
+    let addButton = null;
+    for (const selector of addButtonSelectors) {
+      addButton = document.querySelector(selector);
+      if (addButton) {
+        console.log('🐀 Found add button with selector:', selector);
+        break;
       }
     }
-    console.log('🐀 Tags filled:', tags.length);
+    
+    // Fallback: find button by text content near the tags input
+    if (!addButton) {
+      const buttons = document.querySelectorAll('button');
+      for (const btn of buttons) {
+        if (btn.textContent.trim().toLowerCase() === 'ajouter') {
+          addButton = btn;
+          console.log('🐀 Found add button by text');
+          break;
+        }
+      }
+    }
+    
+    if (addButton) {
+      addButton.click();
+      console.log('🐀 Clicked Ajouter button');
+      await sleep(300);
+    }
+    
+    console.log('🐀 Tags filled (comma-separated):', tagsString);
   } else {
-    console.warn('🐀 Tags input or button not found');
+    console.warn('🐀 Tags input not found');
+    // Copy to clipboard as fallback
+    try {
+      await navigator.clipboard.writeText(tagsString);
+      console.log('🐀 Tags copied to clipboard:', tagsString);
+    } catch (e) {
+      console.warn('🐀 Could not copy tags to clipboard');
+    }
   }
 }
 

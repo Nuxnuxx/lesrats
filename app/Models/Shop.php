@@ -19,6 +19,7 @@ class Shop extends Model
         'ai_image_prompt',
         'ai_image_enabled',
         'etsy_categories',
+        'available_tags',
         'total_revenue',
         'total_orders',
     ];
@@ -80,6 +81,7 @@ PROMPT;
         'is_active' => 'boolean',
         'ai_image_enabled' => 'boolean',
         'etsy_categories' => 'array',
+        'available_tags' => 'array',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
     ];

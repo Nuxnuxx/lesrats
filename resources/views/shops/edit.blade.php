@@ -258,6 +258,74 @@
                 </form>
             </div>
 
+            {{-- Available Tags --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" x-data="availableTagsManager()">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Tags disponibles</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    Definissez les tags disponibles pour cette boutique. Lors de l'import d'un produit, l'IA selectionnera les 13 tags les plus pertinents parmi cette liste.
+                    <br><span class="text-orange-600">Si aucun tag n'est defini, l'IA generera des tags librement.</span>
+                </p>
+
+                <form method="POST" action="{{ route('shops.update-tags', $shop) }}">
+                    @csrf
+                    @method('PUT')
+
+                    {{-- Tags pills display --}}
+                    <div class="flex flex-wrap gap-2 mb-4 min-h-[40px] p-3 border border-gray-200 rounded-lg bg-gray-50">
+                        <template x-if="tags.length === 0">
+                            <span class="text-sm text-gray-400 italic">Aucun tag defini - l'IA generera des tags librement</span>
+                        </template>
+                        <template x-for="(tag, index) in tags" :key="index">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+                                <span x-text="tag"></span>
+                                <button type="button" @click="removeTag(index)" class="ml-2 text-orange-600 hover:text-orange-800">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </span>
+                        </template>
+                    </div>
+
+                    {{-- Add tag input --}}
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" x-model="newTag" 
+                            @keydown.enter.prevent="addTag()"
+                            @keydown.comma.prevent="addTag()"
+                            class="flex-1 text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                            placeholder="Ajouter un tag (Entree ou virgule pour valider)">
+                        <button type="button" @click="addTag()" 
+                            class="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200">
+                            Ajouter
+                        </button>
+                    </div>
+
+                    {{-- Bulk add --}}
+                    <div class="mb-4">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Ajout en masse (collez une liste separee par virgules)</label>
+                        <div class="flex gap-2">
+                            <input type="text" x-model="bulkTags" 
+                                class="flex-1 text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                placeholder="tag1, tag2, tag3, ...">
+                            <button type="button" @click="addBulkTags()" 
+                                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
+                                Ajouter tout
+                            </button>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="available_tags" :value="JSON.stringify(tags)">
+
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                        <span class="text-sm text-gray-500" x-text="tags.length + ' tags definis'"></span>
+                        <button type="submit" 
+                            class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                            Enregistrer les tags
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             @push('scripts')
             <script>
                 function etsyCategoriesManager() {
@@ -275,6 +343,34 @@
                         
                         removeCategory(index) {
                             this.categories.splice(index, 1);
+                        }
+                    }
+                }
+
+                function availableTagsManager() {
+                    return {
+                        tags: @json($shop->available_tags ?? []),
+                        newTag: '',
+                        bulkTags: '',
+                        
+                        addTag() {
+                            const tag = this.newTag.trim().toLowerCase();
+                            if (tag && !this.tags.includes(tag)) {
+                                this.tags.push(tag);
+                            }
+                            this.newTag = '';
+                        },
+                        
+                        addBulkTags() {
+                            const newTags = this.bulkTags.split(',')
+                                .map(t => t.trim().toLowerCase())
+                                .filter(t => t && !this.tags.includes(t));
+                            this.tags.push(...newTags);
+                            this.bulkTags = '';
+                        },
+                        
+                        removeTag(index) {
+                            this.tags.splice(index, 1);
                         }
                     }
                 }
