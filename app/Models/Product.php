@@ -29,6 +29,7 @@ class Product extends Model
         'source_type',
         'source_url',
         'images',
+        'real_images',
         'is_active',
     ];
 
@@ -42,6 +43,7 @@ class Product extends Model
         'margin_other' => 'decimal:2',
         'quantity' => 'integer',
         'images' => 'array',
+        'real_images' => 'array',
         'tags' => 'array',
         'is_active' => 'boolean',
         'is_digital' => 'boolean',

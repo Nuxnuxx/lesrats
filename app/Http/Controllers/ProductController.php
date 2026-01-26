@@ -484,4 +484,103 @@ class ProductController extends Controller
                 ->with('error', 'Erreur lors de la generation des images: '.$e->getMessage());
         }
     }
+
+    /**
+     * Transform a single image with AI and add to real_images.
+     */
+    public function transformSingleImage(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $request->validate([
+            'image_url' => 'required|string',
+            'prompt' => 'required|string|min:10',
+            'strength' => 'nullable|numeric|min:0|max:1',
+        ]);
+
+        $user = $request->user();
+
+        try {
+            // Get Fal.ai API key
+            $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
+
+            if (empty($falApiKey)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cle API Fal.ai non configuree. Ajoutez-la dans votre profil ou dans la configuration.',
+                ], 400);
+            }
+
+            $falService = new FalImageService($falApiKey);
+            $strength = $request->input('strength', 0.65);
+
+            // Transform the image
+            $transformedPath = $falService->transformImage(
+                $request->image_url,
+                $request->prompt,
+                $strength
+            );
+
+            if (! $transformedPath) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'La transformation de l\'image a echoue. Verifiez les logs pour plus de details.',
+                ], 500);
+            }
+
+            // Add to real_images array
+            $realImages = $product->real_images ?? [];
+            $realImages[] = $transformedPath;
+            $product->update(['real_images' => $realImages]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Image transformee et ajoutee aux images reelles!',
+                'data' => [
+                    'transformed_image' => $transformedPath,
+                    'real_images' => $realImages,
+                ],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la transformation: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Remove an image from real_images.
+     */
+    public function removeRealImage(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $request->validate([
+            'image_index' => 'required|integer|min:0',
+        ]);
+
+        $realImages = $product->real_images ?? [];
+        $index = $request->input('image_index');
+
+        if (! isset($realImages[$index])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Image non trouvee.',
+            ], 404);
+        }
+
+        // Remove image at index
+        array_splice($realImages, $index, 1);
+        $product->update(['real_images' => $realImages]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image supprimee des images reelles.',
+            'data' => [
+                'real_images' => $realImages,
+            ],
+        ]);
+    }
 }

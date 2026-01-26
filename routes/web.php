@@ -35,6 +35,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])->name('products.optimize-content');
     Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
     Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])->name('products.generate-ai-images');
+    Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])->name('products.transform-single-image');
+    Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');
 
     // Order management routes
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
