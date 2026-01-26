@@ -267,7 +267,7 @@ class ExtensionController extends Controller
     public function getShops()
     {
         try {
-            $shops = Shop::select('id', 'name', 'platform')->get();
+            $shops = Shop::select('id', 'name')->get();
 
             return response()->json([
                 'success' => true,
@@ -275,7 +275,7 @@ class ExtensionController extends Controller
                     return [
                         'id' => $shop->id,
                         'name' => $shop->name,
-                        'platform' => $shop->platform,
+                        'platform' => null, // Platform column doesn't exist yet
                     ];
                 }),
             ]);
