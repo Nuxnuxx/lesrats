@@ -124,9 +124,181 @@
                             </div>
                         </div>
 
-                        {{-- Pricing --}}
+                        {{-- Country-specific Pricing (AliExpress only) --}}
+                        @if($product->country_prices && count($product->country_prices) > 0)
+                        <div class="bg-white rounded-lg shadow-sm border border-blue-200 p-6 mt-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Prix par pays (AliExpress)</h3>
+                            
+                            {{-- Country prices table --}}
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-sm">
+                                    <thead>
+                                        <tr class="border-b border-gray-200">
+                                            <th class="text-left py-2 px-2 font-medium text-gray-600">Pays</th>
+                                            <th class="text-right py-2 px-2 font-medium text-gray-600">Prix</th>
+                                            <th class="text-right py-2 px-2 font-medium text-gray-600">Livraison</th>
+                                            <th class="text-right py-2 px-2 font-medium text-gray-600">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @php
+                                            $countryNames = [
+                                                'US' => 'Etats-Unis',
+                                                'DE' => 'Allemagne',
+                                                'AT' => 'Autriche',
+                                                'FR' => 'France',
+                                                'CA' => 'Canada',
+                                                'ES' => 'Espagne',
+                                            ];
+                                            $countryFlags = [
+                                                'US' => '🇺🇸',
+                                                'DE' => '🇩🇪',
+                                                'AT' => '🇦🇹',
+                                                'FR' => '🇫🇷',
+                                                'CA' => '🇨🇦',
+                                                'ES' => '🇪🇸',
+                                            ];
+                                            $highestOther = $product->getHighestOtherCountry();
+                                        @endphp
+                                        @foreach($product->country_prices as $code => $data)
+                                            <tr class="border-b border-gray-100 {{ $code === 'US' ? 'bg-blue-50' : ($code === $highestOther ? 'bg-orange-50' : '') }}">
+                                                <td class="py-2 px-2">
+                                                    <span class="mr-1">{{ $countryFlags[$code] ?? '' }}</span>
+                                                    {{ $countryNames[$code] ?? $code }}
+                                                    @if($code === 'US')
+                                                        <span class="ml-1 text-xs text-blue-600">(Zone US)</span>
+                                                    @elseif($code === $highestOther)
+                                                        <span class="ml-1 text-xs text-orange-600">(Max autres)</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-right py-2 px-2">{{ number_format($data['price'] ?? 0, 2) }} EUR</td>
+                                                <td class="text-right py-2 px-2">{{ number_format($data['shipping'] ?? 0, 2) }} EUR</td>
+                                                <td class="text-right py-2 px-2 font-medium">{{ number_format($data['total'] ?? 0, 2) }} EUR</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {{-- Etsy Selling Prices --}}
+                            <div class="mt-6 pt-4 border-t border-gray-200">
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Prix de vente Etsy</h4>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-data="{
+                                    marginUs: {{ $product->margin_us ?? $product->shop->default_margin_us ?? 2.5 }},
+                                    marginOther: {{ $product->margin_other ?? $product->shop->default_margin_other ?? 2.5 }},
+                                    usCost: {{ $product->getUsTotalCost() ?? 0 }},
+                                    otherCost: {{ $product->getHighestOtherCountryTotal() ?? 0 }},
+                                    priceUs: {{ $product->price_us ?? 0 }},
+                                    priceOther: {{ $product->price_other ?? 0 }},
+                                    
+                                    recalculateUs() {
+                                        this.priceUs = Math.round(this.usCost * this.marginUs * 100) / 100;
+                                        document.getElementById('price_us').value = this.priceUs.toFixed(2);
+                                    },
+                                    recalculateOther() {
+                                        this.priceOther = Math.round(this.otherCost * this.marginOther * 100) / 100;
+                                        document.getElementById('price_other').value = this.priceOther.toFixed(2);
+                                    }
+                                }">
+                                    {{-- US Price --}}
+                                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-sm font-medium text-blue-800">🇺🇸 Etats-Unis</span>
+                                            <span class="text-xs text-blue-600">Cout: {{ number_format($product->getUsTotalCost() ?? 0, 2) }} EUR</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="flex-1">
+                                                <label class="block text-xs text-gray-600 mb-1">Prix de vente</label>
+                                                <div class="relative">
+                                                    <input type="number" name="price_us" id="price_us" step="0.01" min="0"
+                                                           x-model.number="priceUs"
+                                                           value="{{ old('price_us', number_format($product->price_us ?? 0, 2, '.', '')) }}"
+                                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-12 text-sm">
+                                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                        <span class="text-gray-500 text-xs">{{ $product->shop->currency }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="w-20">
+                                                <label class="block text-xs text-gray-600 mb-1">Marge</label>
+                                                <div class="relative">
+                                                    <input type="number" name="margin_us" id="margin_us" step="0.1" min="1" max="10"
+                                                           x-model.number="marginUs"
+                                                           @input="recalculateUs()"
+                                                           value="{{ old('margin_us', $product->margin_us ?? '') }}"
+                                                           placeholder="{{ $product->shop->default_margin_us ?? 2.5 }}"
+                                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-6 text-sm">
+                                                    <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                                                        <span class="text-gray-500 text-xs">x</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 flex justify-between text-xs">
+                                            <span class="text-gray-500">Profit: <span class="font-medium" :class="priceUs - usCost >= 0 ? 'text-green-600' : 'text-red-600'" x-text="(priceUs - usCost).toFixed(2) + ' EUR'"></span></span>
+                                            <button type="button" @click="recalculateUs()" class="text-blue-600 hover:text-blue-800">Recalculer</button>
+                                        </div>
+                                    </div>
+
+                                    {{-- Other Countries Price --}}
+                                    <div class="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-sm font-medium text-orange-800">🌍 Autres pays</span>
+                                            <span class="text-xs text-orange-600">Cout max: {{ number_format($product->getHighestOtherCountryTotal() ?? 0, 2) }} EUR</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <div class="flex-1">
+                                                <label class="block text-xs text-gray-600 mb-1">Prix de vente</label>
+                                                <div class="relative">
+                                                    <input type="number" name="price_other" id="price_other" step="0.01" min="0"
+                                                           x-model.number="priceOther"
+                                                           value="{{ old('price_other', number_format($product->price_other ?? 0, 2, '.', '')) }}"
+                                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12 text-sm">
+                                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                        <span class="text-gray-500 text-xs">{{ $product->shop->currency }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="w-20">
+                                                <label class="block text-xs text-gray-600 mb-1">Marge</label>
+                                                <div class="relative">
+                                                    <input type="number" name="margin_other" id="margin_other" step="0.1" min="1" max="10"
+                                                           x-model.number="marginOther"
+                                                           @input="recalculateOther()"
+                                                           value="{{ old('margin_other', $product->margin_other ?? '') }}"
+                                                           placeholder="{{ $product->shop->default_margin_other ?? 2.5 }}"
+                                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-6 text-sm">
+                                                    <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                                                        <span class="text-gray-500 text-xs">x</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2 flex justify-between text-xs">
+                                            <span class="text-gray-500">Profit: <span class="font-medium" :class="priceOther - otherCost >= 0 ? 'text-green-600' : 'text-red-600'" x-text="(priceOther - otherCost).toFixed(2) + ' EUR'"></span></span>
+                                            <button type="button" @click="recalculateOther()" class="text-orange-600 hover:text-orange-800">Recalculer</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p class="mt-3 text-xs text-gray-500">
+                                    <strong>Note:</strong> "Autres pays" utilise le cout le plus eleve parmi DE, AT, FR, CA, ES pour garantir la marge.
+                                    Laissez la marge vide pour utiliser la valeur par defaut de la boutique.
+                                </p>
+                            </div>
+                        </div>
+                        @endif
+
+                        {{-- Pricing (Legacy/Manual) --}}
                         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Prix et rentabilite</h3>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                                @if($product->country_prices && count($product->country_prices) > 0)
+                                    Prix de vente general (fallback)
+                                @else
+                                    Prix et rentabilite
+                                @endif
+                            </h3>
 
                             <div class="grid grid-cols-2 gap-4">
                                 <div>

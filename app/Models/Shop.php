@@ -20,6 +20,8 @@ class Shop extends Model
         'ai_image_enabled',
         'etsy_categories',
         'available_tags',
+        'default_margin_us',
+        'default_margin_other',
         'total_revenue',
         'total_orders',
     ];
@@ -82,6 +84,8 @@ PROMPT;
         'ai_image_enabled' => 'boolean',
         'etsy_categories' => 'array',
         'available_tags' => 'array',
+        'default_margin_us' => 'decimal:2',
+        'default_margin_other' => 'decimal:2',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
     ];

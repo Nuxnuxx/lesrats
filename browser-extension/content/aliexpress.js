@@ -4,7 +4,7 @@
 // Écouter les messages du popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'extractProduct') {
-    extractProductData()
+    extractProductData(request.includeCountryPrices || false)
       .then(data => {
         console.log('🐀 Données extraites:', data);
         sendResponse({ success: true, data });
@@ -15,10 +15,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     return true; // Indique une réponse asynchrone
   }
+  
+  // Handle country price scraping separately (for progress updates)
+  if (request.action === 'scrapeCountryPrices') {
+    scrapeCountryPrices((progress) => {
+      // Send progress update back to popup
+      chrome.runtime.sendMessage({
+        type: 'COUNTRY_PRICE_PROGRESS',
+        progress: progress
+      });
+    })
+      .then(countryPrices => {
+        sendResponse({ success: true, countryPrices });
+      })
+      .catch(error => {
+        console.error('🐀 Erreur country prices:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
 });
 
 // Fonction principale d'extraction
-async function extractProductData() {
+async function extractProductData(includeCountryPrices = false) {
   // Attendre que la page soit chargée
   await waitForPageLoad();
 
@@ -43,6 +62,17 @@ async function extractProductData() {
   data.source_url = window.location.href;
   data.aliexpress_product_id = extractProductId();
   data.source_type = 'aliexpress';
+
+  // Optionally scrape country-specific prices
+  if (includeCountryPrices) {
+    console.log('🐀 Scraping country-specific prices...');
+    try {
+      data.country_prices = await scrapeCountryPrices();
+    } catch (error) {
+      console.error('🐀 Failed to scrape country prices:', error);
+      data.country_prices = null;
+    }
+  }
 
   console.log('🐀 Données finales:', data);
   return data;
@@ -340,6 +370,370 @@ function decodeUnicode(str) {
 function extractProductId() {
   const match = window.location.href.match(/\/item\/(\d+)\.html/);
   return match ? match[1] : null;
+}
+
+// ============================================
+// COUNTRY-SPECIFIC PRICING
+// ============================================
+
+// Countries to scrape for pricing (code -> name mapping)
+const TARGET_COUNTRIES = {
+  'US': 'United States',
+  'DE': 'Germany',
+  'AT': 'Austria',
+  'FR': 'France',
+  'CA': 'Canada',
+  'ES': 'Spain'
+};
+
+// Scrape prices for multiple countries
+async function scrapeCountryPrices(progressCallback = null) {
+  const countryPrices = {};
+  const countries = Object.entries(TARGET_COUNTRIES);
+  
+  console.log('🐀 Starting country price scraping for', countries.length, 'countries');
+  
+  // Get current selected country to restore later
+  const originalCountry = getCurrentSelectedCountry();
+  console.log('🐀 Original country:', originalCountry);
+  
+  for (let i = 0; i < countries.length; i++) {
+    const [code, name] = countries[i];
+    
+    if (progressCallback) {
+      progressCallback({
+        current: i + 1,
+        total: countries.length,
+        country: name,
+        code: code
+      });
+    }
+    
+    try {
+      console.log(`🐀 Scraping price for ${name} (${code})...`);
+      
+      // Select the country
+      const selected = await selectCountry(code, name);
+      if (!selected) {
+        console.warn(`🐀 Could not select ${name}, skipping`);
+        continue;
+      }
+      
+      // Wait for page to update prices
+      await sleep(2500);
+      
+      // Scrape the current price and shipping
+      const priceData = scrapeCurrentPriceAndShipping();
+      
+      if (priceData.price !== null) {
+        countryPrices[code] = {
+          price: priceData.price,
+          shipping: priceData.shipping,
+          total: round2(priceData.price + priceData.shipping)
+        };
+        console.log(`🐀 ${name}: Price=${priceData.price}, Shipping=${priceData.shipping}, Total=${countryPrices[code].total}`);
+      } else {
+        console.warn(`🐀 Could not extract price for ${name}`);
+      }
+      
+    } catch (error) {
+      console.error(`🐀 Error scraping ${name}:`, error);
+    }
+  }
+  
+  // Restore original country
+  if (originalCountry) {
+    console.log('🐀 Restoring original country:', originalCountry);
+    try {
+      await selectCountryByName(originalCountry);
+    } catch (e) {
+      console.warn('🐀 Could not restore original country');
+    }
+  }
+  
+  console.log('🐀 Country prices scraped:', countryPrices);
+  return countryPrices;
+}
+
+// Get the currently selected country name
+function getCurrentSelectedCountry() {
+  // Find the country selector - it's the first one with "Ship to" label
+  const shipToLabel = document.querySelector('.form-item--title--1ZN23sl');
+  if (shipToLabel && shipToLabel.textContent.includes('Ship to')) {
+    const selectWrap = shipToLabel.nextElementSibling?.querySelector('.select--text--1b85oDo');
+    if (selectWrap) {
+      // Get the country name (skip the flag span)
+      const spans = selectWrap.querySelectorAll('span[style*="vertical-align"]');
+      if (spans.length >= 2) {
+        return spans[1].textContent.trim();
+      }
+    }
+  }
+  
+  // Fallback: look for delivery address
+  const deliveryTo = document.querySelector('.delivery-v2--to--Mtweg7y');
+  if (deliveryTo) {
+    return deliveryTo.textContent.trim();
+  }
+  
+  return null;
+}
+
+// Select a country by code and name
+async function selectCountry(code, name) {
+  // Find and click the country selector dropdown
+  const countrySelector = findCountrySelector();
+  if (!countrySelector) {
+    console.warn('🐀 Country selector not found');
+    return false;
+  }
+  
+  // Click to open the dropdown
+  countrySelector.click();
+  await sleep(500);
+  
+  // Wait for popup to appear (use partial class match)
+  const popup = await waitForElementByPartialClass('select--popup', 2000);
+  if (!popup) {
+    console.warn('🐀 Dropdown popup did not appear');
+    return false;
+  }
+  
+  // Find the country item by flag class or text
+  const countryItem = findCountryItem(popup, code, name);
+  if (!countryItem) {
+    console.warn(`🐀 Country item not found for ${name} (${code})`);
+    // Close the popup by clicking elsewhere
+    document.body.click();
+    await sleep(300);
+    return false;
+  }
+  
+  // Click the country
+  countryItem.click();
+  await sleep(500);
+  
+  return true;
+}
+
+// Select a country by name (for restoring original)
+async function selectCountryByName(name) {
+  const countrySelector = findCountrySelector();
+  if (!countrySelector) return false;
+  
+  countrySelector.click();
+  await sleep(500);
+  
+  const popup = document.querySelector('[class*="select--popup"]');
+  if (!popup) return false;
+  
+  // Find by text (partial class match)
+  const items = popup.querySelectorAll('[class*="select--item"]');
+  for (const item of items) {
+    if (item.textContent.includes(name)) {
+      item.click();
+      await sleep(500);
+      return true;
+    }
+  }
+  
+  document.body.click();
+  return false;
+}
+
+// Find the country selector element
+function findCountrySelector() {
+  // Method 1: Look for "Ship to" label using partial class match
+  const allElements = document.querySelectorAll('[class*="form-item--title"]');
+  for (const label of allElements) {
+    if (label.textContent.includes('Ship to')) {
+      const content = label.nextElementSibling;
+      if (content) {
+        const selector = content.querySelector('[class*="select--text"]');
+        if (selector) {
+          console.log('🐀 Found country selector via Ship to label');
+          return selector;
+        }
+      }
+    }
+  }
+  
+  // Method 2: Find by country flag presence (partial class match)
+  const selectors = document.querySelectorAll('[class*="select--text"]');
+  for (const sel of selectors) {
+    if (sel.querySelector('[class*="country-flag"]')) {
+      console.log('🐀 Found country selector via flag');
+      return sel;
+    }
+  }
+  
+  // Method 3: Look inside the shipping/delivery section
+  const deliverySection = document.querySelector('[class*="es--contentWrap"], [class*="delivery-v2--wrap"]');
+  if (deliverySection) {
+    const selector = deliverySection.querySelector('[class*="select--text"]');
+    if (selector && selector.querySelector('[class*="country-flag"]')) {
+      console.log('🐀 Found country selector via delivery section');
+      return selector;
+    }
+  }
+  
+  // Method 4: Find any clickable element with a country flag
+  const flagElements = document.querySelectorAll('[class*="country-flag"]');
+  for (const flag of flagElements) {
+    const parent = flag.closest('[class*="select--text"], [class*="select--wrap"]');
+    if (parent) {
+      console.log('🐀 Found country selector via flag parent');
+      return parent.querySelector('[class*="select--text"]') || parent;
+    }
+  }
+  
+  console.log('🐀 Could not find country selector with any method');
+  return null;
+}
+
+// Find a country item in the popup
+function findCountryItem(popup, code, name) {
+  // Use partial class match for items
+  const items = popup.querySelectorAll('[class*="select--item"]');
+  
+  console.log(`🐀 Looking for ${name} (${code}) in ${items.length} items`);
+  
+  // First try to find by flag class (most reliable)
+  for (const item of items) {
+    // Try multiple flag class patterns
+    const flag = item.querySelector(`[class*="country-flag"][class*="${code}"], .country-flag-y2023.${code}, [class*="${code}"]`);
+    if (flag && flag.className.includes('country-flag')) {
+      console.log(`🐀 Found ${name} by flag class`);
+      return item;
+    }
+  }
+  
+  // Fallback: find by country name text
+  for (const item of items) {
+    const text = item.textContent.trim();
+    if (text.includes(name)) {
+      console.log(`🐀 Found ${name} by text`);
+      return item;
+    }
+  }
+  
+  console.log(`🐀 Could not find ${name} in popup`);
+  return null;
+}
+
+// Scrape current price and shipping from the page
+function scrapeCurrentPriceAndShipping() {
+  const result = {
+    price: null,
+    shipping: 0
+  };
+  
+  // Get product price
+  result.price = extractPriceFromDOM();
+  
+  // Get shipping cost
+  const shippingCost = extractShippingCost();
+  result.shipping = shippingCost;
+  
+  return result;
+}
+
+// Extract shipping cost from the page
+function extractShippingCost() {
+  // Look for shipping information in the shipping section
+  const shippingItems = document.querySelectorAll('.shipping--item--F04J6q9, .dynamic-shipping');
+  
+  for (const item of shippingItems) {
+    const text = item.textContent || '';
+    
+    // Check for free shipping
+    if (text.match(/free\s*shipping/i) || 
+        text.match(/livraison\s*gratuite/i) ||
+        text.match(/gratis/i)) {
+      return 0;
+    }
+    
+    // Look for shipping cost pattern
+    // Patterns: "$2.50", "€2,50", "2.50 €", "2,50€", "+$1.50"
+    const costMatch = text.match(/[+]?\s*[\$€]?\s*(\d+[.,]\d{2})\s*[\$€]?/);
+    if (costMatch) {
+      const cost = parseFloat(costMatch[1].replace(',', '.'));
+      // Sanity check - shipping usually under 50
+      if (cost > 0 && cost < 50) {
+        return cost;
+      }
+    }
+  }
+  
+  // Also check for shipping in delivery section
+  const deliverySection = document.querySelector('[data-pl="product-delivery"]');
+  if (deliverySection) {
+    const text = deliverySection.textContent || '';
+    if (text.match(/free/i) || text.match(/gratuit/i)) {
+      return 0;
+    }
+  }
+  
+  // Default to free shipping if we can't find cost
+  return 0;
+}
+
+// Wait for an element to appear
+function waitForElement(selector, timeout = 5000) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const check = () => {
+      const element = document.querySelector(selector);
+      if (element) {
+        resolve(element);
+        return;
+      }
+      
+      if (Date.now() - startTime > timeout) {
+        resolve(null);
+        return;
+      }
+      
+      requestAnimationFrame(check);
+    };
+    
+    check();
+  });
+}
+
+// Wait for an element by partial class name
+function waitForElementByPartialClass(partialClass, timeout = 5000) {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    
+    const check = () => {
+      const element = document.querySelector(`[class*="${partialClass}"]`);
+      if (element) {
+        resolve(element);
+        return;
+      }
+      
+      if (Date.now() - startTime > timeout) {
+        resolve(null);
+        return;
+      }
+      
+      requestAnimationFrame(check);
+    };
+    
+    check();
+  });
+}
+
+// Sleep helper
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Round to 2 decimal places
+function round2(num) {
+  return Math.round(num * 100) / 100;
 }
 
 // Notifier que le content script est chargé

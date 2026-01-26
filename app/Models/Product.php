@@ -16,6 +16,11 @@ class Product extends Model
         'etsy_category',
         'price',
         'cost_price',
+        'country_prices',
+        'price_us',
+        'price_other',
+        'margin_us',
+        'margin_other',
         'is_digital',
         'quantity',
         'low_stock_threshold',
@@ -30,6 +35,11 @@ class Product extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'cost_price' => 'decimal:2',
+        'country_prices' => 'array',
+        'price_us' => 'decimal:2',
+        'price_other' => 'decimal:2',
+        'margin_us' => 'decimal:2',
+        'margin_other' => 'decimal:2',
         'quantity' => 'integer',
         'images' => 'array',
         'tags' => 'array',
@@ -126,6 +136,98 @@ class Product extends Model
             self::SOURCE_PRINTABLES => 'Printables',
             default => 'Manuel',
         };
+    }
+
+    /**
+     * Get effective margin for US (product override or shop default).
+     */
+    public function getEffectiveMarginUs(): float
+    {
+        if ($this->margin_us !== null) {
+            return (float) $this->margin_us;
+        }
+
+        return (float) ($this->shop->default_margin_us ?? 2.5);
+    }
+
+    /**
+     * Get effective margin for "Autres pays" (product override or shop default).
+     */
+    public function getEffectiveMarginOther(): float
+    {
+        if ($this->margin_other !== null) {
+            return (float) $this->margin_other;
+        }
+
+        return (float) ($this->shop->default_margin_other ?? 2.5);
+    }
+
+    /**
+     * Get the US total cost from country_prices.
+     */
+    public function getUsTotalCost(): ?float
+    {
+        $prices = $this->country_prices ?? [];
+
+        return isset($prices['US']['total']) ? (float) $prices['US']['total'] : null;
+    }
+
+    /**
+     * Get the highest total cost from "Autres pays" (DE, AT, FR, CA, ES).
+     */
+    public function getHighestOtherCountryTotal(): ?float
+    {
+        $prices = $this->country_prices ?? [];
+        $otherCountries = ['DE', 'AT', 'FR', 'CA', 'ES'];
+        $maxTotal = null;
+
+        foreach ($otherCountries as $country) {
+            if (isset($prices[$country]['total'])) {
+                $total = (float) $prices[$country]['total'];
+                if ($maxTotal === null || $total > $maxTotal) {
+                    $maxTotal = $total;
+                }
+            }
+        }
+
+        return $maxTotal;
+    }
+
+    /**
+     * Get the country with the highest total for "Autres pays".
+     */
+    public function getHighestOtherCountry(): ?string
+    {
+        $prices = $this->country_prices ?? [];
+        $otherCountries = ['DE', 'AT', 'FR', 'CA', 'ES'];
+        $maxTotal = null;
+        $maxCountry = null;
+
+        foreach ($otherCountries as $country) {
+            if (isset($prices[$country]['total'])) {
+                $total = (float) $prices[$country]['total'];
+                if ($maxTotal === null || $total > $maxTotal) {
+                    $maxTotal = $total;
+                    $maxCountry = $country;
+                }
+            }
+        }
+
+        return $maxCountry;
+    }
+
+    /**
+     * Calculate suggested selling prices based on margins.
+     */
+    public function calculateSuggestedPrices(): array
+    {
+        $usCost = $this->getUsTotalCost();
+        $otherCost = $this->getHighestOtherCountryTotal();
+
+        return [
+            'price_us' => $usCost !== null ? round($usCost * $this->getEffectiveMarginUs(), 2) : null,
+            'price_other' => $otherCost !== null ? round($otherCost * $this->getEffectiveMarginOther(), 2) : null,
+        ];
     }
 
     /**

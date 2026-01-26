@@ -35,6 +35,11 @@ class ExtensionController extends Controller
             'aliexpress_product_id' => 'nullable|string',
             'source_type' => 'nullable|string|in:aliexpress,printables,manual',
             'shop_id' => 'nullable|integer|exists:shops,id',
+            // Country-specific pricing data
+            'country_prices' => 'nullable|array',
+            'country_prices.*.price' => 'nullable|numeric|min:0',
+            'country_prices.*.shipping' => 'nullable|numeric|min:0',
+            'country_prices.*.total' => 'nullable|numeric|min:0',
         ]);
 
         try {
@@ -85,6 +90,45 @@ class ExtensionController extends Controller
             // Calculer le prix de vente (marge de 2.5x par défaut)
             $costPrice = $validated['price'] ?? 0;
             $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
+
+            // Process country-specific pricing if available
+            $countryPrices = $validated['country_prices'] ?? null;
+            $priceUs = null;
+            $priceOther = null;
+
+            if ($countryPrices && ! empty($countryPrices)) {
+                // Get shop's default margins
+                $marginUs = (float) ($shop->default_margin_us ?? 2.5);
+                $marginOther = (float) ($shop->default_margin_other ?? 2.5);
+
+                // Calculate US price
+                if (isset($countryPrices['US']['total'])) {
+                    $priceUs = round((float) $countryPrices['US']['total'] * $marginUs, 2);
+                }
+
+                // Calculate "Autres pays" price (highest of DE, AT, FR, CA, ES)
+                $otherCountries = ['DE', 'AT', 'FR', 'CA', 'ES'];
+                $maxOtherTotal = null;
+                foreach ($otherCountries as $country) {
+                    if (isset($countryPrices[$country]['total'])) {
+                        $total = (float) $countryPrices[$country]['total'];
+                        if ($maxOtherTotal === null || $total > $maxOtherTotal) {
+                            $maxOtherTotal = $total;
+                        }
+                    }
+                }
+                if ($maxOtherTotal !== null) {
+                    $priceOther = round($maxOtherTotal * $marginOther, 2);
+                }
+
+                Log::info('Country prices processed', [
+                    'country_prices' => $countryPrices,
+                    'margin_us' => $marginUs,
+                    'margin_other' => $marginOther,
+                    'price_us' => $priceUs,
+                    'price_other' => $priceOther,
+                ]);
+            }
 
             // Récupérer les prompts personnalisés de la boutique (avec niche injectée)
             $descriptionPrompt = $shop->getEffectiveAiDescriptionPrompt();
@@ -164,6 +208,9 @@ class ExtensionController extends Controller
                 'description' => $description,
                 'price' => $sellingPrice,
                 'cost_price' => $costPrice,
+                'country_prices' => $countryPrices,
+                'price_us' => $priceUs,
+                'price_other' => $priceOther,
                 'images' => $images,
                 'tags' => $tags ?? [],
                 'etsy_category' => $etsyCategory ?? null,
@@ -289,6 +336,8 @@ class ExtensionController extends Controller
                     'title' => $product->title,
                     'description' => $product->description,
                     'price' => (float) $product->price,
+                    'price_us' => $product->price_us ? (float) $product->price_us : null,
+                    'price_other' => $product->price_other ? (float) $product->price_other : null,
                     'tags' => $tags,
                     'images' => $images,
                     'quantity' => $product->quantity ?? 999,

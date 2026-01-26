@@ -173,8 +173,11 @@ async function checkCurrentPage() {
     // On est sur une page produit AliExpress
     showState(states.EXTRACTING);
 
-    // Envoyer un message au content script pour extraire les données
-    const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractProduct' });
+    // Envoyer un message au content script pour extraire les données (without country prices initially)
+    const response = await chrome.tabs.sendMessage(tab.id, { 
+      action: 'extractProduct',
+      includeCountryPrices: false 
+    });
 
     if (response && response.success) {
       currentProduct = response.data;
@@ -212,6 +215,7 @@ async function importProduct() {
   const apiUrl = document.getElementById('api-url').value.trim();
   const apiToken = document.getElementById('api-token').value.trim();
   const shopId = document.getElementById('shop-select').value;
+  const includeCountryPrices = document.getElementById('include-country-prices').checked;
 
   if (!apiUrl) {
     showError('Veuillez entrer l\'URL de votre serveur LesRats');
@@ -221,6 +225,49 @@ async function importProduct() {
   if (!shopId) {
     showError('Veuillez sélectionner une boutique');
     return;
+  }
+
+  // If country prices are requested, scrape them first
+  if (includeCountryPrices) {
+    try {
+      showCountryPriceProgress(true);
+      updateCountryPriceProgress(0, 6, 'Demarrage...');
+      
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      // Listen for progress updates
+      const progressListener = (message) => {
+        if (message.type === 'COUNTRY_PRICE_PROGRESS' && message.progress) {
+          updateCountryPriceProgress(
+            message.progress.current, 
+            message.progress.total, 
+            `${message.progress.country} (${message.progress.code})`
+          );
+        }
+      };
+      chrome.runtime.onMessage.addListener(progressListener);
+      
+      // Scrape country prices
+      const response = await chrome.tabs.sendMessage(tab.id, { 
+        action: 'scrapeCountryPrices'
+      });
+      
+      // Remove listener
+      chrome.runtime.onMessage.removeListener(progressListener);
+      
+      if (response && response.success && response.countryPrices) {
+        currentProduct.country_prices = response.countryPrices;
+        console.log('Country prices scraped:', response.countryPrices);
+      } else {
+        console.warn('Failed to scrape country prices:', response?.error);
+      }
+      
+      showCountryPriceProgress(false);
+    } catch (error) {
+      console.error('Error scraping country prices:', error);
+      showCountryPriceProgress(false);
+      // Continue with import even if country prices fail
+    }
   }
 
   showState(states.SENDING);
@@ -258,6 +305,29 @@ async function importProduct() {
   } catch (error) {
     console.error('Erreur d\'import:', error);
     showError('Impossible de se connecter au serveur. Vérifiez l\'URL et que le serveur est démarré.');
+  }
+}
+
+// Show/hide country price progress
+function showCountryPriceProgress(show) {
+  const progressDiv = document.getElementById('country-price-progress');
+  if (progressDiv) {
+    progressDiv.classList.toggle('hidden', !show);
+  }
+}
+
+// Update country price progress
+function updateCountryPriceProgress(current, total, countryName) {
+  const fill = document.getElementById('progress-fill');
+  const text = document.getElementById('progress-text');
+  
+  if (fill) {
+    const percent = (current / total) * 100;
+    fill.style.width = `${percent}%`;
+  }
+  
+  if (text) {
+    text.textContent = `Scraping ${countryName}... (${current}/${total})`;
   }
 }
 

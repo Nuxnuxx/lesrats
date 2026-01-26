@@ -64,6 +64,22 @@
         <input type="password" id="api-token" placeholder="Votre token API">
       </div>
 
+      <div class="form-group checkbox-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="include-country-prices">
+          <span class="checkbox-text">Scraper les prix par pays (US, DE, AT, FR, CA, ES)</span>
+        </label>
+        <p class="help-text-small">Ajoute ~15 secondes pour recuperer les prix de livraison par pays</p>
+      </div>
+
+      <!-- Country price progress -->
+      <div id="country-price-progress" class="country-progress hidden">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="progress-text" id="progress-text">Scraping des prix...</p>
+      </div>
+
       <button id="btn-import" class="btn btn-primary">
         🚀 Importer vers LesRats
       </button>
