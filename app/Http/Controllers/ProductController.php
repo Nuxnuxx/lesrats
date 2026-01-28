@@ -124,7 +124,10 @@ class ProductController extends Controller
     {
         Gate::authorize('update', $product->shop);
 
-        return view('products.edit', compact('product'));
+        // Get backgrounds from the shop for AI image generation
+        $backgrounds = $product->shop->ai_backgrounds ?? [];
+
+        return view('products.edit', compact('product', 'backgrounds'));
     }
 
     /**
@@ -495,7 +498,7 @@ class ProductController extends Controller
         $request->validate([
             'image_url' => 'required|string',
             'prompt' => 'required|string|min:10',
-            'strength' => 'nullable|numeric|min:0|max:1',
+            'background_url' => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -512,13 +515,14 @@ class ProductController extends Controller
             }
 
             $falService = new FalImageService($falApiKey);
-            $strength = $request->input('strength', 0.65);
+            $backgroundUrl = $request->input('background_url');
 
-            // Transform the image
+            // Transform the image with optional background
             $transformedPath = $falService->transformImage(
                 $request->image_url,
                 $request->prompt,
-                $strength
+                0.65, // Fixed strength
+                $backgroundUrl
             );
 
             if (! $transformedPath) {

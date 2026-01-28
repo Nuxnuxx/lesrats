@@ -720,20 +720,23 @@
                                                           placeholder="Decrivez comment transformer l'image..."></textarea>
                                             </div>
 
-                                            {{-- Strength Slider --}}
+                                            {{-- Background Selection --}}
                                             <div class="mb-6">
-                                                <div class="flex justify-between items-center mb-2">
-                                                    <label class="block text-sm font-medium text-gray-700">Intensite de transformation:</label>
-                                                    <span class="text-sm text-purple-600 font-medium" x-text="Math.round(strength * 100) + '%'"></span>
-                                                </div>
-                                                <input type="range" 
-                                                       x-model="strength"
-                                                       min="0.1" max="0.95" step="0.05"
-                                                       class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
-                                                <div class="flex justify-between text-xs text-gray-500 mt-1">
-                                                    <span>Proche de l'original</span>
-                                                    <span>Tres different</span>
-                                                </div>
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Image de reference (Background):</label>
+                                                <select x-model="selectedBackground"
+                                                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
+                                                    <option value="">Aucun (utiliser l'image originale)</option>
+                                                    @foreach($backgrounds as $index => $bg)
+                                                        <option value="{{ asset('storage/' . $bg['path']) }}">{{ $bg['name'] }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <p class="mt-1 text-xs text-gray-500">
+                                                    @if(count($backgrounds) > 0)
+                                                        Selectionnez un background pour l'utiliser comme reference lors de la generation.
+                                                    @else
+                                                        <span class="text-orange-600">Aucun background configure. <a href="{{ route('shops.edit', $product->shop) }}" class="underline">Ajouter des backgrounds</a></span>
+                                                    @endif
+                                                </p>
                                             </div>
 
                                             {{-- Error Message --}}
@@ -1003,7 +1006,7 @@
                 currentImageIndex: 0,
                 selectedImageIndex: 0,
                 prompt: config.defaultPrompt || '',
-                strength: 0.65,
+                selectedBackground: '',
                 isGenerating: false,
                 generatedImage: null,
                 errorMessage: null,
@@ -1013,7 +1016,7 @@
                     this.step = 'select';
                     this.selectedImageIndex = this.currentImageIndex;
                     this.prompt = this.defaultPrompt || '';
-                    this.strength = 0.65;
+                    this.selectedBackground = '';
                     this.generatedImage = null;
                     this.errorMessage = null;
                     document.body.classList.add('overflow-hidden');
@@ -1044,7 +1047,7 @@
                             body: JSON.stringify({
                                 image_url: this.images[this.selectedImageIndex],
                                 prompt: this.prompt,
-                                strength: parseFloat(this.strength),
+                                background_url: this.selectedBackground || null,
                             }),
                         });
 

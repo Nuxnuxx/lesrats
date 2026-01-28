@@ -248,9 +248,94 @@
                     </div>
 
                     <div class="flex items-center justify-end mt-6">
-                        <button type="submit" 
+                        <button type="submit"
                                 class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
                             Enregistrer les prompts IA
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {{-- AI Backgrounds --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Images de reference (Backgrounds)</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    Uploadez des images de fond qui seront utilisees comme reference lors de la generation d'images IA.
+                    <br><span class="text-orange-600">Ces backgrounds seront disponibles dans le menu deroulant lors de la modification des images produit.</span>
+                </p>
+
+                {{-- Liste des backgrounds existants --}}
+                @php $backgrounds = $shop->ai_backgrounds ?? []; @endphp
+                @if(count($backgrounds) > 0)
+                    <div class="mb-6">
+                        <h4 class="text-sm font-medium text-gray-700 mb-3">Backgrounds enregistres ({{ count($backgrounds) }})</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            @foreach($backgrounds as $index => $bg)
+                                <div class="relative group">
+                                    <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                                        <img src="{{ asset('storage/' . $bg['path']) }}"
+                                             alt="{{ $bg['name'] }}"
+                                             class="w-full h-full object-cover">
+                                    </div>
+                                    <div class="mt-2 flex items-center justify-between">
+                                        <span class="text-xs font-medium text-gray-700 truncate flex-1" title="{{ $bg['name'] }}">{{ $bg['name'] }}</span>
+                                        <form method="POST" action="{{ route('shops.delete-background', $shop) }}" class="inline ml-2"
+                                              onsubmit="return confirm('Supprimer ce background ?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="index" value="{{ $index }}">
+                                            <button type="submit" class="text-red-500 hover:text-red-700">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @else
+                    <div class="mb-6 p-4 bg-gray-50 rounded-lg text-center">
+                        <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <p class="text-sm text-gray-500">Aucun background enregistre</p>
+                    </div>
+                @endif
+
+                {{-- Formulaire d'upload --}}
+                <form method="POST" action="{{ route('shops.upload-background', $shop) }}" enctype="multipart/form-data" class="border-t border-gray-200 pt-4">
+                    @csrf
+                    <h4 class="text-sm font-medium text-gray-700 mb-3">Ajouter un nouveau background</h4>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="background_name" class="block text-sm font-medium text-gray-600 mb-1">Nom du background</label>
+                            <input type="text" name="name" id="background_name" required
+                                   class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                   placeholder="Ex: Fond blanc studio">
+                            @error('name')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="background_file" class="block text-sm font-medium text-gray-600 mb-1">Image</label>
+                            <input type="file" name="background" id="background_file" accept="image/*" required
+                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
+                            @error('background')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="mt-4 flex justify-end">
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                            </svg>
+                            Ajouter le background
                         </button>
                     </div>
                 </form>

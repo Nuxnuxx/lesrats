@@ -261,4 +261,68 @@ class ShopController extends Controller
         return redirect()->route('shops.edit', $shop)
             ->with('success', count($cleanedTags).' tags enregistres !');
     }
+
+    /**
+     * Upload a background image for AI generation.
+     */
+    public function uploadBackground(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'background' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120', // Max 5MB
+        ]);
+
+        // Store the background image
+        $path = $request->file('background')->store("backgrounds/shop_{$shop->id}", 'public');
+
+        // Get existing backgrounds or initialize empty array
+        $backgrounds = $shop->ai_backgrounds ?? [];
+
+        // Add new background
+        $backgrounds[] = [
+            'name' => $validated['name'],
+            'path' => $path,
+        ];
+
+        $shop->update(['ai_backgrounds' => $backgrounds]);
+
+        return redirect()->route('shops.edit', $shop)
+            ->with('success', 'Background "' . $validated['name'] . '" ajoute avec succes !');
+    }
+
+    /**
+     * Delete a background image.
+     */
+    public function deleteBackground(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $validated = $request->validate([
+            'index' => 'required|integer|min:0',
+        ]);
+
+        $backgrounds = $shop->ai_backgrounds ?? [];
+        $index = $validated['index'];
+
+        if (isset($backgrounds[$index])) {
+            // Delete the file from storage
+            $path = $backgrounds[$index]['path'] ?? null;
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+
+            // Remove from array
+            array_splice($backgrounds, $index, 1);
+
+            $shop->update(['ai_backgrounds' => $backgrounds]);
+
+            return redirect()->route('shops.edit', $shop)
+                ->with('success', 'Background supprime avec succes !');
+        }
+
+        return redirect()->route('shops.edit', $shop)
+            ->with('error', 'Background non trouve.');
+    }
 }
