@@ -17,6 +17,7 @@
     <!-- Tabs for switching between modes -->
     <div class="tabs">
       <button id="tab-import" class="tab active">Import AliExpress</button>
+      <button id="tab-printables" class="tab">Import Printables</button>
       <button id="tab-etsy" class="tab">Publier sur Etsy</button>
     </div>
 
@@ -108,6 +109,83 @@
         <div class="icon-large">❌</div>
         <p id="error-message">Une erreur est survenue</p>
         <button id="btn-retry" class="btn btn-secondary">
+          Réessayer
+        </button>
+      </div>
+    </div>
+
+    <!-- ============== PRINTABLES SECTION ============== -->
+    <div id="section-printables" class="hidden">
+      <!-- État: Pas sur Printables -->
+      <div id="state-not-printables" class="state">
+        <div class="icon-large">🖨️</div>
+        <p>Naviguez vers une page modèle Printables.com pour commencer l'import.</p>
+        <a href="https://www.printables.com" target="_blank" class="btn btn-secondary">
+          Aller sur Printables
+        </a>
+      </div>
+
+      <!-- État: Extraction en cours -->
+      <div id="state-printables-extracting" class="state hidden">
+        <div class="spinner"></div>
+        <p>Extraction des données du modèle...</p>
+      </div>
+
+      <!-- État: Produit prêt -->
+      <div id="state-printables-ready" class="state hidden">
+        <div class="product-preview">
+          <img id="printables-product-image" src="" alt="Product">
+          <div class="product-info">
+            <h3 id="printables-product-title"></h3>
+            <p class="price" id="printables-product-price"></p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="printables-api-url">URL de votre serveur LesRats:</label>
+          <input type="text" id="printables-api-url" placeholder="http://localhost:8000">
+        </div>
+
+        <div class="form-group">
+          <label for="printables-shop-select">Boutique:</label>
+          <select id="printables-shop-select">
+            <option value="">Chargement...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="printables-api-token">Token API (optionnel):</label>
+          <input type="password" id="printables-api-token" placeholder="Votre token API">
+        </div>
+
+        <button id="btn-import-printables" class="btn btn-primary">
+          🚀 Importer vers LesRats
+        </button>
+      </div>
+
+      <!-- État: Envoi en cours -->
+      <div id="state-printables-sending" class="state hidden">
+        <div class="spinner"></div>
+        <p>Envoi vers LesRats...</p>
+      </div>
+
+      <!-- État: Succès -->
+      <div id="state-printables-success" class="state hidden">
+        <div class="icon-large">✅</div>
+        <p>Modèle importé avec succès!</p>
+        <button id="btn-view-printables-product" class="btn btn-primary">
+          Voir le produit
+        </button>
+        <button id="btn-import-another-printables" class="btn btn-secondary">
+          Importer un autre modèle
+        </button>
+      </div>
+
+      <!-- État: Erreur -->
+      <div id="state-printables-error" class="state hidden">
+        <div class="icon-large">❌</div>
+        <p id="printables-error-message">Une erreur est survenue</p>
+        <button id="btn-printables-retry" class="btn btn-secondary">
           Réessayer
         </button>
       </div>

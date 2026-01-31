@@ -87,47 +87,62 @@ class ExtensionController extends Controller
                 ]);
             }
 
-            // Calculer le prix de vente (marge de 2.5x par défaut)
-            $costPrice = $validated['price'] ?? 0;
-            $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
-
-            // Process country-specific pricing if available
+            // Calculer le prix de vente
+            $sourceType = $validated['source_type'] ?? 'aliexpress';
             $countryPrices = $validated['country_prices'] ?? null;
             $priceUs = null;
             $priceOther = null;
 
-            if ($countryPrices && ! empty($countryPrices)) {
-                // Get shop's default margins
-                $marginUs = (float) ($shop->default_margin_us ?? 2.5);
-                $marginOther = (float) ($shop->default_margin_other ?? 2.5);
+            if ($sourceType === 'printables') {
+                // Prix fixe pour les produits Printables (fichiers numériques 3D)
+                $costPrice = 0;
+                $sellingPrice = 5.99;
+                $priceUs = 5.99;
+                $priceOther = 5.99;
+                $countryPrices = null; // Pas de prix par pays pour les produits numériques
 
-                // Calculate US price
-                if (isset($countryPrices['US']['total'])) {
-                    $priceUs = round((float) $countryPrices['US']['total'] * $marginUs, 2);
-                }
+                Log::info('Printables product - fixed price applied', [
+                    'selling_price' => $sellingPrice,
+                ]);
+            } else {
+                // Logique existante pour AliExpress (marge de 2.5x par défaut)
+                $costPrice = $validated['price'] ?? 0;
+                $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
 
-                // Calculate "Autres pays" price (highest of DE, AT, FR, CA, ES)
-                $otherCountries = ['DE', 'AT', 'FR', 'CA', 'ES'];
-                $maxOtherTotal = null;
-                foreach ($otherCountries as $country) {
-                    if (isset($countryPrices[$country]['total'])) {
-                        $total = (float) $countryPrices[$country]['total'];
-                        if ($maxOtherTotal === null || $total > $maxOtherTotal) {
-                            $maxOtherTotal = $total;
+                // Process country-specific pricing if available
+                if ($countryPrices && ! empty($countryPrices)) {
+                    // Get shop's default margins
+                    $marginUs = (float) ($shop->default_margin_us ?? 2.5);
+                    $marginOther = (float) ($shop->default_margin_other ?? 2.5);
+
+                    // Calculate US price
+                    if (isset($countryPrices['US']['total'])) {
+                        $priceUs = round((float) $countryPrices['US']['total'] * $marginUs, 2);
+                    }
+
+                    // Calculate "Autres pays" price (highest of DE, AT, FR, CA, ES)
+                    $otherCountries = ['DE', 'AT', 'FR', 'CA', 'ES'];
+                    $maxOtherTotal = null;
+                    foreach ($otherCountries as $country) {
+                        if (isset($countryPrices[$country]['total'])) {
+                            $total = (float) $countryPrices[$country]['total'];
+                            if ($maxOtherTotal === null || $total > $maxOtherTotal) {
+                                $maxOtherTotal = $total;
+                            }
                         }
                     }
-                }
-                if ($maxOtherTotal !== null) {
-                    $priceOther = round($maxOtherTotal * $marginOther, 2);
-                }
+                    if ($maxOtherTotal !== null) {
+                        $priceOther = round($maxOtherTotal * $marginOther, 2);
+                    }
 
-                Log::info('Country prices processed', [
-                    'country_prices' => $countryPrices,
-                    'margin_us' => $marginUs,
-                    'margin_other' => $marginOther,
-                    'price_us' => $priceUs,
-                    'price_other' => $priceOther,
-                ]);
+                    Log::info('Country prices processed', [
+                        'country_prices' => $countryPrices,
+                        'margin_us' => $marginUs,
+                        'margin_other' => $marginOther,
+                        'price_us' => $priceUs,
+                        'price_other' => $priceOther,
+                    ]);
+                }
             }
 
             // Récupérer les prompts personnalisés de la boutique (avec niche injectée)
@@ -188,7 +203,7 @@ class ExtensionController extends Controller
             $images = $validated['images'] ?? [];
 
             // Déterminer le stock et les paramètres selon le type de source
-            $sourceType = $validated['source_type'] ?? 'aliexpress';
+            // $sourceType is already defined above
             $isDigital = $sourceType === 'printables';
 
             if ($isDigital) {

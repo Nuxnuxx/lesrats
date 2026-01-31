@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "LesRats - AliExpress Importer & Etsy Publisher",
-  "version": "1.1.0",
-  "description": "Importez des produits AliExpress et publiez-les facilement sur Etsy",
+  "name": "LesRats - AliExpress, Printables Importer & Etsy Publisher",
+  "version": "1.2.0",
+  "description": "Importez des produits AliExpress et Printables, puis publiez-les facilement sur Etsy",
   "permissions": [
     "activeTab",
     "storage",
@@ -21,6 +21,8 @@
   "host_permissions": [
     "https://*.aliexpress.com/*",
     "https://fr.aliexpress.com/*",
+    "https://*.printables.com/*",
+    "https://www.printables.com/*",
     "https://*.etsy.com/*",
     "http://localhost/*",
     "http://127.0.0.1/*"
@@ -47,6 +49,14 @@
         "https://fr.aliexpress.com/item/*.html*"
       ],
       "js": ["content/aliexpress.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://*.printables.com/model/*",
+        "https://www.printables.com/model/*"
+      ],
+      "js": ["content/printables.js"],
       "run_at": "document_idle"
     },
     {

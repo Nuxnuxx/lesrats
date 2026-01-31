@@ -16,8 +16,20 @@ const etsyStates = {
   ERROR: 'state-etsy-error'
 };
 
+// États de l'interface - Printables
+const printablesStates = {
+  NOT_PRINTABLES: 'state-not-printables',
+  EXTRACTING: 'state-printables-extracting',
+  READY: 'state-printables-ready',
+  SENDING: 'state-printables-sending',
+  SUCCESS: 'state-printables-success',
+  ERROR: 'state-printables-error'
+};
+
 let currentProduct = null;
+let currentPrintablesProduct = null;
 let importedProductUrl = null;
+let importedPrintablesProductUrl = null;
 let currentTab = 'import';
 let shops = [];
 
@@ -48,8 +60,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-etsy-retry').addEventListener('click', resetEtsyState);
   document.getElementById('btn-etsy-another').addEventListener('click', resetEtsyState);
 
+  // Event listeners - Printables
+  document.getElementById('btn-import-printables').addEventListener('click', importPrintablesProduct);
+  document.getElementById('btn-printables-retry').addEventListener('click', retryPrintablesExtraction);
+  document.getElementById('btn-import-another-printables').addEventListener('click', retryPrintablesExtraction);
+  document.getElementById('btn-view-printables-product').addEventListener('click', viewPrintablesProduct);
+
   // Event listeners - Tabs
   document.getElementById('tab-import').addEventListener('click', () => switchTab('import'));
+  document.getElementById('tab-printables').addEventListener('click', () => switchTab('printables'));
   document.getElementById('tab-etsy').addEventListener('click', () => switchTab('etsy'));
 
   // Sauvegarder les paramètres quand ils changent
@@ -130,14 +149,21 @@ async function saveEtsySettings() {
 // Changer d'onglet
 function switchTab(tab) {
   currentTab = tab;
-  
+
   // Update tab buttons
   document.getElementById('tab-import').classList.toggle('active', tab === 'import');
+  document.getElementById('tab-printables').classList.toggle('active', tab === 'printables');
   document.getElementById('tab-etsy').classList.toggle('active', tab === 'etsy');
-  
+
   // Show/hide sections
   document.getElementById('section-import').classList.toggle('hidden', tab !== 'import');
+  document.getElementById('section-printables').classList.toggle('hidden', tab !== 'printables');
   document.getElementById('section-etsy').classList.toggle('hidden', tab !== 'etsy');
+
+  // Check page when switching to printables tab
+  if (tab === 'printables') {
+    checkPrintablesPage();
+  }
 }
 
 // Afficher un état (Import section)
@@ -417,4 +443,174 @@ function showEtsyError(message) {
 function resetEtsyState() {
   document.getElementById('etsy-product-id').value = '';
   showEtsyState(etsyStates.READY);
+}
+
+// ============== PRINTABLES FUNCTIONS ==============
+
+// Afficher un état (Printables section)
+function showPrintablesState(stateId) {
+  Object.values(printablesStates).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('hidden');
+  });
+  const el = document.getElementById(stateId);
+  if (el) el.classList.remove('hidden');
+}
+
+// Vérifier si on est sur Printables
+async function checkPrintablesPage() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+    if (!tab.url || !tab.url.includes('printables.com/model/')) {
+      showPrintablesState(printablesStates.NOT_PRINTABLES);
+      return;
+    }
+
+    // On est sur une page modèle Printables
+    showPrintablesState(printablesStates.EXTRACTING);
+
+    // Envoyer un message au content script pour extraire les données
+    const response = await chrome.tabs.sendMessage(tab.id, {
+      action: 'extractPrintablesProduct'
+    });
+
+    if (response && response.success) {
+      currentPrintablesProduct = response.data;
+      displayPrintablesProduct(currentPrintablesProduct);
+      showPrintablesState(printablesStates.READY);
+      // Load shops for Printables section
+      loadPrintablesShops();
+    } else {
+      showPrintablesError(response?.error || 'Impossible d\'extraire les données du modèle');
+    }
+  } catch (error) {
+    console.error('Erreur Printables:', error);
+    showPrintablesError('Erreur de communication avec la page. Rechargez la page et réessayez.');
+  }
+}
+
+// Afficher les infos du produit Printables
+function displayPrintablesProduct(product) {
+  document.getElementById('printables-product-title').textContent = product.title || 'Sans titre';
+  document.getElementById('printables-product-price').textContent = product.price ? `${product.price} €` : 'Gratuit';
+
+  const imgElement = document.getElementById('printables-product-image');
+  if (product.images && product.images.length > 0) {
+    imgElement.src = product.images[0];
+  } else {
+    imgElement.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23666"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>';
+  }
+}
+
+// Charger les boutiques pour Printables
+async function loadPrintablesShops() {
+  const saved = await chrome.storage.local.get(['apiUrl', 'apiToken', 'selectedShopId']);
+  const apiUrl = saved.apiUrl || 'http://localhost:8000';
+
+  // Set the API URL and token in Printables fields
+  document.getElementById('printables-api-url').value = apiUrl;
+  if (saved.apiToken) {
+    document.getElementById('printables-api-token').value = saved.apiToken;
+  }
+
+  const shopSelect = document.getElementById('printables-shop-select');
+  shopSelect.innerHTML = '<option value="">Chargement...</option>';
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'fetchShops',
+      apiUrl: apiUrl
+    });
+
+    if (response.success && response.shops) {
+      shopSelect.innerHTML = response.shops.map(shop =>
+        `<option value="${shop.id}" ${saved.selectedShopId == shop.id ? 'selected' : ''}>${shop.name} (${shop.platform})</option>`
+      ).join('');
+    } else {
+      shopSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+    }
+  } catch (error) {
+    console.error('Error loading shops for Printables:', error);
+    shopSelect.innerHTML = '<option value="">Serveur inaccessible</option>';
+  }
+}
+
+// Importer le produit Printables
+async function importPrintablesProduct() {
+  if (!currentPrintablesProduct) {
+    showPrintablesError('Aucun modèle à importer');
+    return;
+  }
+
+  const apiUrl = document.getElementById('printables-api-url').value.trim();
+  const apiToken = document.getElementById('printables-api-token').value.trim();
+  const shopId = document.getElementById('printables-shop-select').value;
+
+  if (!apiUrl) {
+    showPrintablesError('Veuillez entrer l\'URL de votre serveur LesRats');
+    return;
+  }
+
+  if (!shopId) {
+    showPrintablesError('Veuillez sélectionner une boutique');
+    return;
+  }
+
+  showPrintablesState(printablesStates.SENDING);
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
+    // Add shop_id to product data
+    const productData = {
+      ...currentPrintablesProduct,
+      shop_id: parseInt(shopId)
+    };
+
+    const response = await fetch(`${apiUrl}/api/extension/import`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(productData)
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      importedPrintablesProductUrl = data.product_url || `${apiUrl}/products/${data.product_id}/edit`;
+      showPrintablesState(printablesStates.SUCCESS);
+    } else {
+      showPrintablesError(data.message || data.error || 'Erreur lors de l\'import');
+    }
+  } catch (error) {
+    console.error('Erreur d\'import Printables:', error);
+    showPrintablesError('Impossible de se connecter au serveur. Vérifiez l\'URL et que le serveur est démarré.');
+  }
+}
+
+// Voir le produit Printables importé
+function viewPrintablesProduct() {
+  if (importedPrintablesProductUrl) {
+    chrome.tabs.create({ url: importedPrintablesProductUrl });
+  }
+}
+
+// Réessayer l'extraction Printables
+function retryPrintablesExtraction() {
+  currentPrintablesProduct = null;
+  importedPrintablesProductUrl = null;
+  checkPrintablesPage();
+}
+
+// Afficher une erreur Printables
+function showPrintablesError(message) {
+  document.getElementById('printables-error-message').textContent = message;
+  showPrintablesState(printablesStates.ERROR);
 }

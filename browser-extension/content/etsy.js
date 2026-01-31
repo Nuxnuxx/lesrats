@@ -40,7 +40,8 @@ console.log('🐀 LesRats Etsy Publisher v1.0 loaded');
       await chrome.storage.local.remove(['pendingEtsyProduct', 'pendingEtsyShopName']);
       
       // Handle dialogs in sequence (there may be multiple)
-      await handleAllDialogs(productData);
+      // Pass is_digital flag from backend for correct product type selection
+      await handleAllDialogs(productData, productData.is_digital === true);
       
       // Wait for form to load
       await waitForFormAfterCategory();
@@ -54,11 +55,13 @@ console.log('🐀 LesRats Etsy Publisher v1.0 loaded');
 })();
 
 // Handle all dialogs in sequence until main form appears
-async function handleAllDialogs(productData) {
+async function handleAllDialogs(productData, isDigital = false) {
   const categoryData = productData.etsy_category || null;
   let maxAttempts = 10;
   let dialogsHandled = 0;
   let handledDialogTitles = new Set();
+
+  console.log('🐀 handleAllDialogs - isDigital:', isDigital);
   
   while (maxAttempts > 0) {
     // Check if there's a dialog present
@@ -81,7 +84,7 @@ async function handleAllDialogs(productData) {
     }
     
     console.log('🐀 Found dialog:', dialogTitle);
-    await handleCategoryDialog(categoryData);
+    await handleCategoryDialog(categoryData, isDigital);
     handledDialogTitles.add(dialogTitle);
     dialogsHandled++;
     
@@ -94,23 +97,23 @@ async function handleAllDialogs(productData) {
 }
 
 // Handle the category selection dialog
-async function handleCategoryDialog(categoryData) {
+async function handleCategoryDialog(categoryData, isDigital = false) {
   // Check if category dialog is present
   const dialog = document.querySelector('[data-wt-dialog-root="true"]');
   if (!dialog) {
     console.log('🐀 No category dialog found');
     return;
   }
-  
+
   // Check dialog title to determine which dialog it is
   const dialogTitle = dialog.querySelector('.wt-dialog__header__heading')?.textContent || '';
-  
+
   if (dialogTitle.includes('quelle sorte d\'article') || dialogTitle.includes('Quelle sorte')) {
     console.log('🐀 Category selection dialog detected');
     await handleCategorySelectionDialog(dialog, categoryData);
   } else if (dialogTitle.includes('Parlez-nous') || dialogTitle.includes('ensuite de votre article')) {
     console.log('🐀 Article details dialog detected');
-    await handleArticleDetailsDialog(dialog, categoryData);
+    await handleArticleDetailsDialog(dialog, categoryData, isDigital);
   } else {
     console.log('🐀 Unknown dialog:', dialogTitle);
   }
@@ -149,15 +152,12 @@ async function handleCategorySelectionDialog(dialog, categoryData) {
 }
 
 // Handle the second dialog - article details (type, who made it, etc.)
-async function handleArticleDetailsDialog(dialog, categoryData) {
+async function handleArticleDetailsDialog(dialog, categoryData, isDigital = false) {
   console.log('🐀 Filling article details dialog');
-  
+  console.log('🐀 isDigital flag from backend:', isDigital);
+
   // 1. Select article type: "Fichiers numériques" (digital) or "Article physique" (physical)
-  // For dropshipping, usually physical. For 3D files, digital.
-  const isDigital = categoryData?.etsy_name?.toLowerCase().includes('fichier') || 
-                    categoryData?.etsy_name?.toLowerCase().includes('3d') ||
-                    categoryData?.etsy_name?.toLowerCase().includes('numérique');
-  
+  // isDigital flag comes from backend (true for Printables products)
   const typeValue = isDigital ? 'download' : 'physical';
   const typeRadio = dialog.querySelector(`input[name="listing_type_options_group"][value="${typeValue}"]`);
   if (typeRadio) {
