@@ -96,7 +96,25 @@ const SecureStorage = {
   async getSecure(key) {
     const result = await chrome.storage.local.get([key]);
     if (!result[key]) return null;
-    return this.decrypt(result[key]);
+    
+    const value = result[key];
+    
+    // Check if this looks like a Sanctum token (format: "number|hash")
+    // These are plain text legacy tokens that need migration
+    if (/^\d+\|[a-zA-Z0-9]+$/.test(value)) {
+      console.log('🐀 SecureStorage: Found legacy Sanctum token, migrating to encrypted storage...');
+      await this.setSecure(key, value);
+      return value;
+    }
+    
+    // Try to decrypt (for already encrypted values)
+    const decrypted = await this.decrypt(value);
+    
+    if (decrypted === null) {
+      console.warn('🐀 SecureStorage: Failed to decrypt value for key:', key);
+    }
+    
+    return decrypted;
   },
 
   // Store multiple values (encrypts only specified keys)

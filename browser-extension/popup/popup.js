@@ -114,7 +114,15 @@ async function saveSettings() {
 // Charger la liste des boutiques
 async function loadShops() {
   const apiUrl = document.getElementById('api-url').value.trim() || 'http://localhost:8000';
-  const apiToken = await SecureStorage.getSecure('apiToken') || document.getElementById('api-token').value.trim();
+  const tokenFromStorage = await SecureStorage.getSecure('apiToken');
+  const tokenFromInput = document.getElementById('api-token').value.trim();
+  const apiToken = tokenFromStorage || tokenFromInput;
+  
+  console.log('🐀 loadShops - URL:', apiUrl);
+  console.log('🐀 loadShops - Token from storage:', tokenFromStorage ? 'YES (decrypted)' : 'NO');
+  console.log('🐀 loadShops - Token from input:', tokenFromInput ? 'YES' : 'NO');
+  console.log('🐀 loadShops - Using token:', apiToken ? 'YES' : 'NO');
+  
   const shopSelect = document.getElementById('shop-select');
   
   shopSelect.innerHTML = '<option value="">Chargement...</option>';
@@ -125,6 +133,8 @@ async function loadShops() {
       apiUrl: apiUrl,
       apiToken: apiToken
     });
+    
+    console.log('🐀 loadShops - Response:', response);
     
     if (response.success && response.shops) {
       shops = response.shops;
@@ -327,7 +337,10 @@ async function importProduct() {
       shop_id: parseInt(shopId)
     };
 
-    const response = await fetch(`${apiUrl}/api/extension/import`, {
+    // Remove trailing slash from URL
+    const baseUrl = apiUrl.replace(/\/+$/, '');
+
+    const response = await fetch(`${baseUrl}/api/extension/import`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(productData)
@@ -593,7 +606,10 @@ async function importPrintablesProduct() {
       shop_id: parseInt(shopId)
     };
 
-    const response = await fetch(`${apiUrl}/api/extension/import`, {
+    // Remove trailing slash from URL
+    const baseUrl = apiUrl.replace(/\/+$/, '');
+
+    const response = await fetch(`${baseUrl}/api/extension/import`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(productData)
@@ -602,7 +618,7 @@ async function importPrintablesProduct() {
     const data = await response.json();
 
     if (response.ok && data.success) {
-      importedPrintablesProductUrl = data.product_url || `${apiUrl}/products/${data.product_id}/edit`;
+      importedPrintablesProductUrl = data.product_url || `${baseUrl}/products/${data.product_id}/edit`;
       showPrintablesState(printablesStates.SUCCESS);
     } else {
       showPrintablesError(data.message || data.error || 'Erreur lors de l\'import');
