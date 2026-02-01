@@ -35,11 +35,24 @@ class FalImageService
         }
 
         try {
-            // Build image URLs array (Nano Banana supports multiple reference images)
+            // Build image URLs array (Nano Banana supports up to 14 reference images)
             $imageUrls = [$imageUrl];
+
+            // Add background image if provided
             if ($backgroundUrl) {
-                $imageUrls[] = $backgroundUrl;
-                Log::info('Using background reference', ['background_url' => $backgroundUrl]);
+                // If it's a local URL, upload it to Fal.ai storage first
+                if ($this->isLocalUrl($backgroundUrl)) {
+                    $uploadedUrl = $this->uploadLocalFileToFal($backgroundUrl);
+                    if ($uploadedUrl) {
+                        $imageUrls[] = $uploadedUrl;
+                        Log::info('Background uploaded to Fal.ai', ['original' => $backgroundUrl, 'uploaded' => $uploadedUrl]);
+                    } else {
+                        Log::warning('Failed to upload background to Fal.ai', ['background_url' => $backgroundUrl]);
+                    }
+                } else {
+                    $imageUrls[] = $backgroundUrl;
+                    Log::info('Using background reference', ['background_url' => $backgroundUrl]);
+                }
             }
 
             // Build the request payload for Nano Banana
@@ -84,6 +97,66 @@ class FalImageService
             Log::error('Fal.ai transform error', [
                 'error' => $e->getMessage(),
                 'image_url' => $imageUrl,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Check if a URL is a local/localhost URL
+     */
+    protected function isLocalUrl(string $url): bool
+    {
+        return str_contains($url, 'localhost') || str_contains($url, '127.0.0.1');
+    }
+
+    /**
+     * Convert a local file to a base64 data URI that Fal.ai can use directly
+     *
+     * @param  string  $localUrl  The local URL (e.g., http://localhost:8000/storage/backgrounds/...)
+     * @return string|null The base64 data URI, or null on failure
+     */
+    protected function uploadLocalFileToFal(string $localUrl): ?string
+    {
+        try {
+            // Extract the storage path from the local URL
+            // e.g., http://localhost:8000/storage/backgrounds/shop_5/file.jpg -> backgrounds/shop_5/file.jpg
+            $path = preg_replace('#^https?://[^/]+/storage/#', '', $localUrl);
+
+            if (! $path || $path === $localUrl) {
+                Log::error('Could not extract path from local URL', ['url' => $localUrl]);
+
+                return null;
+            }
+
+            // Read the file from local storage
+            if (! Storage::disk('public')->exists($path)) {
+                Log::error('Local file not found', ['path' => $path]);
+
+                return null;
+            }
+
+            $fileContent = Storage::disk('public')->get($path);
+            $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+            // Determine MIME type based on extension
+            $mimeTypes = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+            ];
+            $mimeType = $mimeTypes[$extension] ?? 'image/jpeg';
+
+            // Return as base64 data URI (Fal.ai accepts data URIs directly)
+            return 'data:'.$mimeType.';base64,'.base64_encode($fileContent);
+
+        } catch (\Exception $e) {
+            Log::error('Error converting local file to data URI', [
+                'error' => $e->getMessage(),
+                'url' => $localUrl,
             ]);
 
             return null;
