@@ -1,7 +1,360 @@
 // Content script for Etsy listing editor
 // Full automation: category selection + form filling
 
-console.log('🐀 LesRats Etsy Publisher loaded');
+// ============== DEBUG PANEL ==============
+const DebugPanel = {
+  panel: null,
+  stepsContainer: null,
+  isMinimized: false,
+  steps: [],
+  
+  init() {
+    if (this.panel) return;
+    
+    this.panel = document.createElement('div');
+    this.panel.id = 'lesrats-debug-panel';
+    this.panel.innerHTML = `
+      <style>
+        #lesrats-debug-panel {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          z-index: 999999;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 13px;
+        }
+        #lesrats-debug-panel * {
+          box-sizing: border-box;
+        }
+        .lesrats-panel-content {
+          background: #1a1a2e;
+          border-radius: 12px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+          width: 380px;
+          max-height: 500px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .lesrats-panel-content.minimized {
+          display: none;
+        }
+        .lesrats-header {
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+          color: white;
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .lesrats-header-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 600;
+        }
+        .lesrats-header-actions {
+          display: flex;
+          gap: 8px;
+        }
+        .lesrats-header-btn {
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          width: 24px;
+          height: 24px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+        }
+        .lesrats-header-btn:hover {
+          background: rgba(255,255,255,0.3);
+        }
+        .lesrats-steps {
+          padding: 12px;
+          overflow-y: auto;
+          max-height: 400px;
+          flex: 1;
+        }
+        .lesrats-step {
+          background: rgba(255,255,255,0.05);
+          border-radius: 8px;
+          margin-bottom: 8px;
+          overflow: hidden;
+        }
+        .lesrats-step-header {
+          padding: 10px 12px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          cursor: pointer;
+        }
+        .lesrats-step-header:hover {
+          background: rgba(255,255,255,0.05);
+        }
+        .lesrats-step-icon {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 11px;
+          flex-shrink: 0;
+        }
+        .lesrats-step-icon.pending {
+          background: #374151;
+          color: #9ca3af;
+        }
+        .lesrats-step-icon.running {
+          background: #3b82f6;
+          color: white;
+          animation: lesrats-pulse 1s infinite;
+        }
+        .lesrats-step-icon.success {
+          background: #22c55e;
+          color: white;
+        }
+        .lesrats-step-icon.error {
+          background: #ef4444;
+          color: white;
+        }
+        @keyframes lesrats-pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
+        }
+        .lesrats-step-title {
+          flex: 1;
+          color: #e5e7eb;
+          font-weight: 500;
+        }
+        .lesrats-step-toggle {
+          color: #6b7280;
+          font-size: 10px;
+        }
+        .lesrats-step-details {
+          display: none;
+          padding: 0 12px 12px 42px;
+          color: #9ca3af;
+          font-size: 12px;
+          font-family: 'Monaco', 'Menlo', monospace;
+          white-space: pre-wrap;
+          word-break: break-all;
+        }
+        .lesrats-step-details.expanded {
+          display: block;
+        }
+        .lesrats-step-details .error-text {
+          color: #fca5a5;
+        }
+        .lesrats-step-details .success-text {
+          color: #86efac;
+        }
+        .lesrats-minimized-icon {
+          width: 50px;
+          height: 50px;
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 24px;
+          cursor: pointer;
+          box-shadow: 0 4px 16px rgba(249, 115, 22, 0.4);
+        }
+        .lesrats-minimized-icon.hidden {
+          display: none;
+        }
+        .lesrats-minimized-icon:hover {
+          transform: scale(1.1);
+        }
+        .lesrats-minimized-icon .badge {
+          position: absolute;
+          top: -4px;
+          right: -4px;
+          background: #ef4444;
+          color: white;
+          font-size: 10px;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+      </style>
+      <div class="lesrats-panel-content">
+        <div class="lesrats-header">
+          <div class="lesrats-header-title">
+            <span>🐀</span>
+            <span>LesRats Automation</span>
+          </div>
+          <div class="lesrats-header-actions">
+            <button class="lesrats-header-btn" id="lesrats-minimize" title="Minimiser">−</button>
+            <button class="lesrats-header-btn" id="lesrats-close" title="Fermer">×</button>
+          </div>
+        </div>
+        <div class="lesrats-steps" id="lesrats-steps"></div>
+      </div>
+      <div class="lesrats-minimized-icon hidden" id="lesrats-minimized">
+        🐀
+      </div>
+    `;
+    
+    document.body.appendChild(this.panel);
+    this.stepsContainer = document.getElementById('lesrats-steps');
+    
+    // Event listeners
+    document.getElementById('lesrats-minimize').addEventListener('click', () => this.minimize());
+    document.getElementById('lesrats-close').addEventListener('click', () => this.close());
+    document.getElementById('lesrats-minimized').addEventListener('click', () => this.restore());
+  },
+  
+  addStep(id, title) {
+    this.init();
+    
+    const step = {
+      id,
+      title,
+      status: 'pending',
+      details: '',
+      element: null
+    };
+    
+    const stepEl = document.createElement('div');
+    stepEl.className = 'lesrats-step';
+    stepEl.innerHTML = `
+      <div class="lesrats-step-header">
+        <div class="lesrats-step-icon pending">○</div>
+        <div class="lesrats-step-title">${title}</div>
+        <div class="lesrats-step-toggle">▼</div>
+      </div>
+      <div class="lesrats-step-details"></div>
+    `;
+    
+    const header = stepEl.querySelector('.lesrats-step-header');
+    const details = stepEl.querySelector('.lesrats-step-details');
+    
+    header.addEventListener('click', () => {
+      details.classList.toggle('expanded');
+      stepEl.querySelector('.lesrats-step-toggle').textContent = 
+        details.classList.contains('expanded') ? '▲' : '▼';
+    });
+    
+    step.element = stepEl;
+    this.steps.push(step);
+    this.stepsContainer.appendChild(stepEl);
+    
+    // Auto-scroll to bottom
+    this.stepsContainer.scrollTop = this.stepsContainer.scrollHeight;
+    
+    return id;
+  },
+  
+  updateStep(id, status, details = '') {
+    const step = this.steps.find(s => s.id === id);
+    if (!step) return;
+    
+    step.status = status;
+    step.details = details;
+    
+    const iconEl = step.element.querySelector('.lesrats-step-icon');
+    const detailsEl = step.element.querySelector('.lesrats-step-details');
+    
+    iconEl.className = 'lesrats-step-icon ' + status;
+    
+    switch (status) {
+      case 'running':
+        iconEl.textContent = '◉';
+        break;
+      case 'success':
+        iconEl.textContent = '✓';
+        break;
+      case 'error':
+        iconEl.textContent = '✗';
+        break;
+      default:
+        iconEl.textContent = '○';
+    }
+    
+    if (details) {
+      const formattedDetails = typeof details === 'object' 
+        ? JSON.stringify(details, null, 2)
+        : details;
+      
+      const cssClass = status === 'error' ? 'error-text' : 
+                       status === 'success' ? 'success-text' : '';
+      
+      detailsEl.innerHTML = `<span class="${cssClass}">${formattedDetails}</span>`;
+    }
+    
+    // Auto-scroll
+    this.stepsContainer.scrollTop = this.stepsContainer.scrollHeight;
+  },
+  
+  minimize() {
+    this.isMinimized = true;
+    this.panel.querySelector('.lesrats-panel-content').classList.add('minimized');
+    
+    const minimizedIcon = document.getElementById('lesrats-minimized');
+    minimizedIcon.classList.remove('hidden');
+    
+    // Show error count badge if any errors
+    const errorCount = this.steps.filter(s => s.status === 'error').length;
+    let badge = minimizedIcon.querySelector('.badge');
+    if (errorCount > 0) {
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.className = 'badge';
+        minimizedIcon.style.position = 'relative';
+        minimizedIcon.appendChild(badge);
+      }
+      badge.textContent = errorCount;
+    } else if (badge) {
+      badge.remove();
+    }
+  },
+  
+  restore() {
+    this.isMinimized = false;
+    this.panel.querySelector('.lesrats-panel-content').classList.remove('minimized');
+    document.getElementById('lesrats-minimized').classList.add('hidden');
+  },
+  
+  close() {
+    if (this.panel) {
+      this.panel.remove();
+      this.panel = null;
+      this.steps = [];
+    }
+  },
+  
+  success(message) {
+    this.addStep('final-success', message);
+    this.updateStep('final-success', 'success', 'Automation terminee avec succes!');
+    setTimeout(() => this.minimize(), 2000);
+  },
+  
+  error(message) {
+    this.addStep('final-error', message);
+    this.updateStep('final-error', 'error', message);
+  }
+};
+
+// Helper to run a step with debug output
+async function runStep(id, title, fn) {
+  DebugPanel.addStep(id, title);
+  DebugPanel.updateStep(id, 'running');
+  
+  try {
+    const result = await fn();
+    DebugPanel.updateStep(id, 'success', result || 'OK');
+    return result;
+  } catch (error) {
+    DebugPanel.updateStep(id, 'error', error.message || error);
+    throw error;
+  }
+}
 
 // Check for pending data on page load
 (async function init() {
@@ -15,45 +368,63 @@ console.log('🐀 LesRats Etsy Publisher loaded');
     
     if (!pending.pendingEtsyCategoryName) return;
     
+    // Initialize debug panel
+    DebugPanel.init();
+    
     const categoryName = pending.pendingEtsyCategoryName;
     const isDigital = pending.pendingEtsyIsDigital === true;
     const productId = pending.pendingEtsyProductId;
     const apiUrl = pending.pendingEtsyApiUrl;
     
-    // Clear pending data
-    await chrome.storage.local.remove([
-      'pendingEtsyCategoryName', 
-      'pendingEtsyIsDigital',
-      'pendingEtsyProductId',
-      'pendingEtsyApiUrl'
-    ]);
+    await runStep('init', 'Initialisation', async () => {
+      await chrome.storage.local.remove([
+        'pendingEtsyCategoryName', 
+        'pendingEtsyIsDigital',
+        'pendingEtsyProductId',
+        'pendingEtsyApiUrl'
+      ]);
+      return { categoryName, isDigital, productId };
+    });
     
-    await waitForPageLoad();
+    await runStep('wait-page', 'Attente chargement page', async () => {
+      await waitForPageLoad();
+      return 'Page chargee';
+    });
     
     // Fetch product data from API
     let productData = null;
     if (productId) {
-      const settings = await chrome.storage.local.get(['apiUrl']);
-      const finalApiUrl = apiUrl || settings.apiUrl || 'http://localhost:8000';
-      productData = await fetchProductData(finalApiUrl, productId);
+      await runStep('fetch-product', 'Recuperation donnees produit', async () => {
+        const settings = await chrome.storage.local.get(['apiUrl']);
+        const finalApiUrl = apiUrl || settings.apiUrl || 'http://localhost:8000';
+        productData = await fetchProductData(finalApiUrl, productId);
+        if (!productData) throw new Error('Produit non trouve ou token invalide');
+        return { title: productData.title, price: productData.price };
+      });
     }
     
-    // Handle all dialogs (category selection + article details)
+    // Handle all dialogs
     await handleAllDialogs({ etsy_category: { etsy_name: categoryName } }, isDigital);
     
-    // Wait for main form and fill it
-    await waitForFormAfterCategory();
+    // Wait for main form
+    await runStep('wait-form', 'Attente formulaire principal', async () => {
+      await waitForFormAfterCategory();
+      return 'Formulaire pret';
+    });
     
+    // Fill form
     if (productData) {
-      await fillEtsyForm(productData);
-      showSuccess('Formulaire rempli automatiquement!');
-    } else {
-      showSuccess('Categorie selectionnee!');
+      await runStep('fill-form', 'Remplissage formulaire', async () => {
+        await fillEtsyForm(productData);
+        return 'Titre, description, prix, tags remplis';
+      });
     }
+    
+    DebugPanel.success('Automation terminee!');
     
   } catch (error) {
     console.error('🐀 Error:', error);
-    showError('Erreur: ' + error.message);
+    DebugPanel.error('Erreur: ' + error.message);
   }
 })();
 
@@ -62,6 +433,7 @@ async function handleAllDialogs(productData, isDigital = false) {
   const categoryData = productData.etsy_category || null;
   let maxAttempts = 10;
   let handledDialogTitles = new Set();
+  let dialogCount = 0;
   
   while (maxAttempts > 0) {
     const dialog = document.querySelector('[data-wt-dialog-root="true"]');
@@ -75,7 +447,21 @@ async function handleAllDialogs(productData, isDigital = false) {
       continue;
     }
     
-    await handleCategoryDialog(categoryData, isDigital);
+    dialogCount++;
+    const stepId = `dialog-${dialogCount}`;
+    const isCategory = dialog.textContent.includes('Vos principales catégories') || 
+                       dialogTitle.includes('quelle sorte d\'article');
+    
+    DebugPanel.addStep(stepId, isCategory ? 'Selection categorie' : 'Details article');
+    DebugPanel.updateStep(stepId, 'running', { dialog: dialogTitle });
+    
+    try {
+      const result = await handleCategoryDialog(categoryData, isDigital);
+      DebugPanel.updateStep(stepId, 'success', result || 'Dialog traite');
+    } catch (e) {
+      DebugPanel.updateStep(stepId, 'error', e.message);
+    }
+    
     handledDialogTitles.add(dialogTitle);
     await sleep(1500);
     maxAttempts--;
@@ -85,7 +471,7 @@ async function handleAllDialogs(productData, isDigital = false) {
 // Handle the category selection dialog
 async function handleCategoryDialog(categoryData, isDigital = false) {
   const dialog = document.querySelector('[data-wt-dialog-root="true"]');
-  if (!dialog) return;
+  if (!dialog) return { skipped: true };
 
   const dialogTitle = dialog.querySelector('.wt-dialog__header__heading')?.textContent || '';
   const dialogContent = dialog.textContent || '';
@@ -94,31 +480,36 @@ async function handleCategoryDialog(categoryData, isDigital = false) {
       dialogTitle.includes('quelle sorte d\'article') || 
       dialogTitle.includes('Quelle sorte') ||
       dialog.querySelector('.le-category-action-group')) {
-    await handleCategorySelectionDialog(dialog, categoryData);
+    return await handleCategorySelectionDialog(dialog, categoryData);
   } else if (dialogTitle.includes('Parlez-nous') || dialogTitle.includes('ensuite de votre article')) {
-    await handleArticleDetailsDialog(dialog, categoryData, isDigital);
+    return await handleArticleDetailsDialog(dialog, categoryData, isDigital);
   } else {
-    await handleCategorySelectionDialog(dialog, categoryData);
+    return await handleCategorySelectionDialog(dialog, categoryData);
   }
 }
 
 // Handle the first dialog - category selection ("Vos principales catégories")
 async function handleCategorySelectionDialog(dialog, categoryData) {
+  const result = { action: 'category_selection' };
+  
   if (!categoryData) {
     await clickContinueButton(dialog);
-    return;
+    return { ...result, skipped: true };
   }
   
   let found = false;
+  let matchedCategory = null;
   
   // Primary: search by category name
   if (categoryData.etsy_name) {
     const searchName = categoryData.etsy_name.toLowerCase().trim();
-    let checkboxes = dialog.querySelectorAll('input[type="checkbox"][id^="category-"]');
+    result.searchName = searchName;
     
+    let checkboxes = dialog.querySelectorAll('input[type="checkbox"][id^="category-"]');
     if (checkboxes.length === 0) {
       checkboxes = document.querySelectorAll('input[type="checkbox"][id^="category-"]');
     }
+    result.checkboxesFound = checkboxes.length;
     
     // First pass: exact match on h2 title
     for (const checkbox of checkboxes) {
@@ -135,6 +526,7 @@ async function handleCategorySelectionDialog(dialog, categoryData) {
           searchName.includes(categoryName)) {
         checkbox.click();
         found = true;
+        matchedCategory = { id: checkbox.id, name: h2.textContent.trim() };
         await sleep(300);
         break;
       }
@@ -149,6 +541,7 @@ async function handleCategorySelectionDialog(dialog, categoryData) {
         if (label.textContent.toLowerCase().includes(searchName)) {
           checkbox.click();
           found = true;
+          matchedCategory = { id: checkbox.id, name: 'taxonomy match' };
           await sleep(300);
           break;
         }
@@ -162,24 +555,32 @@ async function handleCategorySelectionDialog(dialog, categoryData) {
     if (checkbox) {
       checkbox.click();
       found = true;
+      matchedCategory = { id: categoryData.etsy_id, name: 'ID fallback' };
       await sleep(300);
     }
   }
   
+  result.found = found;
+  result.matchedCategory = matchedCategory;
+  
   if (!found && categoryData.etsy_name) {
-    showError(`Categorie "${categoryData.etsy_name}" non trouvee.`);
+    result.error = `Categorie "${categoryData.etsy_name}" non trouvee`;
   }
   
   await clickContinueButton(dialog);
+  return result;
 }
 
 // Handle the second dialog - article details (type, who made it, etc.)
 async function handleArticleDetailsDialog(dialog, categoryData, isDigital = false) {
+  const result = { action: 'article_details', selections: {} };
+  
   // 1. Select article type: digital or physical
   const typeValue = isDigital ? 'download' : 'physical';
   const typeRadio = dialog.querySelector(`input[name="listing_type_options_group"][value="${typeValue}"]`);
   if (typeRadio) {
     typeRadio.click();
+    result.selections.type = typeValue;
     await sleep(300);
   }
   
@@ -187,6 +588,7 @@ async function handleArticleDetailsDialog(dialog, categoryData, isDigital = fals
   const whoMadeRadios = dialog.querySelectorAll('input[name="whoMade"]');
   if (whoMadeRadios.length >= 3) {
     whoMadeRadios[2].click();
+    result.selections.whoMade = 'autre personne';
     await sleep(300);
   }
   
@@ -194,6 +596,7 @@ async function handleArticleDetailsDialog(dialog, categoryData, isDigital = fals
   const isSupplyRadios = dialog.querySelectorAll('input[name="isSupply"]');
   if (isSupplyRadios.length >= 1) {
     isSupplyRadios[0].click();
+    result.selections.isSupply = 'produit fini';
     await sleep(300);
   }
   
@@ -202,17 +605,22 @@ async function handleArticleDetailsDialog(dialog, categoryData, isDigital = fals
   if (whenMadeSelect) {
     whenMadeSelect.value = '2020_2026';
     whenMadeSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    result.selections.whenMade = '2020-2026';
     await sleep(300);
   }
   
   // 5. Handle production partners
-  await handleProductionPartners(dialog);
+  const partnersResult = await handleProductionPartners(dialog);
+  result.selections.productionPartners = partnersResult;
   
   await clickContinueButton(dialog);
+  return result;
 }
 
 // Handle production partners selection
 async function handleProductionPartners(dialog) {
+  const result = { action: 'production_partners' };
+  
   // Find the production partners button
   let selectPartnersBtn = dialog.querySelector('button[data-change-production-partners-button="true"]') ||
                           dialog.querySelector('button[aria-controls="production-partners-overlay"]');
@@ -228,9 +636,13 @@ async function handleProductionPartners(dialog) {
     }
   }
   
-  if (!selectPartnersBtn) return;
+  if (!selectPartnersBtn) {
+    result.skipped = 'button not found';
+    return result;
+  }
   
   selectPartnersBtn.click();
+  result.buttonClicked = true;
   
   // Wait for overlay
   let overlay = null;
@@ -240,7 +652,10 @@ async function handleProductionPartners(dialog) {
     await sleep(200);
   }
   
-  if (!overlay) return;
+  if (!overlay) {
+    result.error = 'overlay not found';
+    return result;
+  }
   
   // Wait for checkbox
   let firstCheckbox = null;
@@ -252,7 +667,10 @@ async function handleProductionPartners(dialog) {
   
   if (firstCheckbox && firstCheckbox.getAttribute('aria-checked') !== 'true') {
     firstCheckbox.click();
+    result.checkboxClicked = true;
     await sleep(500);
+  } else {
+    result.checkboxAlreadyChecked = true;
   }
   
   // Click "Terminé" button
@@ -265,8 +683,11 @@ async function handleProductionPartners(dialog) {
   
   if (termineBtn) {
     termineBtn.click();
+    result.completed = true;
     await sleep(500);
   }
+  
+  return result;
 }
 
 // Helper to click the Continue button
