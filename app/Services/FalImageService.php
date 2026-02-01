@@ -19,16 +19,17 @@ class FalImageService
     /**
      * Transform an image using img2img with Fal.ai
      *
-     * @param string $imageUrl The source image URL
-     * @param string $prompt The transformation prompt
-     * @param float $strength How much to transform (0.0-1.0, lower = closer to original)
-     * @param string|null $backgroundUrl Optional background/reference image URL
+     * @param  string  $imageUrl  The source image URL
+     * @param  string  $prompt  The transformation prompt
+     * @param  float  $strength  How much to transform (0.0-1.0, lower = closer to original)
+     * @param  string|null  $backgroundUrl  Optional background/reference image URL
      * @return string|null The local path to the transformed image, or null on failure
      */
     public function transformImage(string $imageUrl, string $prompt, float $strength = 0.65, ?string $backgroundUrl = null): ?string
     {
-        if (!$this->apiKey) {
+        if (! $this->apiKey) {
             Log::warning('Fal.ai API key not configured');
+
             return null;
         }
 
@@ -43,29 +44,29 @@ class FalImageService
                 'num_images' => 1,
                 'enable_safety_checker' => true,
                 'output_format' => 'jpeg',
-                'sync_mode' => true, // Wait for result
             ];
 
             // If a background is provided, enhance the prompt to include it as reference
             if ($backgroundUrl) {
                 // Add background context to the prompt
-                $payload['prompt'] = $prompt . '. Use the reference background style and environment.';
+                $payload['prompt'] = $prompt.'. Use the reference background style and environment.';
                 // Some Fal.ai models support control_image or reference_image
                 // For now, we'll include it in the prompt description
                 Log::info('Using background reference', ['background_url' => $backgroundUrl]);
             }
 
-            // Submit the img2img request
+            // Submit the img2img request using synchronous endpoint (fal.run waits for result)
             $response = Http::withHeaders([
-                'Authorization' => 'Key ' . $this->apiKey,
+                'Authorization' => 'Key '.$this->apiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(120)->post('https://queue.fal.run/fal-ai/flux/dev/image-to-image', $payload);
+            ])->timeout(120)->post('https://fal.run/fal-ai/flux/dev/image-to-image', $payload);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::error('Fal.ai API error', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
+
                 return null;
             }
 
@@ -74,8 +75,9 @@ class FalImageService
             // Get the generated image URL
             $generatedImageUrl = $result['images'][0]['url'] ?? null;
 
-            if (!$generatedImageUrl) {
+            if (! $generatedImageUrl) {
                 Log::error('Fal.ai: No image URL in response', ['response' => $result]);
+
                 return null;
             }
 
@@ -87,6 +89,7 @@ class FalImageService
                 'error' => $e->getMessage(),
                 'image_url' => $imageUrl,
             ]);
+
             return null;
         }
     }
@@ -94,9 +97,9 @@ class FalImageService
     /**
      * Transform multiple images
      *
-     * @param array $imageUrls Array of source image URLs
-     * @param string $prompt The transformation prompt
-     * @param float $strength How much to transform
+     * @param  array  $imageUrls  Array of source image URLs
+     * @param  string  $prompt  The transformation prompt
+     * @param  float  $strength  How much to transform
      * @return array Array of local paths (nulls for failed transformations)
      */
     public function transformImages(array $imageUrls, string $prompt, float $strength = 0.65): array
@@ -113,7 +116,7 @@ class FalImageService
     /**
      * Download an image from URL and store it locally
      *
-     * @param string $imageUrl The image URL to download
+     * @param  string  $imageUrl  The image URL to download
      * @return string|null The local storage path, or null on failure
      */
     protected function downloadAndStoreImage(string $imageUrl): ?string
@@ -121,26 +124,28 @@ class FalImageService
         try {
             $response = Http::timeout(30)->get($imageUrl);
 
-            if (!$response->successful()) {
+            if (! $response->successful()) {
                 Log::error('Failed to download image', ['url' => $imageUrl]);
+
                 return null;
             }
 
             // Generate unique filename
             $extension = 'jpg';
-            $filename = 'products/' . date('Y/m/') . Str::uuid() . '.' . $extension;
+            $filename = 'products/'.date('Y/m/').Str::uuid().'.'.$extension;
 
             // Store the image
             Storage::disk('public')->put($filename, $response->body());
 
             // Return the public URL path
-            return '/storage/' . $filename;
+            return '/storage/'.$filename;
 
         } catch (\Exception $e) {
             Log::error('Failed to download and store image', [
                 'error' => $e->getMessage(),
                 'url' => $imageUrl,
             ]);
+
             return null;
         }
     }
@@ -150,6 +155,6 @@ class FalImageService
      */
     public function isConfigured(): bool
     {
-        return !empty($this->apiKey);
+        return ! empty($this->apiKey);
     }
 }
