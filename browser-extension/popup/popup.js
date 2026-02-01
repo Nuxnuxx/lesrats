@@ -35,21 +35,15 @@ let shops = [];
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
-  // Charger les paramètres sauvegardés (token is encrypted)
-  const saved = await chrome.storage.local.get(['apiUrl', 'lastEtsyShopName']);
-  const apiToken = await SecureStorage.getSecure('apiToken');
+  // Charger les paramètres sauvegardés
+  const saved = await chrome.storage.local.get(['lastEtsyShopName']);
   
-  if (saved.apiUrl) {
-    document.getElementById('api-url').value = saved.apiUrl;
-  } else {
-    document.getElementById('api-url').value = 'http://localhost:8000';
-  }
-  if (apiToken) {
-    document.getElementById('api-token').value = apiToken;
-  }
   if (saved.lastEtsyShopName) {
     document.getElementById('etsy-shop-name').value = saved.lastEtsyShopName;
   }
+
+  // Event listeners - Settings
+  document.getElementById('btn-settings').addEventListener('click', openSettings);
 
   // Event listeners - Import
   document.getElementById('btn-import').addEventListener('click', importProduct);
@@ -73,15 +67,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('tab-printables').addEventListener('click', () => switchTab('printables'));
   document.getElementById('tab-etsy').addEventListener('click', () => switchTab('etsy'));
 
-  // Sauvegarder les paramètres quand ils changent
-  document.getElementById('api-url').addEventListener('change', saveSettings);
-  document.getElementById('api-token').addEventListener('change', saveSettings);
-  document.getElementById('shop-select').addEventListener('change', saveSettings);
-  document.getElementById('etsy-shop-name').addEventListener('change', saveEtsySettings);
-
-  // Load shops when API URL or token changes
-  document.getElementById('api-url').addEventListener('change', loadShops);
-  document.getElementById('api-token').addEventListener('change', loadShops);
+  // Save shop selection when changed
+  document.getElementById('shop-select').addEventListener('change', saveShopSelection);
 
   // Load shops on startup
   loadShops();
@@ -96,34 +83,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   checkCurrentPage();
 });
 
-// Sauvegarder les paramètres
-async function saveSettings() {
-  // Save URL and shop selection normally
+// Open settings page
+function openSettings() {
+  window.location.href = 'settings.html';
+}
+
+// Sauvegarder la selection de boutique
+async function saveShopSelection() {
   await chrome.storage.local.set({
-    apiUrl: document.getElementById('api-url').value,
     selectedShopId: document.getElementById('shop-select').value
   });
-  
-  // Save token encrypted
-  const apiToken = document.getElementById('api-token').value;
-  if (apiToken) {
-    await SecureStorage.setSecure('apiToken', apiToken);
-  }
 }
 
 // Charger la liste des boutiques
 async function loadShops() {
-  const apiUrl = document.getElementById('api-url').value.trim() || 'http://localhost:8000';
-  const tokenFromStorage = await SecureStorage.getSecure('apiToken');
-  const tokenFromInput = document.getElementById('api-token').value.trim();
-  const apiToken = tokenFromStorage || tokenFromInput;
-  
-  console.log('🐀 loadShops - URL:', apiUrl);
-  console.log('🐀 loadShops - Token from storage:', tokenFromStorage ? 'YES (decrypted)' : 'NO');
-  console.log('🐀 loadShops - Token from input:', tokenFromInput ? 'YES' : 'NO');
-  console.log('🐀 loadShops - Using token:', apiToken ? 'YES' : 'NO');
+  const saved = await chrome.storage.local.get(['apiUrl']);
+  const apiUrl = saved.apiUrl || 'http://localhost:8000';
+  const apiToken = await SecureStorage.getSecure('apiToken');
   
   const shopSelect = document.getElementById('shop-select');
+  
+  if (!apiUrl || !apiToken) {
+    shopSelect.innerHTML = '<option value="">Configurez dans Parametres</option>';
+    return;
+  }
   
   shopSelect.innerHTML = '<option value="">Chargement...</option>';
   
@@ -133,8 +116,6 @@ async function loadShops() {
       apiUrl: apiUrl,
       apiToken: apiToken
     });
-    
-    console.log('🐀 loadShops - Response:', response);
     
     if (response.success && response.shops) {
       shops = response.shops;
@@ -261,18 +242,19 @@ async function importProduct() {
     return;
   }
 
-  const apiUrl = document.getElementById('api-url').value.trim();
-  const apiToken = document.getElementById('api-token').value.trim();
+  const saved = await chrome.storage.local.get(['apiUrl']);
+  const apiUrl = saved.apiUrl;
+  const apiToken = await SecureStorage.getSecure('apiToken');
   const shopId = document.getElementById('shop-select').value;
   const includeCountryPrices = document.getElementById('include-country-prices').checked;
 
-  if (!apiUrl) {
-    showError('Veuillez entrer l\'URL de votre serveur LesRats');
+  if (!apiUrl || !apiToken) {
+    showError('Configurez URL et token dans Parametres');
     return;
   }
 
   if (!shopId) {
-    showError('Veuillez sélectionner une boutique');
+    showError('Veuillez selectionner une boutique');
     return;
   }
 
@@ -537,13 +519,13 @@ async function loadPrintablesShops() {
   const apiUrl = saved.apiUrl || 'http://localhost:8000';
   const apiToken = await SecureStorage.getSecure('apiToken') || '';
 
-  // Set the API URL and token in Printables fields
-  document.getElementById('printables-api-url').value = apiUrl;
-  if (apiToken) {
-    document.getElementById('printables-api-token').value = apiToken;
-  }
-
   const shopSelect = document.getElementById('printables-shop-select');
+  
+  if (!apiUrl || !apiToken) {
+    shopSelect.innerHTML = '<option value="">Configurez dans Parametres</option>';
+    return;
+  }
+  
   shopSelect.innerHTML = '<option value="">Chargement...</option>';
 
   try {
@@ -555,7 +537,7 @@ async function loadPrintablesShops() {
 
     if (response.success && response.shops) {
       shopSelect.innerHTML = response.shops.map(shop =>
-        `<option value="${shop.id}" ${saved.selectedShopId == shop.id ? 'selected' : ''}>${shop.name}${shop.platform ? ` (${shop.platform})` : ''}</option>`
+        `<option value="${shop.id}" ${saved.selectedShopId == shop.id ? 'selected' : ''}>${shop.name}</option>`
       ).join('');
     } else {
       const errorMsg = response.error || 'Erreur de chargement';
@@ -570,21 +552,22 @@ async function loadPrintablesShops() {
 // Importer le produit Printables
 async function importPrintablesProduct() {
   if (!currentPrintablesProduct) {
-    showPrintablesError('Aucun modèle à importer');
+    showPrintablesError('Aucun modele a importer');
     return;
   }
 
-  const apiUrl = document.getElementById('printables-api-url').value.trim();
-  const apiToken = document.getElementById('printables-api-token').value.trim();
+  const saved = await chrome.storage.local.get(['apiUrl']);
+  const apiUrl = saved.apiUrl;
+  const apiToken = await SecureStorage.getSecure('apiToken');
   const shopId = document.getElementById('printables-shop-select').value;
 
-  if (!apiUrl) {
-    showPrintablesError('Veuillez entrer l\'URL de votre serveur LesRats');
+  if (!apiUrl || !apiToken) {
+    showPrintablesError('Configurez URL et token dans Parametres');
     return;
   }
 
   if (!shopId) {
-    showPrintablesError('Veuillez sélectionner une boutique');
+    showPrintablesError('Veuillez selectionner une boutique');
     return;
   }
 
@@ -593,12 +576,9 @@ async function importPrintablesProduct() {
   try {
     const headers = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json'
+      'Accept': 'application/json',
+      'Authorization': `Bearer ${apiToken}`
     };
-
-    if (apiToken) {
-      headers['Authorization'] = `Bearer ${apiToken}`;
-    }
 
     // Add shop_id to product data
     const productData = {
@@ -625,7 +605,7 @@ async function importPrintablesProduct() {
     }
   } catch (error) {
     console.error('Erreur d\'import Printables:', error);
-    showPrintablesError('Impossible de se connecter au serveur. Vérifiez l\'URL et que le serveur est démarré.');
+    showPrintablesError('Impossible de se connecter au serveur.');
   }
 }
 

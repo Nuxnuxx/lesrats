@@ -10,8 +10,16 @@
   <div class="container">
     <header>
       <div class="logo">🐀</div>
-      <h1>LesRats</h1>
-      <p class="subtitle">Import & Publish</p>
+      <div class="header-content">
+        <h1>LesRats</h1>
+        <p class="subtitle">Import & Publish</p>
+      </div>
+      <button class="btn-settings" id="btn-settings" title="Parametres">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+        </svg>
+      </button>
     </header>
 
     <!-- Tabs for switching between modes -->
@@ -49,20 +57,10 @@
       </div>
 
       <div class="form-group">
-        <label for="api-url">URL de votre serveur LesRats:</label>
-        <input type="text" id="api-url" placeholder="http://localhost:8000">
-      </div>
-
-      <div class="form-group">
         <label for="shop-select">Boutique:</label>
         <select id="shop-select">
           <option value="">Chargement...</option>
         </select>
-      </div>
-
-      <div class="form-group">
-        <label for="api-token">Token API (optionnel):</label>
-        <input type="password" id="api-token" placeholder="Votre token API">
       </div>
 
       <div class="form-group checkbox-group">
@@ -142,20 +140,10 @@
         </div>
 
         <div class="form-group">
-          <label for="printables-api-url">URL de votre serveur LesRats:</label>
-          <input type="text" id="printables-api-url" placeholder="http://localhost:8000">
-        </div>
-
-        <div class="form-group">
           <label for="printables-shop-select">Boutique:</label>
           <select id="printables-shop-select">
             <option value="">Chargement...</option>
           </select>
-        </div>
-
-        <div class="form-group">
-          <label for="printables-api-token">Token API (optionnel):</label>
-          <input type="password" id="printables-api-token" placeholder="Votre token API">
         </div>
 
         <button id="btn-import-printables" class="btn btn-primary">
