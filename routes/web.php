@@ -6,10 +6,20 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShopController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Serve storage files without symlink (for Laravel Cloud)
+Route::get('/storage/{path}', function (string $path) {
+    if (! Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+
+    return response()->file(Storage::disk('public')->path($path));
+})->where('path', '.*')->name('storage.serve');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'verified'])
