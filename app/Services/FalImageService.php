@@ -17,12 +17,13 @@ class FalImageService
     }
 
     /**
-     * Transform an image using img2img with Fal.ai
+     * Transform an image using Nano Banana (Google Gemini 2.5 Flash Image) via Fal.ai
+     * Cost: ~$0.039 per image (~256 images for $10)
      *
      * @param  string  $imageUrl  The source image URL
      * @param  string  $prompt  The transformation prompt
-     * @param  float  $strength  How much to transform (0.0-1.0, lower = closer to original)
-     * @param  string|null  $backgroundUrl  Optional background/reference image URL
+     * @param  float  $strength  Unused (kept for API compatibility)
+     * @param  string|null  $backgroundUrl  Optional reference image URL
      * @return string|null The local path to the transformed image, or null on failure
      */
     public function transformImage(string $imageUrl, string $prompt, float $strength = 0.65, ?string $backgroundUrl = null): ?string
@@ -34,32 +35,27 @@ class FalImageService
         }
 
         try {
-            // Build the request payload
-            $payload = [
-                'image_url' => $imageUrl,
-                'prompt' => $prompt,
-                'strength' => $strength,
-                'num_inference_steps' => 28,
-                'guidance_scale' => 3.5,
-                'num_images' => 1,
-                'enable_safety_checker' => true,
-                'output_format' => 'jpeg',
-            ];
-
-            // If a background is provided, enhance the prompt to include it as reference
+            // Build image URLs array (Nano Banana supports multiple reference images)
+            $imageUrls = [$imageUrl];
             if ($backgroundUrl) {
-                // Add background context to the prompt
-                $payload['prompt'] = $prompt.'. Use the reference background style and environment.';
-                // Some Fal.ai models support control_image or reference_image
-                // For now, we'll include it in the prompt description
+                $imageUrls[] = $backgroundUrl;
                 Log::info('Using background reference', ['background_url' => $backgroundUrl]);
             }
 
-            // Submit the img2img request using synchronous endpoint (fal.run waits for result)
+            // Build the request payload for Nano Banana
+            $payload = [
+                'image_urls' => $imageUrls,
+                'prompt' => $prompt,
+                'num_images' => 1,
+                'output_format' => 'jpeg',
+                'aspect_ratio' => 'auto',
+            ];
+
+            // Submit request using synchronous endpoint (fal.run waits for result)
             $response = Http::withHeaders([
                 'Authorization' => 'Key '.$this->apiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(120)->post('https://fal.run/fal-ai/flux/dev/image-to-image', $payload);
+            ])->timeout(120)->post('https://fal.run/fal-ai/nano-banana/edit', $payload);
 
             if (! $response->successful()) {
                 Log::error('Fal.ai API error', [
