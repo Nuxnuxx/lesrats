@@ -206,8 +206,8 @@ class FalImageService
             // Store the image
             Storage::disk('public')->put($filename, $response->body());
 
-            // Return the public URL path
-            return '/storage/'.$filename;
+            // Return the public URL (works with local storage and R2)
+            return Storage::disk('public')->url($filename);
 
         } catch (\Exception $e) {
             Log::error('Failed to download and store image', [

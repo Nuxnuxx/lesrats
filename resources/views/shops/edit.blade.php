@@ -273,7 +273,7 @@
                             @foreach($backgrounds as $index => $bg)
                                 <div class="relative group">
                                     <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                                        <img src="{{ asset('storage/' . $bg['path']) }}"
+                                        <img src="{{ Storage::disk('public')->url($bg['path']) }}"
                                              alt="{{ $bg['name'] }}"
                                              class="w-full h-full object-cover">
                                     </div>

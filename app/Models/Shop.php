@@ -196,7 +196,7 @@ PROMPT;
             return null;
         }
 
-        return asset('storage/'.$this->logo_path);
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->logo_path);
     }
 
     /**

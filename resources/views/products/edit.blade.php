@@ -727,7 +727,7 @@
                                                         class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
                                                     <option value="">Aucun (utiliser l'image originale)</option>
                                                     @foreach($backgrounds as $index => $bg)
-                                                        <option value="{{ asset('storage/' . $bg['path']) }}">{{ $bg['name'] }}</option>
+                                                        <option value="{{ Storage::disk('public')->url($bg['path']) }}">{{ $bg['name'] }}</option>
                                                     @endforeach
                                                 </select>
                                                 <p class="mt-1 text-xs text-gray-500">
