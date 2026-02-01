@@ -184,25 +184,27 @@
       <!-- État: Etsy Ready -->
       <div id="state-etsy-ready" class="state">
         <div class="icon-large">🛒</div>
-        <p>Publiez un produit LesRats sur Etsy</p>
+        <p>Ouvrir Etsy avec la bonne categorie</p>
         
         <div class="form-group">
-          <label for="etsy-product-id">ID du produit LesRats:</label>
-          <input type="number" id="etsy-product-id" placeholder="Ex: 123">
+          <label for="etsy-category-name">Categorie Etsy:</label>
+          <input type="text" id="etsy-category-name" placeholder="Ex: Fournitures creatives">
+          <p class="help-text-small">Le nom exact de la categorie dans "Vos principales categories"</p>
         </div>
 
-        <div class="form-group">
-          <label for="etsy-shop-name">Nom de la boutique Etsy:</label>
-          <input type="text" id="etsy-shop-name" placeholder="Ex: BloodstoneForgeFR">
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="etsy-is-digital">
+            <span class="checkbox-text">Produit numerique (fichier STL, etc.)</span>
+          </label>
         </div>
 
         <button id="btn-publish-etsy" class="btn btn-etsy">
-          🚀 Ouvrir Etsy & Remplir
+          🚀 Ouvrir Etsy
         </button>
 
         <p class="help-text">
-          Le formulaire Etsy sera rempli automatiquement.<br>
-          Vous devrez ajouter les images et la categorie manuellement.
+          La categorie sera selectionnee automatiquement.
         </p>
       </div>
 
@@ -239,7 +241,7 @@
     </div>
 
     <footer>
-      <p>v1.1.0 • Made with 🧀 by LesRats</p>
+      <p>v2.0.0</p>
     </footer>
   </div>
 

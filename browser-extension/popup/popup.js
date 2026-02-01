@@ -36,10 +36,13 @@ let shops = [];
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
   // Charger les paramètres sauvegardés
-  const saved = await chrome.storage.local.get(['lastEtsyShopName']);
+  const saved = await chrome.storage.local.get(['lastEtsyCategoryName', 'lastEtsyIsDigital']);
   
-  if (saved.lastEtsyShopName) {
-    document.getElementById('etsy-shop-name').value = saved.lastEtsyShopName;
+  if (saved.lastEtsyCategoryName) {
+    document.getElementById('etsy-category-name').value = saved.lastEtsyCategoryName;
+  }
+  if (saved.lastEtsyIsDigital) {
+    document.getElementById('etsy-is-digital').checked = saved.lastEtsyIsDigital;
   }
 
   // Event listeners - Settings
@@ -389,57 +392,30 @@ function showError(message) {
 
 // Publier sur Etsy
 async function publishToEtsy() {
-  const productId = document.getElementById('etsy-product-id').value.trim();
-  const shopName = document.getElementById('etsy-shop-name').value.trim();
+  const categoryName = document.getElementById('etsy-category-name').value.trim();
+  const isDigital = document.getElementById('etsy-is-digital').checked;
   
-  if (!productId) {
-    showEtsyError('Veuillez entrer l\'ID du produit');
+  if (!categoryName) {
+    showEtsyError('Veuillez entrer le nom de la categorie');
     return;
   }
-  
-  if (!shopName) {
-    showEtsyError('Veuillez entrer le nom de la boutique Etsy');
-    return;
-  }
-  
-  // Get API URL and token (token is encrypted)
-  const saved = await chrome.storage.local.get(['apiUrl']);
-  const apiUrl = saved.apiUrl || 'http://localhost:8000';
-  const apiToken = await SecureStorage.getSecure('apiToken') || '';
   
   showEtsyState(etsyStates.LOADING);
   
   try {
-    // First, verify the product exists by fetching its data via service worker
-    const data = await chrome.runtime.sendMessage({
-      action: 'fetchEtsyData',
-      apiUrl: apiUrl,
-      apiToken: apiToken,
-      productId: productId
+    const result = await chrome.runtime.sendMessage({
+      action: 'openEtsyWithCategory',
+      categoryName: categoryName,
+      isDigital: isDigital
     });
     
-    if (!data.success) {
-      showEtsyError(`Produit non trouve: ${data.message || data.error}`);
-      return;
+    if (result.success) {
+      showEtsyState(etsyStates.SUCCESS);
+    } else {
+      showEtsyError(result.error || 'Erreur');
     }
-    
-    // Store the pending product info in extension storage
-    await chrome.storage.local.set({
-      pendingEtsyProduct: productId,
-      pendingEtsyShopName: shopName,
-      apiUrl: apiUrl,
-      lastEtsyShopName: shopName
-    });
-    
-    // Open Etsy listing editor
-    const etsyUrl = 'https://www.etsy.com/your/shops/me/listing-editor/create';
-    chrome.tabs.create({ url: etsyUrl });
-    
-    showEtsyState(etsyStates.SUCCESS);
-    
   } catch (error) {
-    console.error('Erreur Etsy:', error);
-    showEtsyError('Erreur de connexion. Verifiez que le serveur LesRats est demarre.');
+    showEtsyError('Erreur lors de l\'ouverture d\'Etsy.');
   }
 }
 
@@ -451,7 +427,7 @@ function showEtsyError(message) {
 
 // Reset Etsy state
 function resetEtsyState() {
-  document.getElementById('etsy-product-id').value = '';
+  document.getElementById('etsy-category-name').value = '';
   showEtsyState(etsyStates.READY);
 }
 

@@ -872,27 +872,47 @@
                     </div>
 
                     {{-- Publish to Etsy --}}
+                    @php
+                        $etsyCategory = $product->etsy_category;
+                        $etsyCategoryData = null;
+                        if ($etsyCategory && !empty($product->shop->etsy_categories)) {
+                            foreach ($product->shop->etsy_categories as $cat) {
+                                if ($cat['name'] === $etsyCategory) {
+                                    $etsyCategoryData = $cat;
+                                    break;
+                                }
+                            }
+                        }
+                    @endphp
                     <div class="bg-white rounded-lg shadow-sm border border-orange-200 p-6">
                         <h3 class="text-sm font-semibold text-orange-600 mb-4">Publier sur Etsy</h3>
                         
                         <p class="text-xs text-gray-500 mb-3">
-                            Ouvrez Etsy et remplissez automatiquement le formulaire avec les donnees de ce produit.
+                            Publication automatique: categorie, titre, description, prix, tags.
                         </p>
                         
                         <button type="button" 
                                 data-product-id="{{ $product->id }}"
-                                data-shop-name="{{ $product->shop->name }}"
-                                onclick="publishToEtsy(this.dataset.productId, this.dataset.shopName)"
-                                class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors">
+                                data-category-name="{{ $etsyCategoryData['etsy_name'] ?? '' }}"
+                                data-is-digital="{{ $product->is_digital ? 'true' : 'false' }}"
+                                onclick="publishToEtsy(this.dataset)"
+                                class="w-full inline-flex items-center justify-center px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
+                                {{ !$etsyCategoryData ? 'disabled' : '' }}>
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
                             Ouvrir Etsy & Remplir
                         </button>
 
-                        <p class="text-xs text-gray-400 mt-3">
-                            <strong>Rappel:</strong> Vous devrez ajouter les images et la categorie manuellement sur Etsy.
-                        </p>
+                        @if(!$etsyCategoryData)
+                            <p class="text-xs text-red-500 mt-2">
+                                Selectionnez une categorie Etsy pour ce produit.
+                            </p>
+                        @else
+                            <p class="text-xs text-green-600 mt-2">
+                                Categorie: {{ $etsyCategoryData['etsy_name'] }}
+                            </p>
+                        @endif
                     </div>
 
                     {{-- AI Image Generation --}}
@@ -1159,48 +1179,48 @@
             });
         }
 
-        // Publish to Etsy function
-        function publishToEtsy(productId, shopName) {
-            // Show toast that we're preparing
+        // Publish to Etsy function - Full automation
+        function publishToEtsy(dataset) {
+            const categoryName = dataset.categoryName;
+            const isDigital = dataset.isDigital === 'true';
+            const productId = dataset.productId;
+            
+            if (!categoryName) {
+                alert('Veuillez d\'abord selectionner une categorie Etsy pour ce produit.');
+                return;
+            }
+            
+            // Show toast
             const toast = document.createElement('div');
-            toast.textContent = 'Ouverture d\'Etsy...';
+            toast.textContent = 'Preparation des donnees...';
             toast.className = 'fixed bottom-4 right-4 bg-orange-500 text-white px-4 py-2 rounded shadow-lg z-50';
             document.body.appendChild(toast);
 
-            // Try to communicate with extension via postMessage
-            // The extension will pick this up and store it
-            const message = {
-                type: 'LESRATS_PUBLISH_TO_ETSY',
+            // Full product data for Etsy
+            const productData = {
+                categoryName: categoryName,
+                isDigital: isDigital,
                 productId: productId,
-                shopName: shopName,
-                apiUrl: window.location.origin
-            };
-
-            // Try localStorage as fallback for extension communication
-            localStorage.setItem('lesrats_pending_etsy', JSON.stringify({
-                productId: productId,
-                shopName: shopName,
                 apiUrl: window.location.origin,
                 timestamp: Date.now()
-            }));
+            };
 
-            // Open Etsy in new tab
-            const etsyUrl = 'https://www.etsy.com/your/shops/me/listing-editor/create';
-            
-            // Update toast and open Etsy
+            // Send message to extension content script
+            window.postMessage({
+                type: 'LESRATS_PUBLISH_TO_ETSY',
+                ...productData
+            }, '*');
+
+            // Also save to localStorage as fallback
+            localStorage.setItem('lesrats_pending_etsy', JSON.stringify(productData));
+
+            // Open Etsy
             setTimeout(() => {
-                toast.textContent = 'Utilisez l\'extension LesRats sur la page Etsy pour remplir le formulaire!';
-                toast.className = 'fixed bottom-4 right-4 bg-blue-500 text-white px-4 py-2 rounded shadow-lg z-50 max-w-sm';
-                
-                // Open Etsy
-                window.open(etsyUrl, '_blank');
-
-                // Remove toast after a longer delay
-                setTimeout(() => toast.remove(), 5000);
-            }, 500);
-
-            // Also try to trigger extension via custom event (if extension has content script on this page)
-            window.postMessage(message, '*');
+                toast.textContent = 'Ouverture d\'Etsy - Remplissage automatique...';
+                toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
+                window.open('https://www.etsy.com/your/shops/me/listing-editor/create', '_blank');
+                setTimeout(() => toast.remove(), 2000);
+            }, 200);
         }
 
     </script>

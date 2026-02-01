@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LesRats - AliExpress, Printables Importer & Etsy Publisher",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "description": "Importez des produits AliExpress et Printables, puis publiez-les facilement sur Etsy",
   "permissions": [
     "activeTab",
@@ -71,7 +71,8 @@
     {
       "matches": [
         "http://localhost/*",
-        "http://127.0.0.1/*"
+        "http://127.0.0.1/*",
+        "https://*.laravel.cloud/*"
       ],
       "js": ["content/lesrats.js"],
       "run_at": "document_idle"

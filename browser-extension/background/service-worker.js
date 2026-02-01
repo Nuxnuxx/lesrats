@@ -91,7 +91,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   // Fetch Etsy product data (routed through service worker to avoid CORS)
   if (request.action === 'fetchEtsyData') {
-    fetchEtsyData(request.apiUrl, request.productId, request.apiToken)
+    fetchEtsyData(request.apiUrl, request.productId, request.apiToken, request.needsToken)
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
@@ -128,7 +128,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
+  
+  // Open Etsy with category (saves to storage from service worker)
+  if (request.action === 'openEtsyWithCategory') {
+    openEtsyWithCategory(request.categoryName, request.isDigital)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
 });
+
+// Open Etsy listing editor with category pre-selected
+async function openEtsyWithCategory(categoryName, isDigital) {
+  await chrome.storage.local.set({
+    pendingEtsyCategoryName: categoryName,
+    pendingEtsyIsDigital: isDigital,
+    lastEtsyCategoryName: categoryName,
+    lastEtsyIsDigital: isDigital
+  });
+  
+  await chrome.tabs.create({ url: 'https://www.etsy.com/your/shops/me/listing-editor/create' });
+  
+  return { success: true };
+}
 
 // Native messaging host name
 const NATIVE_HOST = 'com.lesrats.host';
@@ -153,78 +175,52 @@ async function autoUploadViaNativeHost(images) {
 }
 
 // Fetch product data for Etsy publishing
-async function fetchEtsyData(apiUrl, productId, apiToken) {
-  // Remove trailing slash from URL
+async function fetchEtsyData(apiUrl, productId, apiToken, needsToken = false) {
   const baseUrl = apiUrl.replace(/\/+$/, '');
   
   try {
-    const headers = {
-      'Accept': 'application/json'
-    };
+    if (needsToken && !apiToken) {
+      apiToken = await SecureStorage.getSecure('apiToken');
+    }
     
+    const headers = { 'Accept': 'application/json' };
     if (apiToken) {
       headers['Authorization'] = `Bearer ${apiToken}`;
     }
     
-    const response = await fetch(`${baseUrl}/api/extension/product/${productId}/etsy-data`, {
-      headers: headers
-    });
+    const response = await fetch(`${baseUrl}/api/extension/product/${productId}/etsy-data`, { headers });
     
     if (response.status === 401) {
-      return { success: false, error: 'Token invalide ou expiré. Vérifiez votre token API dans les paramètres.' };
+      return { success: false, error: 'Token invalide' };
     }
     
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('🐀 Error fetching Etsy data:', error);
     return { success: false, error: error.message };
   }
 }
 
 // Fetch shops list
 async function fetchShops(apiUrl, apiToken) {
-  // Remove trailing slash from URL to avoid double slashes
   const baseUrl = apiUrl.replace(/\/+$/, '');
   
-  console.log('🐀 fetchShops called with:', { apiUrl: baseUrl, hasToken: !!apiToken });
-  
   try {
-    const headers = {
-      'Accept': 'application/json'
-    };
-    
+    const headers = { 'Accept': 'application/json' };
     if (apiToken) {
       headers['Authorization'] = `Bearer ${apiToken}`;
     }
     
-    const url = `${baseUrl}/api/extension/shops`;
-    console.log('🐀 Fetching shops from:', url);
-    
-    const response = await fetch(url, {
-      headers: headers
-    });
-    
-    console.log('🐀 Response status:', response.status);
+    const response = await fetch(`${baseUrl}/api/extension/shops`, { headers });
     
     if (response.status === 401) {
-      return { success: false, error: 'Token invalide. Verifiez votre token.' };
+      return { success: false, error: 'Token invalide' };
     }
-    
-    if (response.status === 403) {
-      return { success: false, error: 'Acces refuse (403)' };
-    }
-    
     if (!response.ok) {
       return { success: false, error: `Erreur serveur (${response.status})` };
     }
     
-    const data = await response.json();
-    console.log('🐀 Shops response:', data);
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error('🐀 Error fetching shops:', error);
-    // More specific error messages
     if (error.message.includes('Failed to fetch')) {
       return { success: false, error: 'Serveur inaccessible' };
     }
