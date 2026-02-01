@@ -43,17 +43,25 @@ class ExtensionController extends Controller
         ]);
 
         try {
+            $user = $request->user();
+
             // Trouver la boutique
             $shop = null;
 
-            // Si un shop_id est fourni, l'utiliser
+            // Si un shop_id est fourni, vérifier que l'utilisateur y a accès
             if (! empty($validated['shop_id'])) {
-                $shop = Shop::find($validated['shop_id']);
+                $shop = $user->shops()->where('shops.id', $validated['shop_id'])->first();
+                if (! $shop) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Vous n\'avez pas accès à cette boutique.',
+                    ], 403);
+                }
             }
 
-            // Sinon, utiliser la première boutique disponible
+            // Sinon, utiliser la première boutique de l'utilisateur
             if (! $shop) {
-                $shop = Shop::first();
+                $shop = $user->shops()->first();
             }
 
             if (! $shop) {
@@ -278,11 +286,13 @@ class ExtensionController extends Controller
 
     /**
      * Get list of shops for extension dropdown.
+     * Only returns shops the authenticated user has access to.
      */
-    public function getShops()
+    public function getShops(Request $request)
     {
         try {
-            $shops = Shop::select('id', 'name')->get();
+            // Get only shops the user has access to
+            $shops = $request->user()->shops()->select('shops.id', 'shops.name')->get();
 
             return response()->json([
                 'success' => true,
@@ -307,10 +317,19 @@ class ExtensionController extends Controller
     /**
      * Get product data formatted for Etsy publishing.
      */
-    public function getEtsyData($id)
+    public function getEtsyData(Request $request, $id)
     {
         try {
+            $user = $request->user();
             $product = Product::with('shop')->findOrFail($id);
+
+            // Verify the user has access to this product's shop
+            if (! $user->hasAccessToShop($product->shop)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Vous n\'avez pas accès à ce produit.',
+                ], 403);
+            }
 
             // Get tags as array
             $tags = $product->tags;

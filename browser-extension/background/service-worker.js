@@ -1,14 +1,16 @@
 // Service Worker pour l'extension LesRats
 
+// Import secure storage utilities
+importScripts('../lib/secure-storage.js');
+
 // Écouter l'installation de l'extension
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
     console.log('🐀 LesRats Extension installée!');
 
-    // Définir les paramètres par défaut
-    chrome.storage.local.set({
-      apiUrl: 'http://localhost:8000',
-      apiToken: ''
+    // Définir les paramètres par défaut (URL is not sensitive, token starts empty)
+    await chrome.storage.local.set({
+      apiUrl: 'http://localhost:8000'
     });
   }
 });
@@ -43,10 +45,10 @@ chrome.commands.onCommand.addListener(async (command) => {
         throw new Error(extractResponse?.error || 'Extraction échouée');
       }
 
-      // Récupérer les paramètres
-      const settings = await chrome.storage.local.get(['apiUrl', 'apiToken']);
+      // Récupérer les paramètres (token is encrypted)
+      const settings = await chrome.storage.local.get(['apiUrl']);
       const apiUrl = settings.apiUrl || 'http://localhost:8000';
-      const apiToken = settings.apiToken || '';
+      const apiToken = await SecureStorage.getSecure('apiToken') || '';
 
       // Envoyer au serveur
       const result = await handleImport(extractResponse.data, apiUrl, apiToken);
@@ -89,7 +91,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   // Fetch Etsy product data (routed through service worker to avoid CORS)
   if (request.action === 'fetchEtsyData') {
-    fetchEtsyData(request.apiUrl, request.productId)
+    fetchEtsyData(request.apiUrl, request.productId, request.apiToken)
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
@@ -97,7 +99,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   // Fetch shops list
   if (request.action === 'fetchShops') {
-    fetchShops(request.apiUrl)
+    fetchShops(request.apiUrl, request.apiToken)
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
@@ -151,9 +153,24 @@ async function autoUploadViaNativeHost(images) {
 }
 
 // Fetch product data for Etsy publishing
-async function fetchEtsyData(apiUrl, productId) {
+async function fetchEtsyData(apiUrl, productId, apiToken) {
   try {
-    const response = await fetch(`${apiUrl}/api/extension/product/${productId}/etsy-data`);
+    const headers = {
+      'Accept': 'application/json'
+    };
+    
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+    
+    const response = await fetch(`${apiUrl}/api/extension/product/${productId}/etsy-data`, {
+      headers: headers
+    });
+    
+    if (response.status === 401) {
+      return { success: false, error: 'Token invalide ou expiré. Vérifiez votre token API dans les paramètres.' };
+    }
+    
     const data = await response.json();
     return data;
   } catch (error) {
@@ -163,9 +180,24 @@ async function fetchEtsyData(apiUrl, productId) {
 }
 
 // Fetch shops list
-async function fetchShops(apiUrl) {
+async function fetchShops(apiUrl, apiToken) {
   try {
-    const response = await fetch(`${apiUrl}/api/extension/shops`);
+    const headers = {
+      'Accept': 'application/json'
+    };
+    
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+    
+    const response = await fetch(`${apiUrl}/api/extension/shops`, {
+      headers: headers
+    });
+    
+    if (response.status === 401) {
+      return { success: false, error: 'Token invalide ou expiré. Vérifiez votre token API dans les paramètres.' };
+    }
+    
     const data = await response.json();
     return data;
   } catch (error) {

@@ -16,15 +16,18 @@ use Illuminate\Support\Facades\Route;
 
 // Extension Browser Routes
 Route::prefix('extension')->group(function () {
-    // Health check
+    // Health check (public - allows extension to verify API connectivity)
     Route::get('/ping', [ExtensionController::class, 'ping']);
 
-    // Get list of shops
-    Route::get('/shops', [ExtensionController::class, 'getShops']);
+    // Authenticated routes
+    Route::middleware('auth:sanctum')->group(function () {
+        // Get list of shops (only user's shops)
+        Route::get('/shops', [ExtensionController::class, 'getShops']);
 
-    // Import product (no auth required for simplicity - can add token auth later)
-    Route::post('/import', [ExtensionController::class, 'import']);
+        // Import product
+        Route::post('/import', [ExtensionController::class, 'import']);
 
-    // Get product data for Etsy publishing
-    Route::get('/product/{id}/etsy-data', [ExtensionController::class, 'getEtsyData']);
+        // Get product data for Etsy publishing
+        Route::get('/product/{id}/etsy-data', [ExtensionController::class, 'getEtsyData']);
+    });
 });

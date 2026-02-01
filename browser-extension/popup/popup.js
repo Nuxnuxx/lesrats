@@ -35,15 +35,17 @@ let shops = [];
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
-  // Charger les paramètres sauvegardés
-  const saved = await chrome.storage.local.get(['apiUrl', 'apiToken', 'lastEtsyShopName']);
+  // Charger les paramètres sauvegardés (token is encrypted)
+  const saved = await chrome.storage.local.get(['apiUrl', 'lastEtsyShopName']);
+  const apiToken = await SecureStorage.getSecure('apiToken');
+  
   if (saved.apiUrl) {
     document.getElementById('api-url').value = saved.apiUrl;
   } else {
     document.getElementById('api-url').value = 'http://localhost:8000';
   }
-  if (saved.apiToken) {
-    document.getElementById('api-token').value = saved.apiToken;
+  if (apiToken) {
+    document.getElementById('api-token').value = apiToken;
   }
   if (saved.lastEtsyShopName) {
     document.getElementById('etsy-shop-name').value = saved.lastEtsyShopName;
@@ -77,8 +79,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('shop-select').addEventListener('change', saveSettings);
   document.getElementById('etsy-shop-name').addEventListener('change', saveEtsySettings);
 
-  // Load shops when API URL changes
+  // Load shops when API URL or token changes
   document.getElementById('api-url').addEventListener('change', loadShops);
+  document.getElementById('api-token').addEventListener('change', loadShops);
 
   // Load shops on startup
   loadShops();
@@ -95,16 +98,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // Sauvegarder les paramètres
 async function saveSettings() {
+  // Save URL and shop selection normally
   await chrome.storage.local.set({
     apiUrl: document.getElementById('api-url').value,
-    apiToken: document.getElementById('api-token').value,
     selectedShopId: document.getElementById('shop-select').value
   });
+  
+  // Save token encrypted
+  const apiToken = document.getElementById('api-token').value;
+  if (apiToken) {
+    await SecureStorage.setSecure('apiToken', apiToken);
+  }
 }
 
 // Charger la liste des boutiques
 async function loadShops() {
   const apiUrl = document.getElementById('api-url').value.trim() || 'http://localhost:8000';
+  const apiToken = await SecureStorage.getSecure('apiToken') || document.getElementById('api-token').value.trim();
   const shopSelect = document.getElementById('shop-select');
   
   shopSelect.innerHTML = '<option value="">Chargement...</option>';
@@ -112,7 +122,8 @@ async function loadShops() {
   try {
     const response = await chrome.runtime.sendMessage({
       action: 'fetchShops',
-      apiUrl: apiUrl
+      apiUrl: apiUrl,
+      apiToken: apiToken
     });
     
     if (response.success && response.shops) {
@@ -123,7 +134,7 @@ async function loadShops() {
       
       // Populate dropdown
       shopSelect.innerHTML = shops.map(shop => 
-        `<option value="${shop.id}" ${saved.selectedShopId == shop.id ? 'selected' : ''}>${shop.name} (${shop.platform})</option>`
+        `<option value="${shop.id}" ${saved.selectedShopId == shop.id ? 'selected' : ''}>${shop.name}${shop.platform ? ` (${shop.platform})` : ''}</option>`
       ).join('');
       
       // If no saved selection and shops exist, save the first one
@@ -131,7 +142,9 @@ async function loadShops() {
         await chrome.storage.local.set({ selectedShopId: shops[0].id.toString() });
       }
     } else {
-      shopSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+      // Show error message - could be auth error
+      const errorMsg = response.error || 'Erreur de chargement';
+      shopSelect.innerHTML = `<option value="">${errorMsg}</option>`;
     }
   } catch (error) {
     console.error('Error loading shops:', error);
@@ -394,9 +407,10 @@ async function publishToEtsy() {
     return;
   }
   
-  // Get API URL
+  // Get API URL and token (token is encrypted)
   const saved = await chrome.storage.local.get(['apiUrl']);
   const apiUrl = saved.apiUrl || 'http://localhost:8000';
+  const apiToken = await SecureStorage.getSecure('apiToken') || '';
   
   showEtsyState(etsyStates.LOADING);
   
@@ -405,6 +419,7 @@ async function publishToEtsy() {
     const data = await chrome.runtime.sendMessage({
       action: 'fetchEtsyData',
       apiUrl: apiUrl,
+      apiToken: apiToken,
       productId: productId
     });
     
@@ -505,13 +520,14 @@ function displayPrintablesProduct(product) {
 
 // Charger les boutiques pour Printables
 async function loadPrintablesShops() {
-  const saved = await chrome.storage.local.get(['apiUrl', 'apiToken', 'selectedShopId']);
+  const saved = await chrome.storage.local.get(['apiUrl', 'selectedShopId']);
   const apiUrl = saved.apiUrl || 'http://localhost:8000';
+  const apiToken = await SecureStorage.getSecure('apiToken') || '';
 
   // Set the API URL and token in Printables fields
   document.getElementById('printables-api-url').value = apiUrl;
-  if (saved.apiToken) {
-    document.getElementById('printables-api-token').value = saved.apiToken;
+  if (apiToken) {
+    document.getElementById('printables-api-token').value = apiToken;
   }
 
   const shopSelect = document.getElementById('printables-shop-select');
@@ -520,15 +536,17 @@ async function loadPrintablesShops() {
   try {
     const response = await chrome.runtime.sendMessage({
       action: 'fetchShops',
-      apiUrl: apiUrl
+      apiUrl: apiUrl,
+      apiToken: apiToken
     });
 
     if (response.success && response.shops) {
       shopSelect.innerHTML = response.shops.map(shop =>
-        `<option value="${shop.id}" ${saved.selectedShopId == shop.id ? 'selected' : ''}>${shop.name} (${shop.platform})</option>`
+        `<option value="${shop.id}" ${saved.selectedShopId == shop.id ? 'selected' : ''}>${shop.name}${shop.platform ? ` (${shop.platform})` : ''}</option>`
       ).join('');
     } else {
-      shopSelect.innerHTML = '<option value="">Erreur de chargement</option>';
+      const errorMsg = response.error || 'Erreur de chargement';
+      shopSelect.innerHTML = `<option value="">${errorMsg}</option>`;
     }
   } catch (error) {
     console.error('Error loading shops for Printables:', error);

@@ -20,6 +20,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/api-keys', [ProfileController::class, 'updateApiKeys'])->name('profile.update-api-keys');
+    Route::post('/profile/tokens', [ProfileController::class, 'createToken'])->name('profile.create-token');
+    Route::delete('/profile/tokens/{token}', [ProfileController::class, 'revokeToken'])->name('profile.revoke-token');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Shop management routes
