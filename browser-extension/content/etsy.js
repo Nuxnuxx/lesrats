@@ -584,11 +584,20 @@ async function handleArticleDetailsDialog(dialog, categoryData, isDigital = fals
     await sleep(300);
   }
   
-  // 2. Select "Who made it": "Une autre personne ou entreprise" (third option)
+  // 2. Select "Who made it"
   const whoMadeRadios = dialog.querySelectorAll('input[name="whoMade"]');
-  if (whoMadeRadios.length >= 3) {
-    whoMadeRadios[2].click();
-    result.selections.whoMade = 'autre personne';
+  if (whoMadeRadios.length >= 1) {
+    if (isDigital) {
+      // Pour STL: "Je l'ai fait moi-meme" (option 1)
+      whoMadeRadios[0].click();
+      result.selections.whoMade = 'je lai fait';
+    } else {
+      // Pour physique: "Une autre personne ou entreprise" (option 3)
+      if (whoMadeRadios.length >= 3) {
+        whoMadeRadios[2].click();
+        result.selections.whoMade = 'autre personne';
+      }
+    }
     await sleep(300);
   }
   
@@ -609,10 +618,15 @@ async function handleArticleDetailsDialog(dialog, categoryData, isDigital = fals
     await sleep(300);
   }
   
-  // 5. Handle production partners
-  const partnersResult = await handleProductionPartners(dialog);
-  result.selections.productionPartners = partnersResult;
-  
+  // 5. Handle production partners - SKIP pour digital
+  if (!isDigital) {
+    const partnersResult = await handleProductionPartners(dialog);
+    result.selections.productionPartners = partnersResult;
+  } else {
+    console.log('🐀 Digital product - skipping production partners');
+    result.selections.productionPartners = { skipped: 'digital product' };
+  }
+
   await clickContinueButton(dialog);
   return result;
 }
@@ -841,15 +855,24 @@ async function fillEtsyForm(product) {
   
   // Fill quantity
   await fillQuantity(product.quantity);
-  
-  // Try to select shipping profile "Standart"
-  await selectShippingProfile('Standart');
-  
+
+  // Only select shipping profile for physical products
+  if (!product.is_digital) {
+    await selectShippingProfile('Standart');
+  } else {
+    console.log('🐀 Digital product - skipping shipping profile');
+  }
+
   // Upload images if available
   if (product.images && product.images.length > 0) {
     await uploadImages(product.images, product.title);
   }
-  
+
+  // Show STL upload reminder for digital products
+  if (product.is_digital) {
+    showDigitalFileReminder(product.source_url);
+  }
+
   console.log('🐀 Form filling complete!');
 }
 
@@ -944,6 +967,97 @@ function showDownloadDragHelper(imageCount, filename = 'lesrats') {
     uploadArea.style.border = '3px dashed #F97316';
     uploadArea.style.borderRadius = '8px';
   }
+}
+
+// Show reminder for digital file upload (STL)
+function showDigitalFileReminder(sourceUrl) {
+  // Remove existing reminder
+  const existing = document.getElementById('lesrats-stl-reminder');
+  if (existing) existing.remove();
+
+  const panel = document.createElement('div');
+  panel.id = 'lesrats-stl-reminder';
+  panel.innerHTML = `
+    <div style="
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      z-index: 999999;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 380px;
+      overflow: hidden;
+    ">
+      <div style="
+        background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
+        color: white;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      ">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 20px;">📁</span>
+          <span style="font-weight: bold;">Produit Digital (STL)</span>
+        </div>
+        <button id="lesrats-close-stl-reminder" style="
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 14px;
+        ">✕</button>
+      </div>
+      <div style="padding: 16px;">
+        <div style="
+          background: #F5F3FF;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 12px;
+        ">
+          <p style="margin: 0 0 8px 0; font-weight: 600; color: #5B21B6;">
+            N'oubliez pas d'uploader le fichier STL !
+          </p>
+          <p style="margin: 0; font-size: 13px; color: #6B7280;">
+            Etsy necessite le fichier STL pour les produits digitaux. Telechargez-le depuis Printables et uploadez-le dans la section "Fichiers numeriques".
+          </p>
+        </div>
+        ${sourceUrl ? `
+        <a href="${sourceUrl}" target="_blank" style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          background: #7C3AED;
+          color: white;
+          text-decoration: none;
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-weight: 500;
+          font-size: 14px;
+        ">
+          <span>🔗</span>
+          Ouvrir Printables pour telecharger le STL
+        </a>
+        ` : ''}
+        <div style="margin-top: 12px; padding: 10px; background: #FEF3C7; border-radius: 8px; font-size: 12px; color: #92400E;">
+          💡 Astuce: Cherchez la section "Fichiers numeriques" dans le formulaire Etsy pour uploader votre fichier STL.
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(panel);
+
+  // Close button handler
+  document.getElementById('lesrats-close-stl-reminder')?.addEventListener('click', () => {
+    panel.remove();
+  });
 }
 
 // Show panel with draggable images

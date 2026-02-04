@@ -133,55 +133,104 @@ function extractPrice() {
   return 0;
 }
 
+// Extraire le nom de fichier unique d'une URL pour déduplication
+function getImageFingerprint(url) {
+  try {
+    // Extraire juste le nom du fichier sans le chemin et les paramètres
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    // Prendre les 2 derniers segments du chemin (format + fichier)
+    const parts = pathname.split('/').filter(p => p);
+    const filename = parts.slice(-2).join('/');
+    return filename.toLowerCase();
+  } catch {
+    return url;
+  }
+}
+
 // Extraire les images
 function extractImages() {
-  const images = new Set();
+  const imageMap = new Map(); // fingerprint -> highRes URL
 
-  // Sélecteurs pour les images principales
+  // Sélecteurs pour les images principales (ordre de priorité)
   const imageSelectors = [
+    // Printables specific - gallery images (priorité haute)
+    '[data-testid="gallery-image"] img',
+    '.print-images img',
     '.model-images img',
+    // Generic gallery selectors
     '.gallery img',
     '.image-gallery img',
-    '.print-images img',
-    '[class*="gallery"] img',
-    '[class*="image"] img',
     '.swiper-slide img',
     '.carousel img',
-    'picture img',
-    'picture source'
+    'picture source',
+    'picture img'
   ];
+
+  function addImage(src) {
+    if (!src || !src.startsWith('http') || !isValidImageUrl(src)) return;
+
+    // Convertir en haute résolution
+    const highResSrc = convertToHighRes(src);
+    const fingerprint = getImageFingerprint(highResSrc);
+
+    // Ne pas ajouter si on a déjà cette image
+    if (!imageMap.has(fingerprint)) {
+      imageMap.set(fingerprint, highResSrc);
+      console.log('🐀 Printables - Image ajoutée:', fingerprint);
+    }
+  }
 
   for (const selector of imageSelectors) {
     document.querySelectorAll(selector).forEach(el => {
-      let src = el.src || el.srcset || el.dataset.src || el.getAttribute('data-lazy-src');
-      if (src) {
-        // Prendre la première URL si srcset
-        src = src.split(',')[0].split(' ')[0];
-        if (src.startsWith('http') && isValidImageUrl(src)) {
-          // Convertir en haute résolution si possible
-          src = convertToHighRes(src);
-          images.add(src);
+      // Chercher l'URL dans plusieurs attributs (priorité: srcset > data-src > src)
+      let srcset = el.srcset || el.getAttribute('data-srcset');
+      let src = el.dataset.src || el.getAttribute('data-lazy-src') || el.src;
+
+      // Si srcset existe, prendre la plus grande image
+      if (srcset) {
+        const srcsetParts = srcset.split(',').map(s => s.trim());
+        let bestSrc = null;
+        let bestWidth = 0;
+        for (const part of srcsetParts) {
+          const [url, descriptor] = part.split(/\s+/);
+          const widthMatch = descriptor ? descriptor.match(/(\d+)w/) : null;
+          const width = widthMatch ? parseInt(widthMatch[1]) : 0;
+          if (width > bestWidth || !bestSrc) {
+            bestWidth = width;
+            bestSrc = url;
+          }
         }
+        if (bestSrc) {
+          src = bestSrc;
+        }
+      }
+
+      if (src) {
+        src = src.split(' ')[0]; // Nettoyer
+        addImage(src);
       }
     });
   }
 
-  // Chercher aussi dans les attributs style (background-image)
+  // Chercher dans les background-image (éviter les doublons)
   document.querySelectorAll('[style*="background-image"]').forEach(el => {
     const style = el.getAttribute('style');
     const match = style.match(/url\(['"]?(https?:\/\/[^'")\s]+)['"]?\)/);
-    if (match && isValidImageUrl(match[1])) {
-      images.add(match[1]);
+    if (match) {
+      addImage(match[1]);
     }
   });
 
-  // Chercher les images dans les meta tags OpenGraph
+  // OpenGraph image en dernier (souvent la même que la première)
   const ogImage = document.querySelector('meta[property="og:image"]');
   if (ogImage && ogImage.content) {
-    images.add(ogImage.content);
+    addImage(ogImage.content);
   }
 
-  return Array.from(images).slice(0, 10);
+  const result = Array.from(imageMap.values()).slice(0, 10);
+  console.log('🐀 Printables - Total images uniques:', result.length, result);
+  return result;
 }
 
 // Vérifier si l'URL est une image valide (pas une icône ou un placeholder)
@@ -197,13 +246,28 @@ function isValidImageUrl(url) {
 
 // Convertir une URL d'image en haute résolution
 function convertToHighRes(url) {
-  // Supprimer les suffixes de taille courants
+  // Utiliser HTTPS
+  url = url.replace(/^http:/, 'https:');
+
+  // Pattern spécifique Printables
+  if (url.includes('media.printables.com')) {
+    // Stratégie 1: Augmenter la taille dans l'URL thumbnail
+    // Format: /thumbs/inside/1280x960/png/ -> /thumbs/inside/3840x2160/png/
+    // Ou: /thumbs/cover/320x240/png/ -> /thumbs/cover/3840x2160/png/
+    url = url.replace(/\/thumbs\/([^/]+)\/\d+x\d+\//, '/thumbs/$1/3840x2160/');
+
+    // Stratégie 2: Si c'est déjà un chemin /images/, garder tel quel
+    // Les images originales sont souvent dans /images/
+
+    console.log('🐀 Printables - Image haute résolution:', url);
+  }
+
+  // Patterns génériques pour autres sites
   url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
   url = url.replace(/\/thumb\//, '/');
   url = url.replace(/\/small\//, '/');
   url = url.replace(/\/medium\//, '/');
-  // Utiliser HTTPS
-  url = url.replace(/^http:/, 'https:');
+
   return url;
 }
 
