@@ -254,6 +254,85 @@
                         </button>
                     </div>
                 </form>
+
+                {{-- Specific Prompts Section --}}
+                <div class="pt-6 mt-6 border-t border-gray-200">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-2">Prompts specifiques (images)</h4>
+                    <p class="text-xs text-gray-500 mb-4">
+                        Ajoutez des prompts specifiques nommes. Ils seront disponibles dans le menu deroulant lors de la modification des images produit.
+                        <br><span class="text-orange-600">Le prompt general ci-dessus est toujours utilise. Le prompt specifique est ajoute en complement.</span>
+                    </p>
+
+                    {{-- Liste des prompts specifiques existants --}}
+                    @php $specificPrompts = $shop->ai_specific_prompts ?? []; @endphp
+                    @if(count($specificPrompts) > 0)
+                        <div class="mb-4 space-y-3">
+                            @foreach($specificPrompts as $index => $sp)
+                                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900">{{ $sp['name'] }}</p>
+                                        <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ $sp['prompt'] }}</p>
+                                    </div>
+                                    <form method="POST" action="{{ route('shops.delete-specific-prompt', $shop) }}"
+                                          onsubmit="return confirm('Supprimer ce prompt specifique ?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <input type="hidden" name="index" value="{{ $index }}">
+                                        <button type="submit" class="text-red-500 hover:text-red-700 p-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    {{-- Formulaire d'ajout --}}
+                    <form method="POST" action="{{ route('shops.add-specific-prompt', $shop) }}" x-data="{ showForm: false }">
+                        @csrf
+                        <button type="button" @click="showForm = !showForm"
+                                x-show="!showForm"
+                                class="inline-flex items-center px-3 py-2 text-sm font-medium text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Ajouter un prompt specifique
+                        </button>
+
+                        <div x-show="showForm" x-cloak class="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <div>
+                                <label for="specific_prompt_name" class="block text-sm font-medium text-gray-700 mb-1">Nom du prompt</label>
+                                <input type="text" name="name" id="specific_prompt_name" required
+                                       class="w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
+                                       placeholder="Ex: Fond blanc studio, Photo lifestyle...">
+                            </div>
+                            <div>
+                                <label for="specific_prompt_text" class="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
+                                <textarea name="prompt" id="specific_prompt_text" rows="4" required
+                                          class="w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm font-mono"
+                                          placeholder="Decrivez les instructions specifiques pour ce type de transformation..."></textarea>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="submit"
+                                        class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                                    Ajouter
+                                </button>
+                                <button type="button" @click="showForm = false"
+                                        class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
+                                    Annuler
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    @error('name')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    @error('prompt')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
             </div>
 
             {{-- AI Backgrounds --}}

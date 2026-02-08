@@ -41,6 +41,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/shops/{shop}/tags', [ShopController::class, 'updateTags'])->name('shops.update-tags');
     Route::post('/shops/{shop}/backgrounds', [ShopController::class, 'uploadBackground'])->name('shops.upload-background');
     Route::delete('/shops/{shop}/backgrounds', [ShopController::class, 'deleteBackground'])->name('shops.delete-background');
+    Route::post('/shops/{shop}/specific-prompts', [ShopController::class, 'addSpecificPrompt'])->name('shops.add-specific-prompt');
+    Route::delete('/shops/{shop}/specific-prompts', [ShopController::class, 'deleteSpecificPrompt'])->name('shops.delete-specific-prompt');
 
     // Product management routes
     Route::resource('products', ProductController::class);

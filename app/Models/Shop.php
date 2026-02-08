@@ -17,6 +17,7 @@ class Shop extends Model
         'ai_title_prompt',
         'ai_description_prompt',
         'ai_image_prompt',
+        'ai_specific_prompts',
         'ai_image_enabled',
         'ai_backgrounds',
         'etsy_categories',
@@ -83,6 +84,7 @@ PROMPT;
     protected $casts = [
         'is_active' => 'boolean',
         'ai_image_enabled' => 'boolean',
+        'ai_specific_prompts' => 'array',
         'ai_backgrounds' => 'array',
         'etsy_categories' => 'array',
         'available_tags' => 'array',

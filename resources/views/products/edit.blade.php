@@ -578,6 +578,7 @@
                             realImages: {{ json_encode($product->real_images ?? []) }},
                             productId: {{ $product->id }},
                             defaultPrompt: {{ json_encode($product->shop->getEffectiveAiImagePrompt()) }},
+                            specificPrompts: {{ json_encode($product->shop->ai_specific_prompts ?? []) }},
                             csrfToken: '{{ csrf_token() }}'
                          })">
                         <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
@@ -720,14 +721,33 @@
                                                 </div>
                                             </div>
 
-                                            {{-- Prompt Input --}}
+                                            {{-- Prompt Input (General) --}}
                                             <div class="mb-6">
-                                                <label for="ai-prompt" class="block text-sm font-medium text-gray-700 mb-2">Prompt de transformation:</label>
+                                                <label for="ai-prompt" class="block text-sm font-medium text-gray-700 mb-2">Prompt general:</label>
                                                 <textarea id="ai-prompt"
                                                           x-model="prompt"
                                                           rows="4"
                                                           class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm"
                                                           placeholder="Decrivez comment transformer l'image..."></textarea>
+                                            </div>
+
+                                            {{-- Specific Prompt Selection --}}
+                                            <div class="mb-6" x-show="specificPrompts.length > 0">
+                                                <label class="block text-sm font-medium text-gray-700 mb-2">Prompt specifique:</label>
+                                                <select x-model="selectedSpecificPromptIndex"
+                                                        class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
+                                                    <option value="">Aucun</option>
+                                                    <template x-for="(sp, index) in specificPrompts" :key="index">
+                                                        <option :value="index" x-text="sp.name"></option>
+                                                    </template>
+                                                </select>
+                                                <div x-show="selectedSpecificPromptIndex !== ''" class="mt-2 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                                    <p class="text-xs font-medium text-purple-700 mb-1" x-text="specificPrompts[selectedSpecificPromptIndex]?.name"></p>
+                                                    <p class="text-xs text-purple-600 whitespace-pre-line" x-text="specificPrompts[selectedSpecificPromptIndex]?.prompt"></p>
+                                                </div>
+                                                <p class="mt-1 text-xs text-gray-500">
+                                                    <span class="text-purple-600">Le prompt specifique sera combine avec le prompt general ci-dessus.</span>
+                                                </p>
                                             </div>
 
                                             {{-- Background Selection --}}
@@ -1028,14 +1048,16 @@
                 realImages: config.realImages || [],
                 productId: config.productId,
                 defaultPrompt: config.defaultPrompt,
+                specificPrompts: config.specificPrompts || [],
                 csrfToken: config.csrfToken,
-                
+
                 // State
                 showModal: false,
                 step: 'select', // 'select' or 'result'
                 currentImageIndex: 0,
                 selectedImageIndex: 0,
                 prompt: config.defaultPrompt || '',
+                selectedSpecificPromptIndex: '',
                 selectedBackground: '',
                 isGenerating: false,
                 generatedImage: null,
@@ -1046,6 +1068,7 @@
                     this.step = 'select';
                     this.selectedImageIndex = this.currentImageIndex;
                     this.prompt = this.defaultPrompt || '';
+                    this.selectedSpecificPromptIndex = '';
                     this.selectedBackground = '';
                     this.generatedImage = null;
                     this.errorMessage = null;
@@ -1067,6 +1090,12 @@
                     this.errorMessage = null;
 
                     try {
+                        // Combine general prompt + specific prompt
+                        let finalPrompt = this.prompt;
+                        if (this.selectedSpecificPromptIndex !== '' && this.specificPrompts[this.selectedSpecificPromptIndex]) {
+                            finalPrompt = this.prompt + "\n\n" + this.specificPrompts[this.selectedSpecificPromptIndex].prompt;
+                        }
+
                         const response = await fetch(`/products/${this.productId}/transform-single-image`, {
                             method: 'POST',
                             headers: {
@@ -1076,7 +1105,7 @@
                             },
                             body: JSON.stringify({
                                 image_url: this.images[this.selectedImageIndex],
-                                prompt: this.prompt,
+                                prompt: finalPrompt,
                                 background_url: this.selectedBackground || null,
                             }),
                         });

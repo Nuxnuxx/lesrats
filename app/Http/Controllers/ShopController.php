@@ -325,4 +325,54 @@ class ShopController extends Controller
         return redirect()->route('shops.edit', $shop)
             ->with('error', 'Background non trouve.');
     }
+
+    /**
+     * Add a specific prompt for image transformation.
+     */
+    public function addSpecificPrompt(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'prompt' => 'required|string|max:5000',
+        ]);
+
+        $prompts = $shop->ai_specific_prompts ?? [];
+        $prompts[] = [
+            'name' => $validated['name'],
+            'prompt' => $validated['prompt'],
+        ];
+
+        $shop->update(['ai_specific_prompts' => $prompts]);
+
+        return redirect()->route('shops.edit', $shop)
+            ->with('success', 'Prompt specifique ajoute avec succes !');
+    }
+
+    /**
+     * Delete a specific prompt.
+     */
+    public function deleteSpecificPrompt(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $validated = $request->validate([
+            'index' => 'required|integer|min:0',
+        ]);
+
+        $prompts = $shop->ai_specific_prompts ?? [];
+        $index = $validated['index'];
+
+        if (isset($prompts[$index])) {
+            array_splice($prompts, $index, 1);
+            $shop->update(['ai_specific_prompts' => $prompts]);
+
+            return redirect()->route('shops.edit', $shop)
+                ->with('success', 'Prompt specifique supprime avec succes !');
+        }
+
+        return redirect()->route('shops.edit', $shop)
+            ->with('error', 'Prompt specifique non trouve.');
+    }
 }
