@@ -210,6 +210,34 @@ class ExtensionController extends Controller
             // AI image generation can be triggered manually from the product edit page
             $images = $validated['images'] ?? [];
 
+            // Deduplicate Printables images (same image at different sizes/formats)
+            if ($sourceType === 'printables' && ! empty($images)) {
+                $seen = [];
+                $unique = [];
+                foreach ($images as $imageUrl) {
+                    $path = parse_url($imageUrl, PHP_URL_PATH);
+                    if (! $path) {
+                        continue;
+                    }
+                    // Extract unique Printables image identifier: /images/{id}_{uuid}/
+                    if (preg_match('/images\/(\d+_[a-f0-9-]+)/', $path, $matches)) {
+                        $identifier = $matches[1];
+                    } else {
+                        $identifier = pathinfo($path, PATHINFO_FILENAME);
+                    }
+                    if (! isset($seen[$identifier])) {
+                        $seen[$identifier] = true;
+                        $unique[] = $imageUrl;
+                    }
+                }
+                $images = array_slice($unique, 0, 10);
+
+                Log::info('Printables images deduplicated', [
+                    'before' => count($validated['images'] ?? []),
+                    'after' => count($images),
+                ]);
+            }
+
             // Déterminer le stock et les paramètres selon le type de source
             // $sourceType is already defined above
             $isDigital = $sourceType === 'printables';

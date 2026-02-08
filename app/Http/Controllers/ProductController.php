@@ -587,4 +587,37 @@ class ProductController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Remove an image from the product's source images.
+     */
+    public function removeImage(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $request->validate([
+            'image_index' => 'required|integer|min:0',
+        ]);
+
+        $images = $product->images ?? [];
+        $index = $request->input('image_index');
+
+        if (! isset($images[$index])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Image non trouvee.',
+            ], 404);
+        }
+
+        array_splice($images, $index, 1);
+        $product->update(['images' => $images]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image supprimee.',
+            'data' => [
+                'images' => $images,
+            ],
+        ]);
+    }
 }

@@ -133,18 +133,47 @@ function extractPrice() {
   return 0;
 }
 
-// Extraire le nom de fichier unique d'une URL pour déduplication
+// Extraire un identifiant unique d'une URL pour déduplication
 function getImageFingerprint(url) {
   try {
-    // Extraire juste le nom du fichier sans le chemin et les paramètres
     const urlObj = new URL(url);
     const pathname = urlObj.pathname;
-    // Prendre les 2 derniers segments du chemin (format + fichier)
+
+    // Printables: identifiant unique = /images/{id}_{uuid1}_{uuid2}/
+    // Ex: images/9652536_7be1b0fd-cc7a-42e5-9455-1ad273596be4_32c5198f-...
+    const match = pathname.match(/images\/(\d+_[a-f0-9-]+)/);
+    if (match) {
+      return match[1].toLowerCase();
+    }
+
+    // Fallback: nom de fichier sans extension (.webp et .jpg = même image)
     const parts = pathname.split('/').filter(p => p);
-    const filename = parts.slice(-2).join('/');
-    return filename.toLowerCase();
+    const filename = parts[parts.length - 1] || '';
+    return filename.replace(/\.[^.]+$/, '').toLowerCase();
   } catch {
     return url;
+  }
+}
+
+// Extraire les images depuis __NEXT_DATA__ (source la plus fiable pour Next.js)
+function extractImagesFromNextData() {
+  try {
+    const nextDataScript = document.getElementById('__NEXT_DATA__');
+    if (!nextDataScript) return null;
+
+    const jsonStr = nextDataScript.textContent;
+
+    // Chercher toutes les URLs media.printables.com dans le JSON
+    const urlMatches = jsonStr.match(/https?:\/\/media\.printables\.com\/media\/prints\/[^"\\]+/g);
+    if (!urlMatches || urlMatches.length === 0) return null;
+
+    // Dédupliquer les URLs brutes
+    const unique = [...new Set(urlMatches)];
+    console.log('🐀 Printables - __NEXT_DATA__: trouvé', unique.length, 'URLs uniques');
+    return unique;
+  } catch (e) {
+    console.log('🐀 Printables - __NEXT_DATA__ extraction failed:', e.message);
+    return null;
   }
 }
 
@@ -152,84 +181,68 @@ function getImageFingerprint(url) {
 function extractImages() {
   const imageMap = new Map(); // fingerprint -> highRes URL
 
-  // Sélecteurs pour les images principales (ordre de priorité)
-  const imageSelectors = [
-    // Printables specific - gallery images (priorité haute)
-    '[data-testid="gallery-image"] img',
-    '.print-images img',
-    '.model-images img',
-    // Generic gallery selectors
-    '.gallery img',
-    '.image-gallery img',
-    '.swiper-slide img',
-    '.carousel img',
-    'picture source',
-    'picture img'
-  ];
-
   function addImage(src) {
     if (!src || !src.startsWith('http') || !isValidImageUrl(src)) return;
 
-    // Convertir en haute résolution
     const highResSrc = convertToHighRes(src);
     const fingerprint = getImageFingerprint(highResSrc);
 
-    // Ne pas ajouter si on a déjà cette image
     if (!imageMap.has(fingerprint)) {
       imageMap.set(fingerprint, highResSrc);
       console.log('🐀 Printables - Image ajoutée:', fingerprint);
     }
   }
 
-  for (const selector of imageSelectors) {
-    document.querySelectorAll(selector).forEach(el => {
-      // Chercher l'URL dans plusieurs attributs (priorité: srcset > data-src > src)
-      let srcset = el.srcset || el.getAttribute('data-srcset');
-      let src = el.dataset.src || el.getAttribute('data-lazy-src') || el.src;
+  // Stratégie 1: Extraire depuis __NEXT_DATA__ (meilleure source)
+  const nextDataImages = extractImagesFromNextData();
+  if (nextDataImages && nextDataImages.length > 0) {
+    nextDataImages.forEach(addImage);
+  }
 
-      // Si srcset existe, prendre la plus grande image
-      if (srcset) {
-        const srcsetParts = srcset.split(',').map(s => s.trim());
-        let bestSrc = null;
-        let bestWidth = 0;
-        for (const part of srcsetParts) {
-          const [url, descriptor] = part.split(/\s+/);
-          const widthMatch = descriptor ? descriptor.match(/(\d+)w/) : null;
-          const width = widthMatch ? parseInt(widthMatch[1]) : 0;
-          if (width > bestWidth || !bestSrc) {
-            bestWidth = width;
-            bestSrc = url;
+  // Stratégie 2: DOM fallback — uniquement les images media.printables.com du modèle actuel
+  if (imageMap.size === 0) {
+    console.log('🐀 Printables - Fallback DOM extraction');
+
+    document.querySelectorAll('img, picture source').forEach(el => {
+      const sources = [
+        el.src,
+        el.srcset,
+        el.dataset?.src,
+        el.getAttribute('data-srcset')
+      ].filter(Boolean);
+
+      for (const source of sources) {
+        // Gérer srcset: prendre la plus grande
+        if (source.includes(',')) {
+          const parts = source.split(',').map(s => s.trim());
+          let bestSrc = null;
+          let bestWidth = 0;
+          for (const part of parts) {
+            const [partUrl, descriptor] = part.split(/\s+/);
+            const widthMatch = descriptor ? descriptor.match(/(\d+)w/) : null;
+            const width = widthMatch ? parseInt(widthMatch[1]) : 0;
+            if (width > bestWidth || !bestSrc) {
+              bestWidth = width;
+              bestSrc = partUrl;
+            }
           }
+          if (bestSrc && bestSrc.includes('media.printables.com')) addImage(bestSrc);
+        } else {
+          const cleanSrc = source.split(' ')[0];
+          if (cleanSrc.includes('media.printables.com')) addImage(cleanSrc);
         }
-        if (bestSrc) {
-          src = bestSrc;
-        }
-      }
-
-      if (src) {
-        src = src.split(' ')[0]; // Nettoyer
-        addImage(src);
       }
     });
   }
 
-  // Chercher dans les background-image (éviter les doublons)
-  document.querySelectorAll('[style*="background-image"]').forEach(el => {
-    const style = el.getAttribute('style');
-    const match = style.match(/url\(['"]?(https?:\/\/[^'")\s]+)['"]?\)/);
-    if (match) {
-      addImage(match[1]);
-    }
-  });
-
-  // OpenGraph image en dernier (souvent la même que la première)
-  const ogImage = document.querySelector('meta[property="og:image"]');
-  if (ogImage && ogImage.content) {
-    addImage(ogImage.content);
+  // Stratégie 3: og:image en dernier recours
+  if (imageMap.size === 0) {
+    const ogImage = document.querySelector('meta[property="og:image"]');
+    if (ogImage && ogImage.content) addImage(ogImage.content);
   }
 
   const result = Array.from(imageMap.values()).slice(0, 10);
-  console.log('🐀 Printables - Total images uniques:', result.length, result);
+  console.log('🐀 Printables - Total images uniques:', result.length);
   return result;
 }
 
@@ -246,27 +259,13 @@ function isValidImageUrl(url) {
 
 // Convertir une URL d'image en haute résolution
 function convertToHighRes(url) {
-  // Utiliser HTTPS
   url = url.replace(/^http:/, 'https:');
 
-  // Pattern spécifique Printables
   if (url.includes('media.printables.com')) {
-    // Stratégie 1: Augmenter la taille dans l'URL thumbnail
-    // Format: /thumbs/inside/1280x960/png/ -> /thumbs/inside/3840x2160/png/
-    // Ou: /thumbs/cover/320x240/png/ -> /thumbs/cover/3840x2160/png/
-    url = url.replace(/\/thumbs\/([^/]+)\/\d+x\d+\//, '/thumbs/$1/3840x2160/');
-
-    // Stratégie 2: Si c'est déjà un chemin /images/, garder tel quel
-    // Les images originales sont souvent dans /images/
-
-    console.log('🐀 Printables - Image haute résolution:', url);
+    // Remplacer toute taille par 1920x1920 en mode inside (fit, pas de crop)
+    // /thumbs/inside/640x480/ ou /thumbs/cover/320x240/ -> /thumbs/inside/1920x1920/
+    url = url.replace(/\/thumbs\/(inside|cover)\/\d+x\d+\//, '/thumbs/inside/1920x1920/');
   }
-
-  // Patterns génériques pour autres sites
-  url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
-  url = url.replace(/\/thumb\//, '/');
-  url = url.replace(/\/small\//, '/');
-  url = url.replace(/\/medium\//, '/');
 
   return url;
 }
