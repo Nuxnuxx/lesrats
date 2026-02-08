@@ -24,6 +24,7 @@ class Shop extends Model
         'available_tags',
         'default_margin_us',
         'default_margin_other',
+        'discount_percentage',
         'total_revenue',
         'total_orders',
     ];
@@ -90,6 +91,7 @@ PROMPT;
         'available_tags' => 'array',
         'default_margin_us' => 'decimal:2',
         'default_margin_other' => 'decimal:2',
+        'discount_percentage' => 'decimal:2',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
     ];

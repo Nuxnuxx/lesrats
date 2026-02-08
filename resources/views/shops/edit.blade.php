@@ -158,9 +158,38 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 mt-4">
+                        <div>
+                            <label for="discount_percentage" class="block text-sm font-medium text-gray-700 mb-1">
+                                Reduction boutique Etsy (%)
+                            </label>
+                            <div class="relative">
+                                <input type="number" name="discount_percentage" id="discount_percentage"
+                                       step="1" min="0" max="99"
+                                       value="{{ old('discount_percentage', $shop->discount_percentage ?? 0) }}"
+                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-10">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 text-sm">%</span>
+                                </div>
+                            </div>
+                            @php $discount = (float)($shop->discount_percentage ?? 0); @endphp
+                            @if($discount > 0)
+                                <p class="mt-1 text-xs text-green-700">
+                                    Prix Etsy liste = prix souhaite &divide; {{ number_format(1 - $discount/100, 2) }}
+                                    &mdash; Ex: &euro;10.00 &rarr; &euro;{{ number_format(10 / (1 - $discount/100), 2) }} sur Etsy
+                                </p>
+                            @else
+                                <p class="mt-1 text-xs text-gray-500">0 = pas de reduction (prix envoye tel quel)</p>
+                            @endif
+                            @error('discount_percentage')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
                     <div class="mt-4 p-3 bg-blue-50 rounded-lg">
                         <p class="text-xs text-blue-700">
-                            <strong>Comment ca marche:</strong> Lors de l'import depuis AliExpress, le prix "Etats-Unis" est calcule en multipliant le cout total US par la marge US. 
+                            <strong>Comment ca marche:</strong> Lors de l'import depuis AliExpress, le prix "Etats-Unis" est calcule en multipliant le cout total US par la marge US.
                             Le prix "Autres pays" utilise le cout total le plus eleve parmi DE, AT, FR, CA, ES multiplie par la marge correspondante.
                         </p>
                     </div>

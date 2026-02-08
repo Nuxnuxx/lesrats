@@ -403,15 +403,19 @@ class ExtensionController extends Controller
                 }
             }
 
+            // Inflate prices if shop has an active discount (so Etsy shows the right final price after discount)
+            $discount = (float) ($product->shop->discount_percentage ?? 0);
+            $factor = $discount > 0 ? (1 / (1 - $discount / 100)) : 1;
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'id' => $product->id,
                     'title' => $product->title,
                     'description' => $product->description,
-                    'price' => (float) $product->price,
-                    'price_us' => $product->price_us ? (float) $product->price_us : null,
-                    'price_other' => $product->price_other ? (float) $product->price_other : null,
+                    'price' => round((float) $product->price * $factor, 2),
+                    'price_us' => $product->price_us ? round((float) $product->price_us * $factor, 2) : null,
+                    'price_other' => $product->price_other ? round((float) $product->price_other * $factor, 2) : null,
                     'tags' => $tags,
                     'images' => $imagesToUse,
                     'quantity' => $product->quantity ?? 999,
