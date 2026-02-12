@@ -10,9 +10,6 @@ use App\Services\FalImageService;
 use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -589,58 +586,6 @@ class ProductController extends Controller
                 'real_images' => $realImages,
             ],
         ]);
-    }
-
-    /**
-     * Download product images as a ZIP file.
-     */
-    public function downloadImages(Product $product)
-    {
-        Gate::authorize('view', $product->shop);
-
-        $images = ! empty($product->real_images) ? $product->real_images : ($product->images ?? []);
-
-        if (empty($images)) {
-            return back()->with('error', 'Aucune image a telecharger.');
-        }
-
-        $slug = Str::slug($product->title) ?: 'produit';
-        $zipPath = tempnam(sys_get_temp_dir(), 'zip_').'_'.$slug.'.zip';
-
-        $zip = new \ZipArchive;
-        if ($zip->open($zipPath, \ZipArchive::CREATE) !== true) {
-            return back()->with('error', 'Impossible de creer le fichier ZIP.');
-        }
-
-        foreach ($images as $index => $imageUrl) {
-            try {
-                // Handle local storage URLs
-                if (str_contains($imageUrl, '/storage/')) {
-                    $path = preg_replace('#^.*/storage/#', '', $imageUrl);
-                    if (Storage::disk('public')->exists($path)) {
-                        $content = Storage::disk('public')->get($path);
-                    } else {
-                        continue;
-                    }
-                } else {
-                    $response = Http::timeout(30)->get($imageUrl);
-                    if (! $response->successful()) {
-                        continue;
-                    }
-                    $content = $response->body();
-                }
-
-                $ext = pathinfo(parse_url($imageUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'png';
-                $filename = str_pad($index + 1, 2, '0', STR_PAD_LEFT).'.'.$ext;
-                $zip->addFromString($filename, $content);
-            } catch (\Exception $e) {
-                continue;
-            }
-        }
-
-        $zip->close();
-
-        return response()->download($zipPath, $slug.'.zip')->deleteFileAfterSend(true);
     }
 
     /**

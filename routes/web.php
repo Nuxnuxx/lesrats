@@ -54,7 +54,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])->name('products.transform-single-image');
     Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');
     Route::delete('/products/{product}/remove-image', [ProductController::class, 'removeImage'])->name('products.remove-image');
-    Route::get('/products/{product}/download-images', [ProductController::class, 'downloadImages'])->name('products.download-images');
 
     // Order management routes
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
