@@ -7,7 +7,7 @@
 - [ ] Sélectionner un dossier de destination pour les photos IA générées
 - [ ] Rajouter prompt mannequin : 4 photos humaines + 2 photos mannequin (LAYWENS)
 - [ ] Ajouter le logo automatiquement sur les photos (trouver une librairie adaptée)
-- [ ] Améliorer la qualité d'image
+- [x] Améliorer la qualité d'image
 
 ## Produits
 - [x] Possibilité de changer le lien AliExpress

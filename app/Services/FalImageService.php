@@ -60,7 +60,7 @@ class FalImageService
                 'image_urls' => $imageUrls,
                 'prompt' => $prompt,
                 'num_images' => 1,
-                'output_format' => 'jpeg',
+                'output_format' => 'png',
                 'aspect_ratio' => 'auto',
             ];
 
@@ -90,8 +90,11 @@ class FalImageService
                 return null;
             }
 
-            // Download and store the image locally
-            return $this->downloadAndStoreImage($generatedImageUrl);
+            // Upscale the image for HD quality
+            $upscaledUrl = $this->upscaleImage($generatedImageUrl);
+
+            // Download and store the image locally (upscaled if available, otherwise original)
+            return $this->downloadAndStoreImage($upscaledUrl ?? $generatedImageUrl);
 
         } catch (\Exception $e) {
             Log::error('Fal.ai transform error', [
@@ -200,7 +203,7 @@ class FalImageService
             }
 
             // Generate unique filename
-            $extension = 'jpg';
+            $extension = 'png';
             $filename = 'products/'.date('Y/m/').Str::uuid().'.'.$extension;
 
             // Store the image
@@ -213,6 +216,47 @@ class FalImageService
             Log::error('Failed to download and store image', [
                 'error' => $e->getMessage(),
                 'url' => $imageUrl,
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Upscale an image using Real-ESRGAN via Fal.ai
+     *
+     * @param  string  $imageUrl  The image URL to upscale
+     * @return string|null The upscaled image URL, or null on failure
+     */
+    protected function upscaleImage(string $imageUrl): ?string
+    {
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Key '.$this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(120)->post('https://fal.run/fal-ai/esrgan', [
+                'image_url' => $imageUrl,
+                'scale' => 2,
+                'model' => 'RealESRGAN_x4plus',
+                'output_format' => 'png',
+            ]);
+
+            if (! $response->successful()) {
+                Log::warning('Fal.ai upscale error', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+
+                return null;
+            }
+
+            $result = $response->json();
+
+            return $result['image']['url'] ?? null;
+
+        } catch (\Exception $e) {
+            Log::warning('Fal.ai upscale failed, using original image', [
+                'error' => $e->getMessage(),
             ]);
 
             return null;
