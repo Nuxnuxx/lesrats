@@ -10,6 +10,8 @@ use App\Services\FalImageService;
 use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -619,5 +621,48 @@ class ProductController extends Controller
                 'images' => $images,
             ],
         ]);
+    }
+
+    /**
+     * Download product images as a ZIP file.
+     */
+    public function downloadImages(Product $product)
+    {
+        Gate::authorize('view', $product->shop);
+
+        // Use real_images if available, otherwise fall back to original images
+        $images = ! empty($product->real_images) ? $product->real_images : ($product->images ?? []);
+
+        if (empty($images)) {
+            return back()->with('error', 'Aucune image a telecharger.');
+        }
+
+        $slug = Str::slug($product->title) ?: 'produit';
+        $zipPath = tempnam(sys_get_temp_dir(), 'zip_').'.zip';
+
+        $zip = new \ZipArchive;
+        if ($zip->open($zipPath, \ZipArchive::CREATE) !== true) {
+            return back()->with('error', 'Impossible de creer le fichier ZIP.');
+        }
+
+        foreach ($images as $index => $imageUrl) {
+            try {
+                $response = Http::timeout(30)->get($imageUrl);
+
+                if (! $response->successful()) {
+                    continue;
+                }
+
+                $ext = pathinfo(parse_url($imageUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'png';
+                $filename = str_pad($index + 1, 2, '0', STR_PAD_LEFT).'.'.$ext;
+                $zip->addFromString($filename, $response->body());
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        $zip->close();
+
+        return response()->download($zipPath, $slug.'.zip')->deleteFileAfterSend(true);
     }
 }

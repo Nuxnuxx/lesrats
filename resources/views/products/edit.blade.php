@@ -1288,6 +1288,12 @@
             // Also save to localStorage as fallback
             localStorage.setItem('lesrats_pending_etsy', JSON.stringify(productData));
 
+            // Download images as ZIP
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = '/products/' + productId + '/download-images';
+            document.body.appendChild(iframe);
+
             // Open Etsy
             setTimeout(() => {
                 toast.textContent = 'Ouverture d\'Etsy - Remplissage automatique...';
