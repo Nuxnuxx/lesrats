@@ -93,7 +93,7 @@ class ProductController extends Controller
             'quantity' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'is_digital' => 'boolean',
-            'aliexpress_url' => 'nullable|url',
+            'aliexpress_url' => ['nullable', 'string', 'regex:/^https?:\/\//'],
             'is_active' => 'boolean',
         ]);
 
@@ -151,7 +151,7 @@ class ProductController extends Controller
             'quantity' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'source_url' => 'nullable|url',
-            'aliexpress_url' => 'nullable|url',
+            'aliexpress_url' => ['nullable', 'string', 'regex:/^https?:\/\//'],
             'is_active' => 'boolean',
         ]);
 

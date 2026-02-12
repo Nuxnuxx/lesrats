@@ -436,19 +436,21 @@
                                 @endif
                             </div>
 
-                            <div>
-                                <label for="source_url" class="block text-sm font-medium text-gray-700">URL Source</label>
-                                <input type="url" name="source_url" id="source_url" value="{{ old('source_url', $product->source_url) }}"
+                            @if($product->source_type === 'aliexpress')
+                            <div class="mb-4">
+                                <label for="aliexpress_url" class="block text-sm font-medium text-gray-700">URL AliExpress</label>
+                                <input type="text" name="aliexpress_url" id="aliexpress_url" value="{{ old('aliexpress_url', $product->aliexpress_url) }}"
                                     class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-                                    placeholder="https://...">
-                                <p class="mt-1 text-xs text-gray-500">Lien vers le produit chez le fournisseur</p>
-                                @error('source_url')
+                                    placeholder="https://aliexpress.com/item/...">
+                                <p class="mt-1 text-xs text-gray-500">Lien direct vers le produit AliExpress</p>
+                                @error('aliexpress_url')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                             </div>
+                            @endif
 
-                            @if($product->source_url)
-                                <a href="{{ $product->source_url }}" target="_blank" 
+                            @if($product->aliexpress_url ?? $product->source_url)
+                                <a href="{{ $product->aliexpress_url ?? $product->source_url }}" target="_blank"
                                    class="mt-3 inline-flex items-center text-sm text-orange-600 hover:text-orange-700">
                                     <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>

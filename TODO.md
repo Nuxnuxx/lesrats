@@ -10,8 +10,10 @@
 - [ ] Améliorer la qualité d'image
 
 ## Produits
-- [ ] Possibilité de changer le lien AliExpress
+- [x] Possibilité de changer le lien AliExpress
 - [ ] Automatiser les tailles des vêtements
 
 ## Automatisation
 - [ ] Automatiser les envois (futur)
+
+## Objectif app utilisable pour le mois de Mars
