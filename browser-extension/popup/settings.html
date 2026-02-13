@@ -153,6 +153,44 @@
     .save-status.show {
       opacity: 1;
     }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #d1d5db;
+      border-radius: 24px;
+      transition: 0.2s;
+    }
+    .toggle-slider:before {
+      content: "";
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background-color: #f97316;
+    }
+    .toggle-switch input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
   </style>
 </head>
 <body>
@@ -181,6 +219,36 @@
       <div id="connection-status"></div>
     </div>
     
+    <div class="settings-section">
+      <h2>Mode Developpement</h2>
+
+      <div class="setting-item" style="display: flex; align-items: center; gap: 12px;">
+        <label class="toggle-switch">
+          <input type="checkbox" id="dev-mode-toggle">
+          <span class="toggle-slider"></span>
+        </label>
+        <label for="dev-mode-toggle" style="cursor: pointer; font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 0;">
+          Activer le mode dev
+        </label>
+      </div>
+
+      <div id="dev-mode-fields" style="display: none; margin-top: 12px;">
+        <div class="setting-item">
+          <label for="dev-api-url">URL serveur local</label>
+          <input type="text" id="dev-api-url" placeholder="http://localhost:8000" value="http://localhost:8000">
+        </div>
+
+        <div class="setting-item">
+          <label for="dev-api-token">Token dev</label>
+          <input type="password" id="dev-api-token" placeholder="Token de votre instance locale">
+          <p class="help-text">Token genere sur votre serveur local</p>
+        </div>
+
+        <button class="btn-test" id="btn-test-dev">Tester connexion locale</button>
+        <div id="dev-connection-status"></div>
+      </div>
+    </div>
+
     <div class="settings-section">
       <h2>Boutique par defaut</h2>
       

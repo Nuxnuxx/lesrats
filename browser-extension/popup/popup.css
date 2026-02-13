@@ -429,3 +429,23 @@ kbd {
   background: #1a1a2e;
   color: #fff;
 }
+
+/* Dev mode badge */
+.dev-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  background: #ef4444;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  vertical-align: middle;
+  margin-left: 6px;
+  letter-spacing: 0.5px;
+  animation: dev-pulse 2s ease-in-out infinite;
+}
+
+@keyframes dev-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

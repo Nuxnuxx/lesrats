@@ -30,6 +30,9 @@ class ExtensionController extends Controller
             'images' => 'nullable|array',
             'images.*' => 'nullable|string|url',
             'variants' => 'nullable|array',
+            'variants.*.name' => 'nullable|string',
+            'variants.*.values' => 'nullable|array',
+            'variants.*.values.*' => 'nullable|string',
             'specifications' => 'nullable|array',
             'source_url' => 'required|string|url',
             'aliexpress_product_id' => 'nullable|string',
@@ -86,6 +89,18 @@ class ExtensionController extends Controller
             }
 
             if ($existingProduct) {
+                // Update sizes if variants are provided and product has no sizes yet
+                if (! empty($validated['variants']) && empty($existingProduct->sizes)) {
+                    $sizes = collect($validated['variants'])
+                        ->filter(fn ($v) => stripos($v['name'] ?? '', 'size') !== false || stripos($v['name'] ?? '', 'taille') !== false)
+                        ->flatMap(fn ($v) => $v['values'] ?? [])
+                        ->unique()->values()->toArray();
+                    if (! empty($sizes)) {
+                        $existingProduct->update(['sizes' => $sizes]);
+                        Log::info('Updated sizes on existing product', ['product_id' => $existingProduct->id, 'sizes' => $sizes]);
+                    }
+                }
+
                 return response()->json([
                     'success' => true,
                     'message' => 'Produit déjà importé',
@@ -275,6 +290,18 @@ class ExtensionController extends Controller
                 'low_stock_threshold' => $lowStockThreshold,
             ]);
 
+            // Extract sizes from variants (AliExpress sends variants with name/values)
+            Log::info('Variants received', ['variants' => $validated['variants'] ?? null]);
+            if (! empty($validated['variants'])) {
+                $sizes = collect($validated['variants'])
+                    ->filter(fn ($v) => stripos($v['name'] ?? '', 'size') !== false || stripos($v['name'] ?? '', 'taille') !== false)
+                    ->flatMap(fn ($v) => $v['values'] ?? [])
+                    ->unique()->values()->toArray();
+                if (! empty($sizes)) {
+                    $product->update(['sizes' => $sizes]);
+                }
+            }
+
             Log::info('Product imported via extension', [
                 'product_id' => $product->id,
                 'title' => $product->title,
@@ -418,6 +445,7 @@ class ExtensionController extends Controller
                     'price_other' => $product->price_other ? round((float) $product->price_other * $factor, 2) : null,
                     'tags' => $tags,
                     'images' => $imagesToUse,
+                    'sizes' => $product->sizes ?? [],
                     'quantity' => $product->quantity ?? 999,
                     'is_digital' => (bool) $product->is_digital,
                     'shop_name' => $product->shop->name,

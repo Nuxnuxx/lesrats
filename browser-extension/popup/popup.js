@@ -33,8 +33,24 @@ let importedPrintablesProductUrl = null;
 let currentTab = 'import';
 let shops = [];
 
+// Get active API config (dev or prod)
+async function getApiConfig() {
+  const saved = await chrome.storage.local.get(['apiUrl', 'devMode', 'devApiUrl']);
+  if (saved.devMode) {
+    const devToken = await SecureStorage.getSecure('devApiToken');
+    return { apiUrl: saved.devApiUrl || 'http://localhost:8000', apiToken: devToken, isDev: true };
+  }
+  const apiToken = await SecureStorage.getSecure('apiToken');
+  return { apiUrl: saved.apiUrl || 'http://localhost:8000', apiToken, isDev: false };
+}
+
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
+  // Show DEV badge if dev mode is active
+  const { isDev } = await getApiConfig();
+  const devBadge = document.getElementById('dev-badge');
+  if (devBadge) devBadge.style.display = isDev ? 'inline-block' : 'none';
+
   // Charger les paramètres sauvegardés
   const saved = await chrome.storage.local.get(['lastEtsyCategoryName', 'lastEtsyIsDigital']);
   
@@ -100,19 +116,17 @@ async function saveShopSelection() {
 
 // Charger la liste des boutiques
 async function loadShops() {
-  const saved = await chrome.storage.local.get(['apiUrl']);
-  const apiUrl = saved.apiUrl || 'http://localhost:8000';
-  const apiToken = await SecureStorage.getSecure('apiToken');
-  
+  const { apiUrl, apiToken } = await getApiConfig();
+
   const shopSelect = document.getElementById('shop-select');
-  
+
   if (!apiUrl || !apiToken) {
     shopSelect.innerHTML = '<option value="">Configurez dans Parametres</option>';
     return;
   }
-  
+
   shopSelect.innerHTML = '<option value="">Chargement...</option>';
-  
+
   try {
     const response = await chrome.runtime.sendMessage({
       action: 'fetchShops',
@@ -245,9 +259,7 @@ async function importProduct() {
     return;
   }
 
-  const saved = await chrome.storage.local.get(['apiUrl']);
-  const apiUrl = saved.apiUrl;
-  const apiToken = await SecureStorage.getSecure('apiToken');
+  const { apiUrl, apiToken } = await getApiConfig();
   const shopId = document.getElementById('shop-select').value;
   const includeCountryPrices = document.getElementById('include-country-prices').checked;
 
@@ -491,17 +503,16 @@ function displayPrintablesProduct(product) {
 
 // Charger les boutiques pour Printables
 async function loadPrintablesShops() {
-  const saved = await chrome.storage.local.get(['apiUrl', 'selectedShopId']);
-  const apiUrl = saved.apiUrl || 'http://localhost:8000';
-  const apiToken = await SecureStorage.getSecure('apiToken') || '';
+  const { apiUrl, apiToken } = await getApiConfig();
+  const saved = await chrome.storage.local.get(['selectedShopId']);
 
   const shopSelect = document.getElementById('printables-shop-select');
-  
+
   if (!apiUrl || !apiToken) {
     shopSelect.innerHTML = '<option value="">Configurez dans Parametres</option>';
     return;
   }
-  
+
   shopSelect.innerHTML = '<option value="">Chargement...</option>';
 
   try {
@@ -532,9 +543,7 @@ async function importPrintablesProduct() {
     return;
   }
 
-  const saved = await chrome.storage.local.get(['apiUrl']);
-  const apiUrl = saved.apiUrl;
-  const apiToken = await SecureStorage.getSecure('apiToken');
+  const { apiUrl, apiToken } = await getApiConfig();
   const shopId = document.getElementById('printables-shop-select').value;
 
   if (!apiUrl || !apiToken) {

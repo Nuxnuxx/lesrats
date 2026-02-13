@@ -2,26 +2,44 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Load saved settings
-  const saved = await chrome.storage.local.get(['apiUrl', 'selectedShopId']);
+  const saved = await chrome.storage.local.get(['apiUrl', 'selectedShopId', 'devMode', 'devApiUrl']);
   const apiToken = await SecureStorage.getSecure('apiToken');
-  
+  const devApiToken = await SecureStorage.getSecure('devApiToken');
+
   if (saved.apiUrl) {
     document.getElementById('api-url').value = saved.apiUrl;
   }
   if (apiToken) {
     document.getElementById('api-token').value = apiToken;
   }
-  
+
+  // Dev mode
+  const devToggle = document.getElementById('dev-mode-toggle');
+  const devFields = document.getElementById('dev-mode-fields');
+  devToggle.checked = !!saved.devMode;
+  devFields.style.display = saved.devMode ? 'block' : 'none';
+  if (saved.devApiUrl) {
+    document.getElementById('dev-api-url').value = saved.devApiUrl;
+  }
+  if (devApiToken) {
+    document.getElementById('dev-api-token').value = devApiToken;
+  }
+
+  devToggle.addEventListener('change', () => {
+    devFields.style.display = devToggle.checked ? 'block' : 'none';
+  });
+
   // Load shops if we have URL and token
   if (saved.apiUrl && apiToken) {
     loadShops(saved.selectedShopId);
   }
-  
+
   // Event listeners
   document.getElementById('btn-back').addEventListener('click', goBack);
   document.getElementById('btn-test').addEventListener('click', testConnection);
+  document.getElementById('btn-test-dev').addEventListener('click', testDevConnection);
   document.getElementById('btn-save').addEventListener('click', saveSettings);
-  
+
   // Auto-load shops when URL or token changes
   document.getElementById('api-url').addEventListener('blur', () => loadShops());
   document.getElementById('api-token').addEventListener('blur', () => loadShops());
@@ -88,6 +106,52 @@ async function testConnection() {
   }
 }
 
+async function testDevConnection() {
+  const devUrl = document.getElementById('dev-api-url').value.trim().replace(/\/+$/, '');
+  const devToken = document.getElementById('dev-api-token').value.trim();
+  const statusDiv = document.getElementById('dev-connection-status');
+
+  if (!devUrl) {
+    showStatus(statusDiv, 'error', 'Entrez une URL locale');
+    return;
+  }
+
+  showStatus(statusDiv, 'pending', 'Test en cours...');
+
+  try {
+    const pingResponse = await fetch(`${devUrl}/api/extension/ping`);
+    if (!pingResponse.ok) {
+      showStatus(statusDiv, 'error', `Serveur inaccessible (${pingResponse.status})`);
+      return;
+    }
+
+    if (devToken) {
+      const shopsResponse = await fetch(`${devUrl}/api/extension/shops`, {
+        headers: { 'Accept': 'application/json', 'Authorization': `Bearer ${devToken}` }
+      });
+      if (shopsResponse.status === 401) {
+        showStatus(statusDiv, 'error', 'Token invalide');
+        return;
+      }
+      if (!shopsResponse.ok) {
+        showStatus(statusDiv, 'error', `Erreur API (${shopsResponse.status})`);
+        return;
+      }
+      const data = await shopsResponse.json();
+      if (data.success) {
+        showStatus(statusDiv, 'success', `Connecte! ${data.shops.length} boutique(s)`);
+      } else {
+        showStatus(statusDiv, 'error', data.error || 'Erreur inconnue');
+      }
+    } else {
+      showStatus(statusDiv, 'success', 'Serveur accessible (ajoutez un token)');
+    }
+  } catch (error) {
+    console.error('Dev connection test error:', error);
+    showStatus(statusDiv, 'error', 'Impossible de contacter le serveur local');
+  }
+}
+
 function showStatus(element, type, message) {
   element.innerHTML = `<div class="status-indicator ${type}">${message}</div>`;
 }
@@ -142,18 +206,26 @@ async function saveSettings() {
   const apiUrl = document.getElementById('api-url').value.trim().replace(/\/+$/, '');
   const apiToken = document.getElementById('api-token').value.trim();
   const selectedShopId = document.getElementById('default-shop').value;
-  
-  // Save URL and shop selection normally
+  const devMode = document.getElementById('dev-mode-toggle').checked;
+  const devApiUrl = document.getElementById('dev-api-url').value.trim().replace(/\/+$/, '');
+  const devApiToken = document.getElementById('dev-api-token').value.trim();
+
+  // Save URL, shop selection, and dev mode
   await chrome.storage.local.set({
     apiUrl: apiUrl,
-    selectedShopId: selectedShopId
+    selectedShopId: selectedShopId,
+    devMode: devMode,
+    devApiUrl: devApiUrl
   });
-  
-  // Save token encrypted
+
+  // Save tokens encrypted
   if (apiToken) {
     await SecureStorage.setSecure('apiToken', apiToken);
   }
-  
+  if (devApiToken) {
+    await SecureStorage.setSecure('devApiToken', devApiToken);
+  }
+
   // Show save confirmation
   const saveStatus = document.getElementById('save-status');
   saveStatus.classList.add('show');

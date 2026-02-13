@@ -58,6 +58,15 @@ async function extractProductData(includeCountryPrices = false) {
     data.description = extractDescriptionFromDOM();
   }
 
+  // Fallback: extraire les tailles depuis le DOM si pas trouvées en JSON
+  if (!data.variants || data.variants.length === 0) {
+    const domSizes = extractSizesFromDOM();
+    if (domSizes.length > 0) {
+      data.variants = [{ name: 'Size', values: domSizes }];
+      console.log('🐀 AliExpress - Sizes extracted from DOM:', domSizes);
+    }
+  }
+
   // Toujours ajouter ces infos
   data.source_url = window.location.href;
   data.aliexpress_product_id = extractProductId();
@@ -143,6 +152,29 @@ function extractFromPageData() {
           if (priceMatch3) {
             data.price = parseFloat(priceMatch3[1]);
           }
+        }
+
+        // Extraire les tailles depuis productSKUPropertyList
+        try {
+          const skuMatch = content.match(/"productSKUPropertyList"\s*:\s*(\[[\s\S]*?\])\s*[,}]/);
+          if (skuMatch) {
+            const skuProps = JSON.parse(skuMatch[1]);
+            const sizeProp = skuProps.find(p =>
+              (p.skuPropertyName || '').toLowerCase().includes('size') ||
+              (p.skuPropertyName || '').toLowerCase().includes('taille')
+            );
+            if (sizeProp && sizeProp.skuPropertyValues) {
+              data.variants = [{
+                name: 'Size',
+                values: sizeProp.skuPropertyValues
+                  .map(v => v.propertyValueDisplayName || v.propertyValueName)
+                  .filter(Boolean)
+              }];
+              console.log('🐀 AliExpress - Sizes extracted:', data.variants[0].values);
+            }
+          }
+        } catch (e) {
+          console.log('🐀 AliExpress - SKU extraction failed:', e.message);
         }
       }
     }
@@ -326,6 +358,45 @@ function extractDescriptionFromDOM() {
   }
 
   return '';
+}
+
+// Extraire les tailles depuis le DOM (fallback)
+function extractSizesFromDOM() {
+  const sizes = [];
+
+  // Méthode 1: éléments SKU avec attribut title (structure sku-item--text--)
+  const skuRows = document.querySelectorAll('[class*="sku-item--skus"]');
+  for (const row of skuRows) {
+    const items = row.querySelectorAll('[class*="sku-item--text"]');
+    const values = [];
+    for (const item of items) {
+      const title = item.getAttribute('title');
+      if (title) values.push(title.trim());
+    }
+    // Vérifier si c'est bien une row de tailles (S, M, L, XL, etc.)
+    const sizePatterns = /^(XXS|XS|S|M|L|XL|XXL|XXXL|4XL|5XL|6XL|\d{2,3}(cm)?)$/i;
+    const looksLikeSizes = values.length > 0 && values.some(v => sizePatterns.test(v));
+    if (looksLikeSizes) {
+      return values;
+    }
+  }
+
+  // Méthode 2: chercher dans les property items avec label "Size" ou "Taille"
+  const propItems = document.querySelectorAll('[class*="sku-item--property"]');
+  for (const prop of propItems) {
+    const label = prop.querySelector('[class*="sku-item--title"]');
+    const labelText = (label?.textContent || '').toLowerCase();
+    if (labelText.includes('size') || labelText.includes('taille') || labelText.includes('talla')) {
+      const items = prop.querySelectorAll('[class*="sku-item--text"]');
+      for (const item of items) {
+        const title = item.getAttribute('title') || item.textContent?.trim();
+        if (title) sizes.push(title);
+      }
+      if (sizes.length > 0) return sizes;
+    }
+  }
+
+  return sizes;
 }
 
 // Convertir une URL d'image en haute résolution

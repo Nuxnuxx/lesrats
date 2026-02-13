@@ -13,6 +13,7 @@ class Product extends Model
         'title',
         'description',
         'tags',
+        'sizes',
         'etsy_category',
         'price',
         'cost_price',
@@ -45,6 +46,7 @@ class Product extends Model
         'images' => 'array',
         'real_images' => 'array',
         'tags' => 'array',
+        'sizes' => 'array',
         'is_active' => 'boolean',
         'is_digital' => 'boolean',
     ];

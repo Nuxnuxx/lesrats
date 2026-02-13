@@ -154,10 +154,16 @@ class ProductController extends Controller
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'source_url' => 'nullable|url',
             'aliexpress_url' => ['nullable', 'string', 'regex:/^https?:\/\//'],
+            'sizes' => 'nullable|string',
             'is_active' => 'boolean',
         ]);
 
         $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;
+
+        // Convert sizes JSON string to array
+        if (isset($validated['sizes']) && is_string($validated['sizes'])) {
+            $validated['sizes'] = json_decode($validated['sizes'], true) ?? [];
+        }
 
         // Convert tags string to array
         if (isset($validated['tags']) && is_string($validated['tags'])) {

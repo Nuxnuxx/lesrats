@@ -395,8 +395,13 @@ async function runStep(id, title, fn) {
     let productData = null;
     if (productId) {
       await runStep('fetch-product', 'Recuperation donnees produit', async () => {
-        const settings = await chrome.storage.local.get(['apiUrl']);
-        const finalApiUrl = apiUrl || settings.apiUrl || 'http://localhost:8000';
+        const settings = await chrome.storage.local.get(['apiUrl', 'devMode', 'devApiUrl']);
+        let finalApiUrl;
+        if (settings.devMode) {
+          finalApiUrl = settings.devApiUrl || 'http://localhost:8000';
+        } else {
+          finalApiUrl = apiUrl || settings.apiUrl || 'http://localhost:8000';
+        }
         productData = await fetchProductData(finalApiUrl, productId);
         if (!productData) throw new Error('Produit non trouve ou token invalide');
         return { title: productData.title, price: productData.price };
@@ -866,6 +871,11 @@ async function fillEtsyForm(product) {
   // Upload images if available
   if (product.images && product.images.length > 0) {
     await uploadImages(product.images, product.title);
+  }
+
+  // Fill size variations if available
+  if (product.sizes && product.sizes.length > 0) {
+    await fillVariations(product.sizes);
   }
 
   // Show STL upload reminder for digital products
@@ -1530,6 +1540,91 @@ async function selectShippingProfile(profileName) {
   }
   
   console.warn('🐀 Shipping profile not found:', profileName);
+}
+
+// Fill size variations in Etsy listing form
+async function fillVariations(sizes) {
+  if (!sizes || sizes.length === 0) return;
+  console.log('🐀 Filling size variations:', sizes);
+
+  // Find the "Add a variation" button
+  const addBtn = findElement([
+    '[data-testid="add-variation-button"]',
+    'button[aria-label*="variation" i]',
+    'button[aria-label*="Variation" i]',
+  ]);
+
+  // Fallback: search by text content
+  if (!addBtn) {
+    const allButtons = document.querySelectorAll('button, [role="button"]');
+    for (const btn of allButtons) {
+      const text = btn.textContent?.trim().toLowerCase() || '';
+      if (text.includes('add a variation') || text.includes('ajouter une variation') || text.includes('variation')) {
+        btn.click();
+        console.log('🐀 Clicked variation button (text match):', btn.textContent.trim());
+        await sleep(1000);
+        break;
+      }
+    }
+  } else {
+    addBtn.click();
+    console.log('🐀 Clicked variation button (selector match)');
+    await sleep(1000);
+  }
+
+  // Look for "Size" option in the modal/dialog
+  const sizeOption = Array.from(document.querySelectorAll('input[type="radio"], input[type="checkbox"], button, label, [role="option"]'))
+    .find(el => {
+      const text = (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().toLowerCase();
+      return text === 'size' || text === 'taille' || text === 'sizes';
+    });
+
+  if (sizeOption) {
+    sizeOption.click();
+    console.log('🐀 Selected Size variation type');
+    await sleep(800);
+  } else {
+    console.warn('🐀 Size option not found in variation dialog');
+    return;
+  }
+
+  // Fill each size value
+  for (const size of sizes) {
+    // Look for the input field to type size values
+    const input = findElement([
+      'input[placeholder*="size" i]',
+      'input[placeholder*="option" i]',
+      'input[placeholder*="taille" i]',
+      '[data-testid="variation-option-input"]',
+      'input[aria-label*="variation" i]',
+    ]);
+
+    if (input) {
+      await setInputValue(input, size);
+      // Press Enter to confirm the size value
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
+      await sleep(400);
+      console.log('🐀 Added size:', size);
+    } else {
+      console.warn('🐀 Size input field not found for:', size);
+      break;
+    }
+  }
+
+  // Try to confirm/close the dialog
+  await sleep(500);
+  const saveBtn = Array.from(document.querySelectorAll('button'))
+    .find(btn => {
+      const text = btn.textContent?.trim().toLowerCase() || '';
+      return text.includes('save') || text.includes('done') || text.includes('apply') || text.includes('enregistrer');
+    });
+  if (saveBtn) {
+    saveBtn.click();
+    console.log('🐀 Confirmed variations dialog');
+  }
+
+  console.log('🐀 Size variations filled:', sizes.length, 'sizes');
 }
 
 // Helper: Find element by multiple selectors

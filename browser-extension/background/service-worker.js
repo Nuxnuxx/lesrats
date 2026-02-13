@@ -45,10 +45,16 @@ chrome.commands.onCommand.addListener(async (command) => {
         throw new Error(extractResponse?.error || 'Extraction échouée');
       }
 
-      // Récupérer les paramètres (token is encrypted)
-      const settings = await chrome.storage.local.get(['apiUrl']);
-      const apiUrl = settings.apiUrl || 'http://localhost:8000';
-      const apiToken = await SecureStorage.getSecure('apiToken') || '';
+      // Récupérer les paramètres (dev mode aware)
+      const settings = await chrome.storage.local.get(['apiUrl', 'devMode', 'devApiUrl']);
+      let apiUrl, apiToken;
+      if (settings.devMode) {
+        apiUrl = settings.devApiUrl || 'http://localhost:8000';
+        apiToken = await SecureStorage.getSecure('devApiToken') || '';
+      } else {
+        apiUrl = settings.apiUrl || 'http://localhost:8000';
+        apiToken = await SecureStorage.getSecure('apiToken') || '';
+      }
 
       // Envoyer au serveur
       const result = await handleImport(extractResponse.data, apiUrl, apiToken);
@@ -180,7 +186,10 @@ async function fetchEtsyData(apiUrl, productId, apiToken, needsToken = false) {
   
   try {
     if (needsToken && !apiToken) {
-      apiToken = await SecureStorage.getSecure('apiToken');
+      const s = await chrome.storage.local.get(['devMode']);
+      apiToken = s.devMode
+        ? await SecureStorage.getSecure('devApiToken')
+        : await SecureStorage.getSecure('apiToken');
     }
     
     const headers = { 'Accept': 'application/json' };

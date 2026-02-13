@@ -121,6 +121,52 @@
                                 </div>
                                 @endif
 
+                                {{-- Sizes --}}
+                                <div x-data="{
+                                    sizes: @json($product->sizes ?? []),
+                                    newSize: '',
+                                    addSize() {
+                                        const s = this.newSize.trim().toUpperCase();
+                                        if (s && !this.sizes.includes(s)) {
+                                            this.sizes.push(s);
+                                        }
+                                        this.newSize = '';
+                                    },
+                                    removeSize(index) {
+                                        this.sizes.splice(index, 1);
+                                    }
+                                }">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Tailles disponibles</label>
+                                    <div class="flex flex-wrap gap-2 mb-2 min-h-[36px] p-2 border border-gray-200 rounded-lg bg-gray-50">
+                                        <template x-if="sizes.length === 0">
+                                            <span class="text-sm text-gray-400 italic">Aucune taille</span>
+                                        </template>
+                                        <template x-for="(size, index) in sizes" :key="index">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                                                <span x-text="size"></span>
+                                                <button type="button" @click="removeSize(index)" class="ml-1.5 text-blue-600 hover:text-blue-800">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <input type="text" x-model="newSize"
+                                            @keydown.enter.prevent="addSize()"
+                                            @keydown.comma.prevent="addSize()"
+                                            class="flex-1 text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                            placeholder="Ajouter une taille (ex: S, M, L, XL)">
+                                        <button type="button" @click="addSize()"
+                                            class="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200">
+                                            +
+                                        </button>
+                                    </div>
+                                    <input type="hidden" name="sizes" :value="JSON.stringify(sizes)">
+                                    <p class="mt-1 text-xs text-gray-500">Entree ou virgule pour valider. Utilisees comme variations Etsy.</p>
+                                </div>
+
                             </div>
                         </div>
 
