@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 
 class FalImageService
 {
@@ -260,6 +262,73 @@ class FalImageService
             ]);
 
             return null;
+        }
+    }
+
+    /**
+     * Apply a shop logo overlay on a locally stored image.
+     *
+     * @param  string  $imageUrl  The public URL of the stored image
+     * @param  string  $logoPath  The storage-relative path to the logo (e.g. "shop-logos/abc.png")
+     * @return bool Whether the overlay was successfully applied
+     */
+    public function applyLogoOverlay(string $imageUrl, string $logoPath): bool
+    {
+        try {
+            $disk = Storage::disk('public');
+
+            // Resolve storage-relative path from public URL
+            $imageRelativePath = Str::after(parse_url($imageUrl, PHP_URL_PATH), '/storage/');
+
+            if (! $disk->exists($imageRelativePath)) {
+                Log::warning('Logo overlay: product image not found', ['path' => $imageRelativePath]);
+
+                return false;
+            }
+
+            if (! $disk->exists($logoPath)) {
+                Log::warning('Logo overlay: logo file not found', ['path' => $logoPath]);
+
+                return false;
+            }
+
+            $manager = new ImageManager(new Driver);
+
+            $image = $manager->read($disk->path($imageRelativePath));
+            $imageWidth = $image->width();
+
+            // Resize logo to 15% of image width (scaleDown won't upscale small logos)
+            $logoTargetWidth = (int) round($imageWidth * 0.15);
+            $logo = $manager->read($disk->path($logoPath));
+            $logo->scaleDown(width: $logoTargetWidth);
+
+            // 3% padding from edges
+            $padding = (int) round($imageWidth * 0.03);
+
+            $image->place(
+                element: $logo,
+                position: 'top-left',
+                offset_x: $padding,
+                offset_y: $padding,
+            );
+
+            $image->toPng()->save($disk->path($imageRelativePath));
+
+            Log::info('Logo overlay applied', [
+                'image' => $imageRelativePath,
+                'logo' => $logoPath,
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('Logo overlay failed', [
+                'error' => $e->getMessage(),
+                'image_url' => $imageUrl,
+                'logo_path' => $logoPath,
+            ]);
+
+            return false;
         }
     }
 

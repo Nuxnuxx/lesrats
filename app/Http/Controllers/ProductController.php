@@ -466,6 +466,9 @@ class ProductController extends Controller
             foreach (array_slice($images, 0, 5) as $imageUrl) {
                 $transformedPath = $falService->transformImage($imageUrl, $shop->ai_image_prompt);
                 if ($transformedPath) {
+                    if ($shop->logo_path) {
+                        $falService->applyLogoOverlay($transformedPath, $shop->logo_path);
+                    }
                     $transformedImages[] = $transformedPath;
                     $successCount++;
                 } else {
@@ -538,6 +541,11 @@ class ProductController extends Controller
                     'success' => false,
                     'message' => 'La transformation de l\'image a echoue. Verifiez les logs pour plus de details.',
                 ], 500);
+            }
+
+            // Apply shop logo overlay if configured
+            if ($product->shop->logo_path) {
+                $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
             }
 
             // Add to real_images array
