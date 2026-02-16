@@ -1007,6 +1007,27 @@
                     @if($hasImages)
                         <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                             <h3 class="text-sm font-semibold text-gray-900 mb-4">Generation IA d'images</h3>
+
+                            {{-- Logo Toggle --}}
+                            @if($product->shop->logo_path)
+                            <div class="flex items-center justify-between mb-4 p-3 rounded-lg border"
+                                 :class="applyLogo ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'"
+                                 x-data="{ applyLogo: {{ $product->apply_logo ? 'true' : 'false' }} }"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <img src="{{ Storage::disk('public')->url($product->shop->logo_path) }}" alt="Logo" class="w-6 h-6 object-contain rounded">
+                                    <span class="text-sm font-medium text-gray-700">Appliquer le logo</span>
+                                </div>
+                                <button type="button"
+                                        @click="applyLogo = !applyLogo; fetch('/products/{{ $product->id }}/toggle-logo', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' }, body: JSON.stringify({ apply_logo: applyLogo }) })"
+                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                                        :class="applyLogo ? 'bg-orange-500' : 'bg-gray-300'"
+                                >
+                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                          :class="applyLogo ? 'translate-x-6' : 'translate-x-1'"></span>
+                                </button>
+                            </div>
+                            @endif
                             
                             @if($hasImagePrompt)
                                 <p class="text-xs text-gray-500 mb-3">

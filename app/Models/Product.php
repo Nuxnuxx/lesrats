@@ -32,6 +32,7 @@ class Product extends Model
         'images',
         'real_images',
         'is_active',
+        'apply_logo',
     ];
 
     protected $casts = [
@@ -49,6 +50,7 @@ class Product extends Model
         'sizes' => 'array',
         'is_active' => 'boolean',
         'is_digital' => 'boolean',
+        'apply_logo' => 'boolean',
     ];
 
     // ============================================

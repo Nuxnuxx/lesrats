@@ -466,7 +466,7 @@ class ProductController extends Controller
             foreach (array_slice($images, 0, 5) as $imageUrl) {
                 $transformedPath = $falService->transformImage($imageUrl, $shop->ai_image_prompt);
                 if ($transformedPath) {
-                    if ($shop->logo_path) {
+                    if ($product->apply_logo && $shop->logo_path) {
                         $falService->applyLogoOverlay($transformedPath, $shop->logo_path);
                     }
                     $transformedImages[] = $transformedPath;
@@ -543,8 +543,8 @@ class ProductController extends Controller
                 ], 500);
             }
 
-            // Apply shop logo overlay if configured
-            if ($product->shop->logo_path) {
+            // Apply shop logo overlay if enabled on this product
+            if ($product->apply_logo && $product->shop->logo_path) {
                 $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
             }
 
@@ -568,6 +568,20 @@ class ProductController extends Controller
                 'message' => 'Erreur lors de la transformation: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Toggle logo overlay on AI-generated images.
+     */
+    public function toggleLogo(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $request->validate(['apply_logo' => 'required|boolean']);
+
+        $product->update(['apply_logo' => $request->boolean('apply_logo')]);
+
+        return response()->json(['success' => true, 'apply_logo' => $product->apply_logo]);
     }
 
     /**
