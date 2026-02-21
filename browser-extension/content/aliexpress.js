@@ -130,6 +130,18 @@ function extractFromPageData() {
           }
         }
 
+        // Fallback: chercher toutes les URLs alicdn.com dans le script si imagePathList vide
+        if (data.images.length === 0) {
+          const allAliUrls = content.match(/https?:\\?\/\\?\/ae\d*\.alicdn\.com\/kf\/[^"'\s,\\]+/g);
+          if (allAliUrls && allAliUrls.length > 0) {
+            data.images = [...new Set(allAliUrls)]
+              .map(url => url.replace(/\\u002F/g, '/').replace(/\\\//g, '/'))
+              .filter(url => !url.includes('_80x80') && !url.includes('_220x220') && !url.includes('_50x50'))
+              .map(url => convertToHighRes(url))
+              .slice(0, 10);
+          }
+        }
+
         // Extraire le titre depuis subject ou title
         const titleMatch = content.match(/["']subject["']\s*:\s*["']([^"']+)["']/);
         if (titleMatch) {
@@ -322,6 +334,17 @@ function extractImagesFromDOM() {
       images.add(src);
     }
   });
+
+  // Fallback ultime: toutes les imgs alicdn.com y compris lazy-loadées
+  if (images.size === 0) {
+    document.querySelectorAll('img').forEach(img => {
+      const src = img.src || img.dataset.src || img.dataset.lazySrc
+        || img.getAttribute('data-lazy-src') || img.getAttribute('data-original');
+      if (src && src.includes('alicdn.com')) {
+        images.add(convertToHighRes(src));
+      }
+    });
+  }
 
   return Array.from(images).slice(0, 10);
 }

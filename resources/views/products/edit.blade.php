@@ -627,7 +627,8 @@
                             productId: {{ $product->id }},
                             defaultPrompt: {{ json_encode($product->shop->getEffectiveAiImagePrompt()) }},
                             specificPrompts: {{ json_encode($product->shop->ai_specific_prompts ?? []) }},
-                            csrfToken: '{{ csrf_token() }}'
+                            csrfToken: '{{ csrf_token() }}',
+                            applyLogo: {{ $product->apply_logo ? 'true' : 'false' }}
                          })">
                         <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
                         
@@ -823,6 +824,25 @@
                                                 </p>
                                             </div>
 
+                                            {{-- Logo Toggle --}}
+                                            @if($product->shop->logo_path)
+                                            <div class="mb-6 flex items-center justify-between p-3 rounded-lg border"
+                                                 :class="applyLogo ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'">
+                                                <div class="flex items-center gap-2">
+                                                    <img src="{{ Storage::disk('public')->url($product->shop->logo_path) }}"
+                                                         class="w-6 h-6 object-contain rounded" alt="Logo">
+                                                    <span class="text-sm font-medium text-gray-700">Appliquer le logo</span>
+                                                </div>
+                                                <button type="button"
+                                                        @click="applyLogo = !applyLogo; fetch('/products/{{ $product->id }}/toggle-logo', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ apply_logo: applyLogo }) })"
+                                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                                                        :class="applyLogo ? 'bg-orange-500' : 'bg-gray-300'">
+                                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                                          :class="applyLogo ? 'translate-x-6' : 'translate-x-1'"></span>
+                                                </button>
+                                            </div>
+                                            @endif
+
                                             {{-- Error Message --}}
                                             <div x-show="errorMessage" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                                                 <p class="text-sm text-red-600" x-text="errorMessage"></p>
@@ -998,79 +1018,8 @@
                             </p>
                         @endif
 
-                        @if($product->shop->logo_path && !$product->apply_logo)
-                            <div class="mt-3 p-2.5 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start gap-2">
-                                <svg class="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                </svg>
-                                <p class="text-xs text-yellow-700">Le logo de la boutique n'est pas active sur ce produit. Les images publiees n'auront pas de logo.</p>
-                            </div>
-                        @endif
                     </div>
 
-                    {{-- AI Image Generation --}}
-                    @php
-                        $hasImages = is_array($product->images) ? !empty($product->images) : !empty(json_decode($product->images, true));
-                        $hasImagePrompt = !empty($product->shop->ai_image_prompt);
-                    @endphp
-                    @if($hasImages)
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                            <h3 class="text-sm font-semibold text-gray-900 mb-4">Generation IA d'images</h3>
-
-                            {{-- Logo Toggle --}}
-                            @if($product->shop->logo_path)
-                            <div class="flex items-center justify-between mb-4 p-3 rounded-lg border"
-                                 :class="applyLogo ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'"
-                                 x-data="{ applyLogo: {{ $product->apply_logo ? 'true' : 'false' }} }"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <img src="{{ Storage::disk('public')->url($product->shop->logo_path) }}" alt="Logo" class="w-6 h-6 object-contain rounded">
-                                    <span class="text-sm font-medium text-gray-700">Appliquer le logo</span>
-                                </div>
-                                <button type="button"
-                                        @click="applyLogo = !applyLogo; fetch('/products/{{ $product->id }}/toggle-logo', { method: 'POST', headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Content-Type': 'application/json' }, body: JSON.stringify({ apply_logo: applyLogo }) })"
-                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                                        :class="applyLogo ? 'bg-orange-500' : 'bg-gray-300'"
-                                >
-                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-                                          :class="applyLogo ? 'translate-x-6' : 'translate-x-1'"></span>
-                                </button>
-                            </div>
-                            @endif
-                            
-                            @if($hasImagePrompt)
-                                <p class="text-xs text-gray-500 mb-3">
-                                    Transformez les images avec Fal.ai en utilisant le prompt configure dans la boutique.
-                                </p>
-                                <form action="{{ route('products.generate-ai-images', $product) }}" method="POST" 
-                                      onsubmit="this.querySelector('button').disabled = true; this.querySelector('button').innerHTML = '<svg class=\'animate-spin w-4 h-4 mr-2\' fill=\'none\' viewBox=\'0 0 24 24\'><circle class=\'opacity-25\' cx=\'12\' cy=\'12\' r=\'10\' stroke=\'currentColor\' stroke-width=\'4\'></circle><path class=\'opacity-75\' fill=\'currentColor\' d=\'M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z\'></path></svg> Generation en cours...';">
-                                    @csrf
-                                    <button type="submit" 
-                                            class="w-full inline-flex items-center justify-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg text-sm font-medium hover:bg-purple-200 transition-colors">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                        Generer images IA
-                                    </button>
-                                </form>
-                                <p class="text-xs text-gray-400 mt-2">
-                                    Prompt: "{{ Str::limit($product->shop->ai_image_prompt, 50) }}"
-                                </p>
-                            @else
-                                <p class="text-xs text-gray-500 mb-3">
-                                    Pour generer des images IA, configurez d'abord un prompt dans les parametres de la boutique.
-                                </p>
-                                <a href="{{ route('shops.edit', $product->shop) }}" 
-                                   class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    </svg>
-                                    Configurer le prompt
-                                </a>
-                            @endif
-                        </div>
-                    @endif
 
                     {{-- Stats --}}
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -1134,6 +1083,7 @@
                 defaultPrompt: config.defaultPrompt,
                 specificPrompts: config.specificPrompts || [],
                 csrfToken: config.csrfToken,
+                applyLogo: config.applyLogo ?? false,
 
                 // State
                 showModal: false,
@@ -1191,6 +1141,7 @@
                                 image_url: this.images[this.selectedImageIndex],
                                 prompt: finalPrompt,
                                 background_url: this.selectedBackground || null,
+                                apply_logo: this.applyLogo,
                             }),
                         });
 

@@ -510,6 +510,7 @@ class ProductController extends Controller
             'image_url' => 'required|string',
             'prompt' => 'required|string|min:10',
             'background_url' => 'nullable|string',
+            'apply_logo' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
@@ -543,8 +544,8 @@ class ProductController extends Controller
                 ], 500);
             }
 
-            // Apply shop logo overlay if enabled on this product
-            if ($product->apply_logo && $product->shop->logo_path) {
+            // Apply shop logo overlay if requested for this generation
+            if ($request->boolean('apply_logo', false) && $product->shop->logo_path) {
                 $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
             }
 
