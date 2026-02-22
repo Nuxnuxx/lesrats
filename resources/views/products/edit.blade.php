@@ -628,7 +628,7 @@
                             defaultPrompt: {{ json_encode($product->shop->getEffectiveAiImagePrompt()) }},
                             specificPrompts: {{ json_encode($product->shop->ai_specific_prompts ?? []) }},
                             csrfToken: '{{ csrf_token() }}',
-                            applyLogo: {{ $product->apply_logo ? 'true' : 'false' }}
+                            applyLogo: {{ $product->shop->logo_path ? 'true' : 'false' }}
                          })">
                         <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
                         
@@ -924,6 +924,19 @@
                             </div>
                         </div>
                     </div>
+
+                    {{-- DEBUG TEMP: Test logo overlay --}}
+                    @if($product->shop->logo_path)
+                    <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-3 flex items-center gap-3">
+                        <span class="text-xs font-bold text-yellow-800">DEBUG</span>
+                        <form action="{{ route('products.debug-apply-logo', $product) }}" method="POST" target="_blank">
+                            @csrf
+                            <button type="submit" class="text-xs bg-yellow-600 text-white px-3 py-1.5 rounded hover:bg-yellow-700">
+                                Appliquer logo sur image AliExpress #1
+                            </button>
+                        </form>
+                    </div>
+                    @endif
 
                     {{-- Real Images Section (AI Generated) --}}
                     <div class="bg-white rounded-lg shadow-sm border border-purple-200 p-6"

@@ -53,6 +53,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])->name('products.generate-ai-images');
     Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])->name('products.transform-single-image');
     Route::post('/products/{product}/toggle-logo', [ProductController::class, 'toggleLogo'])->name('products.toggle-logo');
+    // DEBUG TEMP: test logo overlay library
+    Route::post('/products/{product}/debug-apply-logo', [ProductController::class, 'debugApplyLogo'])->name('products.debug-apply-logo');
     Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');
     Route::delete('/products/{product}/remove-image', [ProductController::class, 'removeImage'])->name('products.remove-image');
     Route::get('/products/{product}/download-images', [ProductController::class, 'downloadImages'])->name('products.download-images');

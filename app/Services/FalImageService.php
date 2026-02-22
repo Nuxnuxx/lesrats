@@ -307,7 +307,7 @@ class FalImageService
 
             $image->place(
                 element: $logo,
-                position: 'top-left',
+                position: 'top-right',
                 offset_x: $padding,
                 offset_y: $padding,
             );
