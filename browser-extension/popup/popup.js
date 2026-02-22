@@ -51,16 +51,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const devBadge = document.getElementById('dev-badge');
   if (devBadge) devBadge.style.display = isDev ? 'inline-block' : 'none';
 
-  // Charger les paramètres sauvegardés
-  const saved = await chrome.storage.local.get(['lastEtsyCategoryName', 'lastEtsyIsDigital']);
-  
-  if (saved.lastEtsyCategoryName) {
-    document.getElementById('etsy-category-name').value = saved.lastEtsyCategoryName;
-  }
-  if (saved.lastEtsyIsDigital) {
-    document.getElementById('etsy-is-digital').checked = saved.lastEtsyIsDigital;
-  }
-
   // Event listeners - Settings
   document.getElementById('btn-settings').addEventListener('click', openSettings);
 
@@ -73,11 +63,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-import-another').addEventListener('click', retryExtraction);
   document.getElementById('btn-view-product').addEventListener('click', viewProduct);
 
-  // Event listeners - Etsy
-  document.getElementById('btn-publish-etsy').addEventListener('click', publishToEtsy);
-  document.getElementById('btn-etsy-retry').addEventListener('click', resetEtsyState);
-  document.getElementById('btn-etsy-another').addEventListener('click', resetEtsyState);
-
   // Event listeners - Printables
   document.getElementById('btn-import-printables').addEventListener('click', importPrintablesProduct);
   document.getElementById('btn-printables-retry').addEventListener('click', retryPrintablesExtraction);
@@ -87,7 +72,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Event listeners - Tabs
   document.getElementById('tab-import').addEventListener('click', () => switchTab('import'));
   document.getElementById('tab-printables').addEventListener('click', () => switchTab('printables'));
-  document.getElementById('tab-etsy').addEventListener('click', () => switchTab('etsy'));
 
   // Save shop selection when changed
   document.getElementById('shop-select').addEventListener('change', saveShopSelection);
@@ -177,12 +161,10 @@ function switchTab(tab) {
   // Update tab buttons
   document.getElementById('tab-import').classList.toggle('active', tab === 'import');
   document.getElementById('tab-printables').classList.toggle('active', tab === 'printables');
-  document.getElementById('tab-etsy').classList.toggle('active', tab === 'etsy');
 
   // Show/hide sections
   document.getElementById('section-import').classList.toggle('hidden', tab !== 'import');
   document.getElementById('section-printables').classList.toggle('hidden', tab !== 'printables');
-  document.getElementById('section-etsy').classList.toggle('hidden', tab !== 'etsy');
 
   // Check page when switching to printables tab
   if (tab === 'printables') {

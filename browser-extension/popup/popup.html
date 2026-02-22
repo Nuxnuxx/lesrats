@@ -9,7 +9,7 @@
 <body>
   <div class="container">
     <header>
-      <div class="logo">🐀</div>
+      <div class="logo"><img src="../icons/icon128.png" alt="LesRats" width="40" height="40"></div>
       <div class="header-content">
         <h1>LesRats <span id="dev-badge" class="dev-badge" style="display:none;">DEV</span></h1>
         <p class="subtitle">Import & Publish</p>
@@ -26,7 +26,6 @@
     <div class="tabs">
       <button id="tab-import" class="tab active">Import AliExpress</button>
       <button id="tab-printables" class="tab">Import Printables</button>
-      <button id="tab-etsy" class="tab">Publier sur Etsy</button>
     </div>
 
     <!-- ============== IMPORT SECTION ============== -->
@@ -189,60 +188,6 @@
         <div class="icon-large">❌</div>
         <p id="printables-error-message">Une erreur est survenue</p>
         <button id="btn-printables-retry" class="btn btn-secondary">
-          Réessayer
-        </button>
-      </div>
-    </div>
-
-    <!-- ============== ETSY SECTION ============== -->
-    <div id="section-etsy" class="hidden">
-      <!-- État: Etsy Ready -->
-      <div id="state-etsy-ready" class="state">
-        <div class="icon-large">🛒</div>
-        <p>Ouvrir Etsy avec la bonne categorie</p>
-        
-        <div class="form-group">
-          <label for="etsy-category-name">Categorie Etsy:</label>
-          <input type="text" id="etsy-category-name" placeholder="Ex: Fournitures creatives">
-          <p class="help-text-small">Le nom exact de la categorie dans "Vos principales categories"</p>
-        </div>
-
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="etsy-is-digital">
-            <span class="checkbox-text">Produit numerique (fichier STL, etc.)</span>
-          </label>
-        </div>
-
-        <button id="btn-publish-etsy" class="btn btn-etsy">
-          🚀 Ouvrir Etsy
-        </button>
-
-        <p class="help-text">
-          La categorie sera selectionnee automatiquement.
-        </p>
-      </div>
-
-      <!-- État: Etsy Loading -->
-      <div id="state-etsy-loading" class="state hidden">
-        <div class="spinner"></div>
-        <p>Ouverture d'Etsy...</p>
-      </div>
-
-      <!-- État: Etsy Success -->
-      <div id="state-etsy-success" class="state hidden">
-        <div class="icon-large">✅</div>
-        <p>Page Etsy ouverte! Le formulaire va etre rempli automatiquement.</p>
-        <button id="btn-etsy-another" class="btn btn-secondary">
-          Publier un autre produit
-        </button>
-      </div>
-
-      <!-- État: Etsy Error -->
-      <div id="state-etsy-error" class="state hidden">
-        <div class="icon-large">❌</div>
-        <p id="etsy-error-message">Une erreur est survenue</p>
-        <button id="btn-etsy-retry" class="btn btn-secondary">
           Réessayer
         </button>
       </div>
