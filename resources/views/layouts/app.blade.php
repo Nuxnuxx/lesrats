@@ -7,6 +7,11 @@
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 
+        <!-- Favicon -->
+        <link rel="icon" href="/favicon.ico" sizes="any">
+        <link rel="icon" type="image/png" sizes="32x32" href="/logo.png">
+        <link rel="apple-touch-icon" href="/logo-192.png">
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
@@ -24,7 +29,7 @@
             <!-- Page Heading -->
             @isset($header)
                 <header class="bg-white shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                    <div class="mx-auto py-6 px-4 sm:px-6 lg:px-8">
                         {{ $header }}
                     </div>
                 </header>
@@ -32,7 +37,7 @@
 
             <!-- Flash Messages -->
             @if (session('success') || session('error') || session('warning') || session('info'))
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+                <div class="mx-auto px-4 sm:px-6 lg:px-8 pt-4">
                     @if (session('success'))
                         <x-ui.flash-message type="success" class="mb-4">{{ session('success') }}</x-ui.flash-message>
                     @endif
