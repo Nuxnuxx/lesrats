@@ -30,6 +30,13 @@ class FalImageService
      */
     public function transformImage(string $imageUrl, string $prompt, float $strength = 0.65, ?string $backgroundUrl = null): ?string
     {
+        // Dev mode: skip API call, just copy the source image
+        if (app()->environment('local')) {
+            Log::info('FalImageService: DEV MODE — copying source image instead of calling API', ['image_url' => $imageUrl]);
+
+            return $this->downloadAndStoreImage($imageUrl);
+        }
+
         if (! $this->apiKey) {
             Log::warning('Fal.ai API key not configured');
 
