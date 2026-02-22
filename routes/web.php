@@ -35,7 +35,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Shop management routes
-    Route::resource('shops', ShopController::class);
+    Route::get('/shops', [ShopController::class, 'index'])->name('shops.index');
+    Route::get('/shops/create', [ShopController::class, 'create'])->name('shops.create');
+    Route::post('/shops', [ShopController::class, 'store'])->name('shops.store');
+    Route::get('/shops/{shop}', [ShopController::class, 'edit'])->name('shops.edit');
+    Route::put('/shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
+    Route::patch('/shops/{shop}', [ShopController::class, 'update']);
+    Route::delete('/shops/{shop}', [ShopController::class, 'destroy'])->name('shops.destroy');
     Route::post('/shops/{shop}/switch', [ShopController::class, 'switch'])->name('shops.switch');
     Route::put('/shops/{shop}/categories', [ShopController::class, 'updateCategories'])->name('shops.update-categories');
     Route::put('/shops/{shop}/tags', [ShopController::class, 'updateTags'])->name('shops.update-tags');
@@ -45,7 +51,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/shops/{shop}/specific-prompts', [ShopController::class, 'deleteSpecificPrompt'])->name('shops.delete-specific-prompt');
 
     // Product management routes
-    Route::resource('products', ProductController::class);
+    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
+    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
+    Route::get('/products/{product}', [ProductController::class, 'edit'])->name('products.edit');
+    Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
+    Route::patch('/products/{product}', [ProductController::class, 'update']);
+    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     Route::post('/products/analyze-aliexpress', [ProductController::class, 'analyzeAliExpress'])->name('products.analyze-aliexpress');
     Route::post('/products/analyze-printables', [ProductController::class, 'analyzePrintables'])->name('products.analyze-printables');
     Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])->name('products.optimize-content');

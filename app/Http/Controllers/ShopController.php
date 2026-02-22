@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Order;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -61,65 +60,8 @@ class ShopController extends Controller
         // Attach current user as owner
         $shop->users()->attach(auth()->id(), ['role' => 'owner']);
 
-        return redirect()->route('shops.show', $shop)
+        return redirect()->route('shops.edit', $shop)
             ->with('success', 'Boutique creee avec succes !');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Shop $shop)
-    {
-        Gate::authorize('view', $shop);
-
-        $shop->load('members.user');
-
-        // Calculate stats
-        $stats = [
-            'total_products' => $shop->products()->count(),
-            'active_products' => $shop->products()->where('is_active', true)->count(),
-            'total_orders' => $shop->orders()->count(),
-            'total_revenue' => $shop->orders()->sum('total_price'),
-            'total_profit' => $shop->orders()->sum('total_profit'),
-            'today_orders' => $shop->orders()->today()->count(),
-            'today_revenue' => $shop->orders()->today()->sum('total_price'),
-            'this_month_orders' => $shop->orders()->thisMonth()->count(),
-            'this_month_revenue' => $shop->orders()->thisMonth()->sum('total_price'),
-        ];
-
-        // Get revenue chart data (last 30 days)
-        $chartData = $shop->getRevenueChartData(30);
-
-        // Get recent products (last 10)
-        $recentProducts = $shop->products()
-            ->orderByDesc('created_at')
-            ->limit(10)
-            ->get();
-
-        // Get recent orders (last 10)
-        $recentOrders = $shop->orders()
-            ->with('items')
-            ->orderByDesc('created_at')
-            ->limit(10)
-            ->get();
-
-        // Orders by status for quick stats
-        $ordersByStatus = [
-            'new' => $shop->orders()->where('status', Order::STATUS_NEW)->count(),
-            'ordered' => $shop->orders()->where('status', Order::STATUS_ORDERED)->count(),
-            'shipped' => $shop->orders()->where('status', Order::STATUS_SHIPPED)->count(),
-            'delivered' => $shop->orders()->where('status', Order::STATUS_DELIVERED)->count(),
-            'completed' => $shop->orders()->where('status', Order::STATUS_COMPLETED)->count(),
-        ];
-
-        return view('shops.show', compact(
-            'shop',
-            'stats',
-            'chartData',
-            'recentProducts',
-            'recentOrders',
-            'ordersByStatus'
-        ));
     }
 
     /**
@@ -290,7 +232,7 @@ class ShopController extends Controller
         $shop->update(['ai_backgrounds' => $backgrounds]);
 
         return redirect()->route('shops.edit', $shop)
-            ->with('success', 'Background "' . $validated['name'] . '" ajoute avec succes !');
+            ->with('success', 'Background "'.$validated['name'].'" ajoute avec succes !');
     }
 
     /**

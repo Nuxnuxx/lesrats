@@ -105,18 +105,8 @@ class ProductController extends Controller
 
         $product = Product::create($validated);
 
-        return redirect()->route('products.show', $product)
+        return redirect()->route('products.edit', $product)
             ->with('success', 'Produit cree avec succes !');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Product $product)
-    {
-        Gate::authorize('view', $product->shop);
-
-        return view('products.show', compact('product'));
     }
 
     /**

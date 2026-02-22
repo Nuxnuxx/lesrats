@@ -66,17 +66,6 @@ Voir [docs/TESTING.md](docs/TESTING.md) pour la documentation complete.
 APP_URL=http://localhost:8000
 ```
 
-### Etsy API (for real Etsy connection)
-
-See [ETSY_API_SETUP.md](ETSY_API_SETUP.md) for detailed instructions.
-
-```env
-ETSY_CLIENT_ID=your_client_id
-ETSY_CLIENT_SECRET=your_client_secret
-ETSY_REDIRECT_URI=http://localhost:8000/etsy/callback
-ETSY_MOCK_ENABLED=false
-```
-
 ### OpenAI (optional, for AI content optimization)
 
 ```env
@@ -105,7 +94,6 @@ app/
 │   ├── Order.php
 │   └── OrderItem.php
 └── Services/
-    ├── EtsyApiClient.php
     ├── AliExpressScraperService.php
     ├── PrintablesScraperService.php
     └── ContentOptimizerService.php
