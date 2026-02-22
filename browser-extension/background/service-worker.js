@@ -309,7 +309,7 @@ async function downloadAndSaveImages(imageUrls, productTitle = '') {
   
   for (let i = 0; i < imageUrls.length && i < 10; i++) {
     const url = imageUrls[i];
-    const filename = `${baseName}_${String(i + 1).padStart(2, '0')}.jpg`;
+    const filename = `Image_Etsy/${baseName}/${baseName}_${String(i + 1).padStart(2, '0')}.jpg`;
     
     try {
       // Use chrome.downloads to save to Downloads folder
