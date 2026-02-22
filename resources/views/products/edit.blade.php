@@ -780,7 +780,6 @@
                                     <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
                                         <template x-if="step === 'select'">
                                             <div class="flex items-center gap-3 w-full justify-between">
-                                                <span class="text-xs text-gray-500" x-show="isGenerating" x-text="'Generation ' + generatingProgress + '/' + generatingTotal + '...'"></span>
                                                 <div class="flex items-center gap-3 ml-auto">
                                                     <button type="button"
                                                             @click="closeModal()"
@@ -799,7 +798,7 @@
                                                         <svg x-show="!isGenerating" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                                                         </svg>
-                                                        <span x-text="isGenerating ? 'Generation ' + generatingProgress + '/' + generatingTotal : (selectedIndexes.length > 1 ? 'Generer ' + selectedIndexes.length + ' images' : 'Generer l\'image')"></span>
+                                                        <span x-text="isGenerating ? 'Lancement...' : (selectedIndexes.length > 1 ? 'Generer ' + selectedIndexes.length + ' images' : 'Generer l\'image')"></span>
                                                     </button>
                                                 </div>
                                             </div>
@@ -825,6 +824,32 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    {{-- AI Generation Progress Banner --}}
+                    <div x-data="aiBatchProgress({ productId: {{ $product->id }}, csrfToken: '{{ csrf_token() }}' })"
+                         x-show="batchId"
+                         x-cloak
+                         @ai-batch-started.window="startPolling($event.detail)"
+                         class="bg-purple-50 rounded-lg shadow-sm border border-purple-300 p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-purple-700 flex items-center">
+                                <svg class="animate-spin w-4 h-4 mr-2 text-purple-600" x-show="!finished" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <svg class="w-4 h-4 mr-2 text-green-600" x-show="finished" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span x-text="finished ? 'Generation terminee!' : 'Generation IA en cours...'"></span>
+                            </h3>
+                            <span class="text-xs text-purple-600" x-text="processed + '/' + total + (failed > 0 ? ' (' + failed + ' echec)' : '')"></span>
+                        </div>
+                        <div class="w-full bg-purple-200 rounded-full h-2">
+                            <div class="bg-purple-600 h-2 rounded-full transition-all duration-500"
+                                 :style="'width: ' + progress + '%'"></div>
+                        </div>
+                        <button x-show="finished" @click="dismiss()" class="mt-2 text-xs text-purple-600 hover:text-purple-800 underline">Fermer</button>
                     </div>
 
                     {{-- Real Images Section (AI Generated) --}}
@@ -982,15 +1007,13 @@
 
                 // State
                 showModal: false,
-                step: 'select', // 'select' or 'result'
+                step: 'select',
                 currentImageIndex: 0,
                 selectedIndexes: [],
                 prompt: config.defaultPrompt || '',
                 selectedSpecificPromptIndex: '',
                 selectedBackground: config.defaultBackground || '',
                 isGenerating: false,
-                generatingProgress: 0,
-                generatingTotal: 0,
                 generatedResults: [],
                 errorMessage: null,
 
@@ -1002,8 +1025,6 @@
                     this.selectedSpecificPromptIndex = '';
                     this.selectedBackground = this.defaultBackground;
                     this.generatedResults = [];
-                    this.generatingProgress = 0;
-                    this.generatingTotal = 0;
                     this.errorMessage = null;
                     document.body.classList.add('overflow-hidden');
                 },
@@ -1050,9 +1071,6 @@
 
                     this.isGenerating = true;
                     this.errorMessage = null;
-                    this.generatedResults = [];
-                    this.generatingTotal = this.selectedIndexes.length;
-                    this.generatingProgress = 0;
 
                     // Combine general prompt + specific prompt
                     let finalPrompt = this.prompt;
@@ -1060,58 +1078,47 @@
                         finalPrompt = this.prompt + "\n\n" + this.specificPrompts[this.selectedSpecificPromptIndex].prompt;
                     }
 
-                    let successCount = 0;
+                    // Collect image URLs for the selected images
+                    const imageUrls = this.selectedIndexes.map(idx => this.images[idx]);
 
-                    for (const idx of this.selectedIndexes) {
-                        this.generatingProgress++;
+                    try {
+                        const response = await fetch(`/products/${this.productId}/dispatch-ai-generation`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                image_urls: imageUrls,
+                                prompt: finalPrompt,
+                                background_url: this.selectedBackground || null,
+                                apply_logo: this.applyLogo,
+                            }),
+                        });
 
-                        try {
-                            const response = await fetch(`/products/${this.productId}/transform-single-image`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': this.csrfToken,
-                                    'Accept': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    image_url: this.images[idx],
-                                    prompt: finalPrompt,
-                                    background_url: this.selectedBackground || null,
-                                    apply_logo: this.applyLogo,
-                                }),
-                            });
+                        const data = await response.json();
 
-                            const data = await response.json();
+                        if (data.success) {
+                            // Update default background client-side
+                            this.defaultBackground = this.selectedBackground;
 
-                            if (data.success) {
-                                this.generatedResults.push(data.data.transformed_image);
-                                this.realImages = data.data.real_images;
-                                successCount++;
-                            } else {
-                                this.generatedResults.push(null);
-                                console.error('Generation failed for image ' + idx + ':', data.message);
-                            }
-                        } catch (error) {
-                            this.generatedResults.push(null);
-                            console.error('Error generating image ' + idx + ':', error);
+                            // Dispatch event to start the progress banner polling
+                            window.dispatchEvent(new CustomEvent('ai-batch-started', {
+                                detail: { batchId: data.batch_id, total: data.total }
+                            }));
+
+                            // Close modal immediately — work continues in background
+                            this.closeModal();
+                        } else {
+                            this.errorMessage = data.message || 'Erreur lors du lancement de la generation.';
                         }
+                    } catch (error) {
+                        console.error('Error dispatching AI generation:', error);
+                        this.errorMessage = 'Erreur de connexion.';
                     }
-
-                    // Update default background client-side so next modal open remembers it
-                    this.defaultBackground = this.selectedBackground;
-
-                    // Dispatch event to update real images section
-                    window.dispatchEvent(new CustomEvent('real-images-updated', {
-                        detail: { images: this.realImages }
-                    }));
 
                     this.isGenerating = false;
-
-                    if (successCount > 0) {
-                        this.step = 'result';
-                    } else {
-                        this.errorMessage = 'Aucune image n\'a pu etre generee. Verifiez les logs.';
-                    }
                 },
 
                 async removeRealImage(index) {
@@ -1208,6 +1215,75 @@
                     } catch (error) {
                         console.error('Error removing image:', error);
                         alert('Erreur de connexion.');
+                    }
+                }
+            };
+        }
+
+        // AI Batch Progress component — polls for batch job status
+        function aiBatchProgress(config) {
+            return {
+                productId: config.productId,
+                csrfToken: config.csrfToken,
+                batchId: null,
+                total: 0,
+                processed: 0,
+                failed: 0,
+                progress: 0,
+                finished: false,
+                pollInterval: null,
+
+                startPolling(detail) {
+                    this.batchId = detail.batchId;
+                    this.total = detail.total;
+                    this.processed = 0;
+                    this.failed = 0;
+                    this.progress = 0;
+                    this.finished = false;
+
+                    // Poll every 2 seconds
+                    this.pollInterval = setInterval(() => this.checkStatus(), 2000);
+                    // Also check immediately
+                    this.checkStatus();
+                },
+
+                async checkStatus() {
+                    if (!this.batchId) return;
+
+                    try {
+                        const response = await fetch(`/products/${this.productId}/ai-generation-status?batch_id=${this.batchId}`, {
+                            headers: { 'Accept': 'application/json' },
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            this.total = data.total;
+                            this.processed = data.processed;
+                            this.failed = data.failed;
+                            this.progress = data.progress;
+
+                            // Update real images in the realImagesManager component
+                            window.dispatchEvent(new CustomEvent('real-images-updated', {
+                                detail: { images: data.real_images }
+                            }));
+
+                            if (data.finished) {
+                                this.finished = true;
+                                clearInterval(this.pollInterval);
+                                this.pollInterval = null;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error checking batch status:', error);
+                    }
+                },
+
+                dismiss() {
+                    this.batchId = null;
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                        this.pollInterval = null;
                     }
                 }
             };

@@ -65,6 +65,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
     Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])->name('products.generate-ai-images');
     Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])->name('products.transform-single-image');
+    Route::post('/products/{product}/dispatch-ai-generation', [ProductController::class, 'dispatchAiGeneration'])->name('products.dispatch-ai-generation');
+    Route::get('/products/{product}/ai-generation-status', [ProductController::class, 'aiGenerationStatus'])->name('products.ai-generation-status');
     Route::post('/products/{product}/toggle-logo', [ProductController::class, 'toggleLogo'])->name('products.toggle-logo');
     Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');
     Route::delete('/products/{product}/remove-image', [ProductController::class, 'removeImage'])->name('products.remove-image');

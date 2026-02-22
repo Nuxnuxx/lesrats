@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\TransformProductImage;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\AliExpressScraperService;
@@ -9,6 +10,7 @@ use App\Services\ContentOptimizerService;
 use App\Services\FalImageService;
 use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -574,6 +576,101 @@ class ProductController extends Controller
                 'message' => 'Erreur lors de la transformation: '.$e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Dispatch a batch of AI image transformations as background jobs.
+     */
+    public function dispatchAiGeneration(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $request->validate([
+            'image_urls' => 'required|array|min:1',
+            'image_urls.*' => 'required|string',
+            'prompt' => 'required|string|min:10',
+            'background_url' => 'nullable|string',
+            'apply_logo' => 'nullable|boolean',
+        ]);
+
+        $user = $request->user();
+        $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
+
+        if (empty($falApiKey) && ! app()->environment('local')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cle API Fal.ai non configuree.',
+            ], 400);
+        }
+
+        $backgroundUrl = $request->input('background_url');
+        $applyLogo = $request->boolean('apply_logo', false);
+
+        // Remember last used background on the shop
+        $shop = $product->shop;
+        if ($backgroundUrl) {
+            $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
+            $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
+        } else {
+            $shop->update(['default_ai_background' => null]);
+        }
+
+        // Create jobs for each image
+        $jobs = collect($request->input('image_urls'))->map(
+            fn (string $url) => new TransformProductImage(
+                productId: $product->id,
+                imageUrl: $url,
+                prompt: $request->input('prompt'),
+                backgroundUrl: $backgroundUrl,
+                applyLogo: $applyLogo,
+                falApiKey: $falApiKey,
+            )
+        )->all();
+
+        // Dispatch as a batch (all jobs run in parallel if multiple workers are available)
+        $batch = Bus::batch($jobs)
+            ->name('AI Generation - '.$product->title)
+            ->allowFailures()
+            ->dispatch();
+
+        return response()->json([
+            'success' => true,
+            'batch_id' => $batch->id,
+            'total' => count($jobs),
+        ]);
+    }
+
+    /**
+     * Check the status of an AI generation batch.
+     */
+    public function aiGenerationStatus(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $batchId = $request->query('batch_id');
+
+        if (! $batchId) {
+            return response()->json(['success' => false, 'message' => 'batch_id requis.'], 400);
+        }
+
+        $batch = Bus::findBatch($batchId);
+
+        if (! $batch) {
+            return response()->json(['success' => false, 'message' => 'Batch non trouve.'], 404);
+        }
+
+        $product->refresh();
+
+        return response()->json([
+            'success' => true,
+            'total' => $batch->totalJobs,
+            'processed' => $batch->processedJobs(),
+            'failed' => $batch->failedJobs,
+            'finished' => $batch->finished(),
+            'cancelled' => $batch->cancelled(),
+            'progress' => $batch->progress(),
+            'real_images' => $product->real_images ?? [],
+        ]);
     }
 
     /**
