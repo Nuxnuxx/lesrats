@@ -274,14 +274,23 @@ class FalImageService
      */
     public function applyLogoOverlay(string $imageUrl, string $logoPath): bool
     {
+        $imageTmp = null;
+        $logoTmp = null;
+
         try {
             $disk = Storage::disk('public');
 
-            // Resolve storage-relative path from public URL
-            $imageRelativePath = Str::after(parse_url($imageUrl, PHP_URL_PATH), '/storage/');
+            // Resolve storage-relative path from public URL.
+            // Handles both local (/storage/file.png) and CDN URLs (no /storage/ prefix).
+            $urlPath = parse_url($imageUrl, PHP_URL_PATH);
+            $imageRelativePath = Str::after($urlPath, '/storage/');
+            if ($imageRelativePath === $urlPath) {
+                // /storage/ not found in path (CDN URL) — strip leading slash
+                $imageRelativePath = ltrim($urlPath, '/');
+            }
 
             if (! $disk->exists($imageRelativePath)) {
-                Log::warning('Logo overlay: product image not found', ['path' => $imageRelativePath]);
+                Log::warning('Logo overlay: product image not found', ['path' => $imageRelativePath, 'url' => $imageUrl]);
 
                 return false;
             }
@@ -292,14 +301,22 @@ class FalImageService
                 return false;
             }
 
+            // Write to temp files so Intervention Image can read them regardless of storage driver
+            $ext = pathinfo($imageRelativePath, PATHINFO_EXTENSION) ?: 'png';
+            $imageTmp = sys_get_temp_dir().'/img_'.Str::random(16).'.'.$ext;
+            $logoTmp = sys_get_temp_dir().'/logo_'.Str::random(16).'.png';
+
+            file_put_contents($imageTmp, $disk->get($imageRelativePath));
+            file_put_contents($logoTmp, $disk->get($logoPath));
+
             $manager = new ImageManager(new Driver);
 
-            $image = $manager->read($disk->path($imageRelativePath));
+            $image = $manager->read($imageTmp);
             $imageWidth = $image->width();
 
             // Resize logo to 15% of image width (scaleDown won't upscale small logos)
             $logoTargetWidth = (int) round($imageWidth * 0.15);
-            $logo = $manager->read($disk->path($logoPath));
+            $logo = $manager->read($logoTmp);
             $logo->scaleDown(width: $logoTargetWidth);
 
             // 3% padding from edges
@@ -307,12 +324,13 @@ class FalImageService
 
             $image->place(
                 element: $logo,
-                position: 'top-left',
+                position: 'top-right',
                 offset_x: $padding,
                 offset_y: $padding,
             );
 
-            $image->toPng()->save($disk->path($imageRelativePath));
+            // Write back via disk (works with local, S3, R2)
+            $disk->put($imageRelativePath, (string) $image->toPng());
 
             Log::info('Logo overlay applied', [
                 'image' => $imageRelativePath,
@@ -329,6 +347,13 @@ class FalImageService
             ]);
 
             return false;
+        } finally {
+            if ($imageTmp && file_exists($imageTmp)) {
+                @unlink($imageTmp);
+            }
+            if ($logoTmp && file_exists($logoTmp)) {
+                @unlink($logoTmp);
+            }
         }
     }
 

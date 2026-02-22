@@ -11,6 +11,8 @@ use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
@@ -534,6 +536,12 @@ class ProductController extends Controller
             }
 
             // Apply shop logo overlay if requested for this generation
+            Log::info('transformSingleImage: apply_logo check', [
+                'apply_logo_raw' => $request->input('apply_logo'),
+                'apply_logo_bool' => $request->boolean('apply_logo', false),
+                'logo_path' => $product->shop->logo_path,
+                'transformed_path' => $transformedPath,
+            ]);
             if ($request->boolean('apply_logo', false) && $product->shop->logo_path) {
                 $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
             }
@@ -581,6 +589,52 @@ class ProductController extends Controller
         $product->update(['apply_logo' => $request->boolean('apply_logo')]);
 
         return response()->json(['success' => true, 'apply_logo' => $product->apply_logo]);
+    }
+
+    /**
+     * DEBUG TEMP: Download first AliExpress image and apply logo overlay to test the library.
+     */
+    public function debugApplyLogo(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        if (! $product->shop->logo_path) {
+            return response()->json(['success' => false, 'message' => 'Pas de logo configuré dans la boutique']);
+        }
+
+        $images = $product->images ?? [];
+        if (empty($images)) {
+            return response()->json(['success' => false, 'message' => 'Pas d\'images sur ce produit']);
+        }
+
+        // Download first image to a local debug folder
+        $sourceUrl = $images[0];
+        $httpResponse = Http::withHeaders([
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer' => 'https://www.aliexpress.com/',
+            'Accept' => 'image/webp,image/apng,image/*,*/*;q=0.8',
+        ])->withOptions(['verify' => false])->get($sourceUrl);
+        if (! $httpResponse->successful()) {
+            return response()->json(['success' => false, 'message' => "Impossible de télécharger l'image: HTTP {$httpResponse->status()}"]);
+        }
+
+        $ext = pathinfo(parse_url($sourceUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'jpg';
+        $filename = 'debug-logo-test/'.Str::random(16).'.'.$ext;
+        $disk = Storage::disk('public');
+        $disk->put($filename, $httpResponse->body());
+        $imageUrl = $disk->url($filename);
+
+        Log::info('debugApplyLogo: image downloaded', ['url' => $imageUrl, 'filename' => $filename]);
+
+        $falApiKey = $request->user()?->fal_api_key ?? config('services.fal.api_key');
+        $falService = new FalImageService($falApiKey);
+        $result = $falService->applyLogoOverlay($imageUrl, $product->shop->logo_path);
+
+        if ($result) {
+            return response()->file($disk->path($filename));
+        }
+
+        return response('Échec — vérifier storage/logs/laravel.log', 500);
     }
 
     /**
