@@ -91,6 +91,10 @@ class ShopController extends Controller
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'shipping_fee' => 'nullable|numeric|min:0',
             'discount_percentage' => 'nullable|numeric|min:0|max:99',
+            'expert_mode' => 'boolean',
+            'pricing_k' => 'nullable|numeric|min:0.01|max:100',
+            'pricing_t' => 'nullable|numeric|min:0|max:0.99',
+            'pricing_t0' => 'nullable|numeric|min:0',
         ]);
 
         // Handle logo removal
@@ -134,6 +138,10 @@ class ShopController extends Controller
             'default_price' => 'sometimes|nullable|numeric|min:0',
             'shipping_fee' => 'sometimes|nullable|numeric|min:0',
             'discount_percentage' => 'sometimes|nullable|numeric|min:0|max:99',
+            'expert_mode' => 'sometimes|boolean',
+            'pricing_k' => 'sometimes|nullable|numeric|min:0.01|max:100',
+            'pricing_t' => 'sometimes|nullable|numeric|min:0|max:0.99',
+            'pricing_t0' => 'sometimes|nullable|numeric|min:0',
             'ai_description_prompt' => 'sometimes|nullable|string|max:5000',
             'ai_image_prompt' => 'sometimes|nullable|string|max:5000',
             'ai_specific_prompts' => 'sometimes|nullable|string',

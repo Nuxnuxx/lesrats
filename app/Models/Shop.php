@@ -26,6 +26,10 @@ class Shop extends Model
         'available_tags',
         'shipping_fee',
         'discount_percentage',
+        'expert_mode',
+        'pricing_k',
+        'pricing_t',
+        'pricing_t0',
         'total_revenue',
         'total_orders',
     ];
@@ -92,6 +96,10 @@ PROMPT;
         'available_tags' => 'array',
         'shipping_fee' => 'decimal:2',
         'discount_percentage' => 'decimal:2',
+        'expert_mode' => 'boolean',
+        'pricing_k' => 'decimal:4',
+        'pricing_t' => 'decimal:4',
+        'pricing_t0' => 'decimal:2',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
     ];

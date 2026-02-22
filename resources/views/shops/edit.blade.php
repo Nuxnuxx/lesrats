@@ -149,6 +149,72 @@
                         </div>
                     </div>
 
+                    {{-- Mode Expert — Pricing optimal --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+                         x-data="{
+                             expertMode: {{ $shop->expert_mode ? 'true' : 'false' }},
+                             pricingK: {{ (float)($shop->pricing_k ?? 1.0) }},
+                             pricingT: {{ (float)($shop->pricing_t ?? 0.20) }},
+                             pricingT0: {{ (float)($shop->pricing_t0 ?? 0.00) }},
+                             get preview() {
+                                 if (this.pricingK <= 0 || this.pricingT >= 1) return '—';
+                                 return ((1 / this.pricingK) + (this.pricingT0 + 10) / (1 - this.pricingT)).toFixed(2);
+                             }
+                         }">
+                        <div class="flex items-center justify-between mb-3">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900">Mode expert — Pricing optimal</h3>
+                                <p class="text-xs text-gray-500 mt-0.5">Calcul automatique du prix à l'import AliExpress</p>
+                            </div>
+                            <button type="button"
+                                    @click="expertMode = !expertMode; _shopAutoSave.save({ expert_mode: expertMode })"
+                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                                    :class="expertMode ? 'bg-orange-500' : 'bg-gray-300'">
+                                <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                      :class="expertMode ? 'translate-x-6' : 'translate-x-1'"></span>
+                            </button>
+                        </div>
+
+                        <div x-show="expertMode" x-transition>
+                            {{-- Formule --}}
+                            <div class="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4 text-center">
+                                <p class="font-mono text-sm text-gray-700">P<sub>opt</sub> = 1/k + (T<sub>0</sub> + C) / (1 − T)</p>
+                                <p class="text-xs text-gray-400 mt-1">C = coût AliExpress &nbsp;·&nbsp; k = élasticité &nbsp;·&nbsp; T = taux taxe &nbsp;·&nbsp; T₀ = offset taxe</p>
+                            </div>
+
+                            <div class="grid grid-cols-3 gap-3 mb-3">
+                                <div>
+                                    <label class="text-xs font-medium text-gray-700">k — élasticité</label>
+                                    <input type="number" step="0.01" min="0.01" max="100"
+                                           x-model="pricingK"
+                                           @input.debounce.800ms="_shopAutoSave.save({ pricing_k: pricingK })"
+                                           class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-700">T — taux taxe (ex: 0.20)</label>
+                                    <input type="number" step="0.01" min="0" max="0.99"
+                                           x-model="pricingT"
+                                           @input.debounce.800ms="_shopAutoSave.save({ pricing_t: pricingT })"
+                                           class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium text-gray-700">T₀ — offset taxe (€)</label>
+                                    <input type="number" step="0.01" min="0"
+                                           x-model="pricingT0"
+                                           @input.debounce.800ms="_shopAutoSave.save({ pricing_t0: pricingT0 })"
+                                           class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
+                                </div>
+                            </div>
+
+                            {{-- Preview live --}}
+                            <div class="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs text-orange-800">
+                                Exemple pour C = 10 € →
+                                <span class="font-semibold font-mono" x-text="preview + ' €'"></span>
+                                <span class="text-orange-500 ml-2">(sans mode expert : 25.00 €)</span>
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- Etsy Categories --}}
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" x-data="etsyCategoriesManager(@js($shop->etsy_categories ?? []))">
                         <h3 class="text-sm font-semibold text-gray-900 mb-3">Categories Etsy</h3>

@@ -130,15 +130,32 @@ class ExtensionController extends Controller
                     'shop_default_price' => $shop->default_price,
                 ]);
             } else {
-                // Logique existante pour AliExpress (marge de 2.5x)
+                // AliExpress product: expert mode formula or default ×2.5 markup
                 $costPrice = $validated['price'] ?? 0;
-                $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
+                $useExpertPricing = $shop->expert_mode
+                    && $shop->pricing_k > 0
+                    && $shop->pricing_t < 1;
+
+                // Popt = 1/k + (T0 + C) / (1 - T)
+                $applyFormula = function (float $cost) use ($shop): float {
+                    return round(
+                        (1 / $shop->pricing_k) + ((float) $shop->pricing_t0 + $cost) / (1 - (float) $shop->pricing_t),
+                        2
+                    );
+                };
+
+                $sellingPrice = $costPrice > 0
+                    ? ($useExpertPricing ? $applyFormula($costPrice) : round($costPrice * 2.5, 2))
+                    : 0;
 
                 // Process country-specific pricing if available
                 if ($countryPrices && ! empty($countryPrices)) {
-                    // Calculate US price (2.5x multiplier)
+                    // Calculate US price
                     if (isset($countryPrices['US']['total'])) {
-                        $priceUs = round((float) $countryPrices['US']['total'] * 2.5, 2);
+                        $costUs = (float) $countryPrices['US']['total'];
+                        $priceUs = $useExpertPricing
+                            ? $applyFormula($costUs)
+                            : round($costUs * 2.5, 2);
                     }
 
                     // Calculate "Autres pays" price (highest of DE, AT, FR, CA, ES)
@@ -153,10 +170,13 @@ class ExtensionController extends Controller
                         }
                     }
                     if ($maxOtherTotal !== null) {
-                        $priceOther = round($maxOtherTotal * 2.5, 2);
+                        $priceOther = $useExpertPricing
+                            ? $applyFormula($maxOtherTotal)
+                            : round($maxOtherTotal * 2.5, 2);
                     }
 
                     Log::info('Country prices processed', [
+                        'expert_mode' => $useExpertPricing,
                         'country_prices' => $countryPrices,
                         'price_us' => $priceUs,
                         'price_other' => $priceOther,
