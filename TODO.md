@@ -4,7 +4,6 @@
 - [ ] Problème de prix par pays (adapter les prix selon la localisation)
 
 ## Photos / Images
-- [x] Sélectionner un dossier de destination pour les photos IA générées - LE L A TRY PAS REUSSI
 - [x] Ajouter le logo automatiquement sur les photos (trouver une librairie adaptée)
 - [x] Améliorer la qualité d'image
 - [ ] Mettre les fonds d'écran par défaut 
