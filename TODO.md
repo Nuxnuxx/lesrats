@@ -6,7 +6,7 @@
 ## Photos / Images
 - [x] Ajouter le logo automatiquement sur les photos (trouver une librairie adaptée)
 - [x] Améliorer la qualité d'image
-- [ ] Mettre les fonds d'écran par défaut 
+- [x] Mettre les fonds d'écran par défaut 
 - [x] Image IA cliquable pour visualiser
 
 
