@@ -518,7 +518,12 @@
                             applyLogo: {{ $product->apply_logo ? 'true' : 'false' }},
                             defaultBackground: '{{ $product->shop->default_ai_background ? Storage::disk("public")->url($product->shop->default_ai_background) : '' }}'
                          })">
-                        <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-sm font-semibold text-gray-900">Apercu</h3>
+                            @if($product->cost_price > 0)
+                                <span class="text-sm font-medium text-gray-500">Achat: <span class="text-red-600 font-bold">{{ number_format($product->cost_price, 2) }} {{ $product->shop->currency }}</span></span>
+                            @endif
+                        </div>
 
                         @php
                             $images = is_array($product->images) ? $product->images : json_decode($product->images, true) ?? [];
