@@ -240,100 +240,145 @@
                 <div class="space-y-4">
 
                     {{-- AI Prompts --}}
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" x-data="promptEditor({
+                        descriptionPrompt: @js($shop->ai_description_prompt ?? ''),
+                        imagePrompt: @js($shop->ai_image_prompt ?? '')
+                    })">
                         <h3 class="text-sm font-semibold text-gray-900 mb-3">Prompts IA</h3>
                         <p class="text-xs text-gray-400 mb-3">
-                            <span class="text-orange-600">[SHOP_NICHE]</span> = description boutique
+                            <span class="text-orange-600">[SHOP_NICHE]</span> = description boutique.
+                            Cliquer pour modifier.
                         </p>
 
                         <div class="space-y-3">
-                            <div>
+                            {{-- Description prompt summary --}}
+                            <div @click="openModal('description')" class="p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:border-orange-300 hover:bg-orange-50/30 transition-colors group">
                                 <div class="flex items-center justify-between mb-1">
-                                    <label for="ai_description_prompt" class="text-xs font-medium text-gray-700">Titres / descriptions / tags</label>
-                                    <button type="button"
-                                        @click="document.getElementById('ai_description_prompt').value = ''; save({ ai_description_prompt: '' })"
-                                        class="text-xs text-orange-600 hover:text-orange-700">Reset</button>
+                                    <span class="text-xs font-medium text-gray-700">Titres / descriptions / tags</span>
+                                    <span class="text-xs" :class="descriptionPrompt ? 'text-orange-600' : 'text-green-600'" x-text="descriptionPrompt ? 'Personnalise' : 'Par defaut'"></span>
                                 </div>
-                                <textarea id="ai_description_prompt" rows="6"
-                                    @input.debounce.800ms="save({ ai_description_prompt: $el.value })"
-                                    class="block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-xs font-mono"
-                                    placeholder="Vide = prompt par defaut...">{{ $shop->ai_description_prompt }}</textarea>
-                                <p class="mt-1 text-xs {{ $shop->ai_description_prompt ? 'text-orange-600' : 'text-green-600' }}">
-                                    {{ $shop->ai_description_prompt ? 'Personnalise' : 'Par defaut' }}
-                                </p>
+                                <p class="text-xs text-gray-500 line-clamp-2 font-mono" x-show="descriptionPrompt" x-text="descriptionPrompt"></p>
+                                <p class="text-xs text-gray-400 italic" x-show="!descriptionPrompt">Prompt par defaut utilise</p>
                             </div>
 
-                            <div class="pt-3 border-t border-gray-100">
-                                <div class="flex items-center justify-between mb-2">
-                                    <label class="text-xs font-medium text-gray-700">Transformation images IA</label>
-                                    <button type="button"
-                                        @click="document.getElementById('ai_image_prompt').value = ''; save({ ai_image_prompt: '' })"
-                                        class="text-xs text-orange-600 hover:text-orange-700">Reset</button>
+                            {{-- Image prompt summary --}}
+                            <div @click="openModal('image')" class="p-3 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:border-orange-300 hover:bg-orange-50/30 transition-colors group">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="text-xs font-medium text-gray-700">Transformation images IA</span>
+                                    <span class="text-xs" :class="imagePrompt ? 'text-orange-600' : 'text-green-600'" x-text="imagePrompt ? 'Personnalise' : 'Par defaut'"></span>
                                 </div>
-                                <textarea id="ai_image_prompt" rows="6"
-                                    @input.debounce.800ms="save({ ai_image_prompt: $el.value })"
-                                    class="block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-xs font-mono"
-                                    placeholder="Vide = prompt par defaut...">{{ $shop->ai_image_prompt }}</textarea>
-                                <p class="mt-1 text-xs {{ $shop->ai_image_prompt ? 'text-orange-600' : 'text-green-600' }}">
-                                    {{ $shop->ai_image_prompt ? 'Personnalise' : 'Par defaut' }}
-                                </p>
+                                <p class="text-xs text-gray-500 line-clamp-2 font-mono" x-show="imagePrompt" x-text="imagePrompt"></p>
+                                <p class="text-xs text-gray-400 italic" x-show="!imagePrompt">Prompt par defaut utilise</p>
                             </div>
                         </div>
-                    </div>
 
-                    {{-- Specific Prompts --}}
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                        <h3 class="text-sm font-semibold text-gray-900 mb-2">Prompts specifiques (images)</h3>
-                        <p class="text-xs text-gray-400 mb-3">Ajoutes en complement du prompt general. Disponibles dans le menu lors de la generation.</p>
-
-                        @php $specificPrompts = $shop->ai_specific_prompts ?? []; @endphp
-                        @if(count($specificPrompts) > 0)
-                            <div class="mb-3 space-y-2">
-                                @foreach($specificPrompts as $index => $sp)
-                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-medium text-gray-900">{{ $sp['name'] }}</p>
-                                            <p class="text-xs text-gray-500 truncate">{{ $sp['prompt'] }}</p>
-                                        </div>
-                                        <form method="POST" action="{{ route('shops.delete-specific-prompt', $shop) }}"
-                                              onsubmit="return confirm('Supprimer ?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <input type="hidden" name="index" value="{{ $index }}">
-                                            <button type="submit" class="text-red-400 hover:text-red-600 p-1">
-                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        {{-- Prompt edit modal --}}
+                        <template x-teleport="body">
+                            <div x-show="showModal" x-cloak
+                                 class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                                 @keydown.escape.window="closeModal()">
+                                <div class="fixed inset-0 bg-black/50" @click="closeModal()"></div>
+                                <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+                                     @click.stop>
+                                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                                        <h3 class="text-lg font-semibold text-gray-900" x-text="modalTitle"></h3>
+                                        <div class="flex items-center gap-3">
+                                            <button type="button" @click="resetPrompt()"
+                                                class="text-sm text-orange-600 hover:text-orange-700 font-medium">Reset</button>
+                                            <button type="button" @click="closeModal()"
+                                                class="text-gray-400 hover:text-gray-600">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                                 </svg>
                                             </button>
-                                        </form>
+                                        </div>
                                     </div>
-                                @endforeach
-                            </div>
-                        @endif
-
-                        <form method="POST" action="{{ route('shops.add-specific-prompt', $shop) }}" x-data="{ showForm: false }">
-                            @csrf
-                            <button type="button" @click="showForm = !showForm" x-show="!showForm"
-                                    class="inline-flex items-center text-xs font-medium text-orange-600 hover:text-orange-700">
-                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                </svg>
-                                Ajouter
-                            </button>
-
-                            <div x-show="showForm" x-cloak class="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                <input type="text" name="name" required
-                                       class="w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
-                                       placeholder="Nom du prompt">
-                                <textarea name="prompt" rows="3" required
-                                          class="w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500 font-mono"
-                                          placeholder="Instructions specifiques..."></textarea>
-                                <div class="flex gap-2">
-                                    <button type="submit" class="px-3 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-medium hover:bg-orange-700">Ajouter</button>
-                                    <button type="button" @click="showForm = false" class="text-xs text-gray-500 hover:text-gray-700">Annuler</button>
+                                    <div class="p-6 flex-1 overflow-y-auto">
+                                        <textarea x-ref="modalTextarea" x-model="editValue"
+                                            @input.debounce.800ms="saveCurrentPrompt()"
+                                            class="w-full h-[60vh] border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm font-mono"
+                                            placeholder="Vide = prompt par defaut..."></textarea>
+                                    </div>
                                 </div>
                             </div>
-                        </form>
+                        </template>
+                    </div>
+
+                    {{-- Specific Prompts --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" x-data="specificPromptsManager(@js($shop->ai_specific_prompts ?? []))">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">Prompts specifiques (images)</h3>
+                        <p class="text-xs text-gray-400 mb-3">Ajoutes en complement du prompt general. Cliquer pour modifier.</p>
+
+                        <div class="space-y-2 mb-3">
+                            <template x-for="(sp, index) in prompts" :key="index">
+                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:border-orange-300 hover:bg-orange-50/30 transition-colors"
+                                     @click="openEdit(index)">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900" x-text="sp.name"></p>
+                                        <p class="text-xs text-gray-500 truncate" x-text="sp.prompt"></p>
+                                    </div>
+                                    <button type="button" @click.stop="removePrompt(index)"
+                                        class="text-red-400 hover:text-red-600 p-1 shrink-0">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="prompts.length === 0">
+                                <p class="text-xs text-gray-400 italic text-center py-2">Aucun prompt specifique</p>
+                            </template>
+                        </div>
+
+                        <button type="button" @click="addPrompt()"
+                            class="inline-flex items-center text-xs font-medium text-orange-600 hover:text-orange-700">
+                            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            Ajouter
+                        </button>
+
+                        {{-- Specific prompt edit modal --}}
+                        <template x-teleport="body">
+                            <div x-show="showModal" x-cloak
+                                 class="fixed inset-0 z-50 flex items-center justify-center p-4"
+                                 @keydown.escape.window="closeEdit()">
+                                <div class="fixed inset-0 bg-black/50" @click="closeEdit()"></div>
+                                <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
+                                     @click.stop>
+                                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                                        <h3 class="text-lg font-semibold text-gray-900" x-text="editIndex === -1 ? 'Nouveau prompt specifique' : 'Modifier le prompt'"></h3>
+                                        <button type="button" @click="closeEdit()"
+                                            class="text-gray-400 hover:text-gray-600">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="p-6 flex-1 overflow-y-auto space-y-4">
+                                        <div>
+                                            <label class="text-xs font-medium text-gray-700 mb-1 block">Nom</label>
+                                            <input type="text" x-model="editName"
+                                                class="w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
+                                                placeholder="Ex: Style minimaliste, Photo lifestyle...">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-medium text-gray-700 mb-1 block">Prompt</label>
+                                            <textarea x-model="editPromptText"
+                                                class="w-full h-[50vh] border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm font-mono"
+                                                placeholder="Instructions specifiques pour la generation d'images..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200">
+                                        <button type="button" @click="closeEdit()" class="text-sm text-gray-500 hover:text-gray-700">Annuler</button>
+                                        <button type="button" @click="saveEdit()"
+                                            class="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                                            <span x-text="editIndex === -1 ? 'Ajouter' : 'Enregistrer'"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
                     </div>
 
                     {{-- Backgrounds --}}
@@ -454,6 +499,106 @@
         function shopAutoSave() {
             return {
                 save(data) { return _shopAutoSave.save(data); }
+            };
+        }
+
+        function promptEditor(config) {
+            return {
+                descriptionPrompt: config.descriptionPrompt,
+                imagePrompt: config.imagePrompt,
+                showModal: false,
+                editingType: null, // 'description' or 'image'
+                editValue: '',
+                modalTitle: '',
+
+                openModal(type) {
+                    this.editingType = type;
+                    if (type === 'description') {
+                        this.editValue = this.descriptionPrompt;
+                        this.modalTitle = 'Prompt: Titres / descriptions / tags';
+                    } else {
+                        this.editValue = this.imagePrompt;
+                        this.modalTitle = 'Prompt: Transformation images IA';
+                    }
+                    this.showModal = true;
+                    document.body.classList.add('overflow-hidden');
+                    this.$nextTick(() => this.$refs.modalTextarea?.focus());
+                },
+
+                closeModal() {
+                    this.saveCurrentPrompt();
+                    this.showModal = false;
+                    this.editingType = null;
+                    document.body.classList.remove('overflow-hidden');
+                },
+
+                resetPrompt() {
+                    this.editValue = '';
+                    this.saveCurrentPrompt();
+                },
+
+                saveCurrentPrompt() {
+                    if (this.editingType === 'description') {
+                        this.descriptionPrompt = this.editValue;
+                        _shopAutoSave.save({ ai_description_prompt: this.editValue });
+                    } else if (this.editingType === 'image') {
+                        this.imagePrompt = this.editValue;
+                        _shopAutoSave.save({ ai_image_prompt: this.editValue });
+                    }
+                }
+            };
+        }
+
+        function specificPromptsManager(initialPrompts) {
+            return {
+                prompts: initialPrompts,
+                showModal: false,
+                editIndex: -1, // -1 = new, >= 0 = editing existing
+                editName: '',
+                editPromptText: '',
+
+                openEdit(index) {
+                    this.editIndex = index;
+                    this.editName = this.prompts[index].name;
+                    this.editPromptText = this.prompts[index].prompt;
+                    this.showModal = true;
+                    document.body.classList.add('overflow-hidden');
+                },
+
+                addPrompt() {
+                    this.editIndex = -1;
+                    this.editName = '';
+                    this.editPromptText = '';
+                    this.showModal = true;
+                    document.body.classList.add('overflow-hidden');
+                },
+
+                saveEdit() {
+                    if (!this.editName.trim()) return;
+                    if (this.editIndex === -1) {
+                        this.prompts.push({ name: this.editName, prompt: this.editPromptText });
+                    } else {
+                        this.prompts[this.editIndex].name = this.editName;
+                        this.prompts[this.editIndex].prompt = this.editPromptText;
+                    }
+                    this.savePrompts();
+                    this.closeEdit();
+                },
+
+                removePrompt(index) {
+                    if (!confirm('Supprimer ce prompt ?')) return;
+                    this.prompts.splice(index, 1);
+                    this.savePrompts();
+                },
+
+                closeEdit() {
+                    this.showModal = false;
+                    document.body.classList.remove('overflow-hidden');
+                },
+
+                savePrompts() {
+                    _shopAutoSave.save({ ai_specific_prompts: JSON.stringify(this.prompts) });
+                }
             };
         }
 

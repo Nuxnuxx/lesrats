@@ -136,11 +136,24 @@ class ShopController extends Controller
             'discount_percentage' => 'sometimes|nullable|numeric|min:0|max:99',
             'ai_description_prompt' => 'sometimes|nullable|string|max:5000',
             'ai_image_prompt' => 'sometimes|nullable|string|max:5000',
+            'ai_specific_prompts' => 'sometimes|nullable|string',
             'etsy_categories' => 'sometimes|nullable|string',
             'available_tags' => 'sometimes|nullable|string',
         ]);
 
         // Decode JSON strings for array fields
+        if (isset($validated['ai_specific_prompts']) && is_string($validated['ai_specific_prompts'])) {
+            $prompts = json_decode($validated['ai_specific_prompts'], true) ?? [];
+            $validated['ai_specific_prompts'] = collect($prompts)
+                ->filter(fn ($p) => ! empty($p['name']) || ! empty($p['prompt']))
+                ->map(fn ($p) => [
+                    'name' => $p['name'] ?? '',
+                    'prompt' => $p['prompt'] ?? '',
+                ])
+                ->values()
+                ->toArray();
+        }
+
         if (isset($validated['etsy_categories']) && is_string($validated['etsy_categories'])) {
             $categories = json_decode($validated['etsy_categories'], true) ?? [];
             $validated['etsy_categories'] = collect($categories)
@@ -319,55 +332,5 @@ class ShopController extends Controller
 
         return redirect()->route('shops.edit', $shop)
             ->with('error', 'Background non trouve.');
-    }
-
-    /**
-     * Add a specific prompt for image transformation.
-     */
-    public function addSpecificPrompt(Request $request, Shop $shop)
-    {
-        Gate::authorize('update', $shop);
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'prompt' => 'required|string|max:5000',
-        ]);
-
-        $prompts = $shop->ai_specific_prompts ?? [];
-        $prompts[] = [
-            'name' => $validated['name'],
-            'prompt' => $validated['prompt'],
-        ];
-
-        $shop->update(['ai_specific_prompts' => $prompts]);
-
-        return redirect()->route('shops.edit', $shop)
-            ->with('success', 'Prompt specifique ajoute avec succes !');
-    }
-
-    /**
-     * Delete a specific prompt.
-     */
-    public function deleteSpecificPrompt(Request $request, Shop $shop)
-    {
-        Gate::authorize('update', $shop);
-
-        $validated = $request->validate([
-            'index' => 'required|integer|min:0',
-        ]);
-
-        $prompts = $shop->ai_specific_prompts ?? [];
-        $index = $validated['index'];
-
-        if (isset($prompts[$index])) {
-            array_splice($prompts, $index, 1);
-            $shop->update(['ai_specific_prompts' => $prompts]);
-
-            return redirect()->route('shops.edit', $shop)
-                ->with('success', 'Prompt specifique supprime avec succes !');
-        }
-
-        return redirect()->route('shops.edit', $shop)
-            ->with('error', 'Prompt specifique non trouve.');
     }
 }
