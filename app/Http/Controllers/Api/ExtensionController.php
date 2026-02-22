@@ -116,16 +116,18 @@ class ExtensionController extends Controller
             $priceUs = null;
             $priceOther = null;
 
-            if ($sourceType === 'printables') {
-                // Prix fixe pour les produits Printables (fichiers numériques 3D)
+            if ($sourceType === 'printables' || $shop->product_type === 'virtual') {
+                // Virtual/digital product — use shop default price
                 $costPrice = 0;
-                $sellingPrice = 5.99;
-                $priceUs = 5.99;
-                $priceOther = 5.99;
+                $defaultPrice = (float) ($shop->default_price ?? 5.99);
+                $sellingPrice = $defaultPrice;
+                $priceUs = $defaultPrice;
+                $priceOther = $defaultPrice;
                 $countryPrices = null; // Pas de prix par pays pour les produits numériques
 
-                Log::info('Printables product - fixed price applied', [
+                Log::info('Virtual product - default price applied', [
                     'selling_price' => $sellingPrice,
+                    'shop_default_price' => $shop->default_price,
                 ]);
             } else {
                 // Logique existante pour AliExpress (marge de 2.5x)

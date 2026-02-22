@@ -63,6 +63,35 @@
                         @enderror
                     </div>
 
+                    <div class="mb-4" x-data="{ type: '{{ old('product_type', 'physical') }}' }">
+                        <label for="product_type" class="block text-sm font-medium text-gray-700">Type de produits *</label>
+                        <select id="product_type" name="product_type" required x-model="type"
+                            class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm">
+                            <option value="physical">Produits physiques (dropshipping)</option>
+                            <option value="virtual">Produits virtuels (fichiers numeriques)</option>
+                        </select>
+                        @error('product_type')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+
+                        <div x-show="type === 'virtual'" x-cloak class="mt-3">
+                            <label for="default_price" class="block text-sm font-medium text-gray-700">Prix par defaut</label>
+                            <div class="mt-1 relative">
+                                <input type="number" name="default_price" id="default_price" step="0.01" min="0"
+                                       value="{{ old('default_price') }}"
+                                       placeholder="5.99"
+                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
+                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 text-sm">EUR</span>
+                                </div>
+                            </div>
+                            <p class="mt-1 text-xs text-gray-500">Prix applique automatiquement aux nouveaux produits. Modifiable par produit.</p>
+                            @error('default_price')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
                     <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                         <a href="{{ route('shops.index') }}" 
                            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">

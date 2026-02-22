@@ -39,6 +39,8 @@ class ShopController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:5000',
             'currency' => 'required|string|size:3',
+            'product_type' => 'required|in:physical,virtual',
+            'default_price' => 'nullable|numeric|min:0',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
@@ -81,6 +83,8 @@ class ShopController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:5000',
             'currency' => 'required|string|size:3',
+            'product_type' => 'nullable|in:physical,virtual',
+            'default_price' => 'nullable|numeric|min:0',
             'ai_title_prompt' => 'nullable|string|max:5000',
             'ai_description_prompt' => 'nullable|string|max:5000',
             'ai_image_prompt' => 'nullable|string|max:5000',

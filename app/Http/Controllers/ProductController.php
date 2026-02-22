@@ -97,6 +97,14 @@ class ProductController extends Controller
         $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;
         $validated['is_digital'] = $validated['is_digital'] ?? false;
 
+        // Auto-fill defaults for virtual shops
+        if ($shop->product_type === 'virtual') {
+            $validated['price'] = $validated['price'] ?: ($shop->default_price ?? 0);
+            $validated['cost_price'] = 0;
+            $validated['is_digital'] = true;
+            $validated['quantity'] = 999;
+        }
+
         $product = Product::create($validated);
 
         return redirect()->route('products.edit', $product)

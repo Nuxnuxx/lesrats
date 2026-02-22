@@ -681,12 +681,15 @@
                     
                     // Set default prices and stock when moving to pricing step
                     if (this.step === 2) {
-                        if (this.sourceType === 'printables') {
+                        const shopDefaultPrice = {{ (float) ($shop->default_price ?? 0) }};
+                        const isVirtual = '{{ $shop->product_type }}' === 'virtual';
+
+                        if (isVirtual || this.sourceType === 'printables') {
                             this.costPrice = 0;
                             this.stockQuantity = 999; // Unlimited for digital
                             this.isUnlimitedStock = true;
                             if (!this.sellingPrice || this.sellingPrice == 0) {
-                                this.sellingPrice = 4.99;
+                                this.sellingPrice = shopDefaultPrice > 0 ? shopDefaultPrice : 4.99;
                             }
                         } else if (this.sourceType === 'aliexpress') {
                             // If no cost price set, use a default
@@ -700,7 +703,7 @@
                         } else {
                             // Manual - set defaults
                             if (!this.sellingPrice || this.sellingPrice == 0) {
-                                this.sellingPrice = 19.99;
+                                this.sellingPrice = shopDefaultPrice > 0 ? shopDefaultPrice : 19.99;
                             }
                         }
                     }
