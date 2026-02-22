@@ -63,14 +63,14 @@
                     {{-- Source Images with AI Editor --}}
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
                          x-data="aiImageEditor({
-                            images: {{ json_encode($images) }},
-                            realImages: {{ json_encode($product->real_image_urls) }},
+                            images: @js($images),
+                            realImages: @js($product->real_image_urls),
                             productId: {{ $product->id }},
-                            defaultPrompt: {{ json_encode($product->shop->getEffectiveAiImagePrompt()) }},
-                            specificPrompts: {{ json_encode($product->shop->ai_specific_prompts ?? []) }},
+                            defaultPrompt: @js($product->shop->getEffectiveAiImagePrompt()),
+                            specificPrompts: @js($product->shop->ai_specific_prompts ?? []),
                             csrfToken: '{{ csrf_token() }}',
                             applyLogo: {{ $product->apply_logo ? 'true' : 'false' }},
-                            defaultBackground: '{{ $product->shop->default_ai_background ? Storage::disk("public")->url($product->shop->default_ai_background) : '' }}'
+                            defaultBackground: @js($product->shop->default_ai_background ? Storage::disk('public')->url($product->shop->default_ai_background) : '')
                          })">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-sm font-semibold text-gray-900">Images source</h3>
@@ -263,7 +263,7 @@
                     {{-- Real Images (AI Generated) --}}
                     <div class="bg-white rounded-lg shadow-sm border border-purple-200 p-4"
                          x-data="realImagesManager({
-                            images: {{ json_encode($product->real_image_urls) }},
+                            images: @js($product->real_image_urls),
                             productId: {{ $product->id }},
                             csrfToken: '{{ csrf_token() }}'
                          })">
