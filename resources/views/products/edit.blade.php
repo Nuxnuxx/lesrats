@@ -359,15 +359,15 @@
                                 <div class="space-y-2">
                                     <div class="flex items-center justify-between text-sm">
                                         <span class="text-gray-500">Frais de livraison (client)</span>
-                                        <span class="text-gray-700">{{ number_format($shippingFee, 2) }} {{ $product->shop->currency }}</span>
+                                        <span class="text-gray-700">+{{ number_format($shippingFee, 2) }} {{ $product->shop->currency }}</span>
                                     </div>
                                     <div class="flex items-center justify-between text-sm">
                                         <span class="text-gray-500">Frais Etsy ({{ round($k * 100, 1) }}% + {{ number_format($f, 2) }})</span>
                                         <span class="text-red-600" x-text="'-' + fees.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
                                     </div>
                                     <div class="flex items-center justify-between text-sm">
-                                        <span class="text-gray-500">Revenu net Etsy</span>
-                                        <span class="text-gray-700" x-text="revenue.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                        <span class="text-gray-500">Cout d'achat (AliExpress)</span>
+                                        <span class="text-red-600">-{{ number_format($initCost, 2) }} {{ $product->shop->currency }}</span>
                                     </div>
                                     <div class="border-t border-gray-200 pt-2 flex items-center justify-between">
                                         <span class="text-sm font-medium text-gray-700">Profit par vente</span>
