@@ -544,6 +544,15 @@ class ProductController extends Controller
             $realImages[] = $transformedPath;
             $product->update(['real_images' => $realImages]);
 
+            // Remember last used background on the shop
+            $shop = $product->shop;
+            if ($backgroundUrl) {
+                $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
+                $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
+            } else {
+                $shop->update(['default_ai_background' => null]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Image transformee et ajoutee aux images reelles!',

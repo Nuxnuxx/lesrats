@@ -256,10 +256,18 @@ class ShopController extends Controller
                 Storage::disk('public')->delete($path);
             }
 
+            // Clear default if this was the last used background
+            if ($shop->default_ai_background === $path) {
+                $shop->default_ai_background = null;
+            }
+
             // Remove from array
             array_splice($backgrounds, $index, 1);
 
-            $shop->update(['ai_backgrounds' => $backgrounds]);
+            $shop->update([
+                'ai_backgrounds' => $backgrounds,
+                'default_ai_background' => $shop->default_ai_background,
+            ]);
 
             return redirect()->route('shops.edit', $shop)
                 ->with('success', 'Background supprime avec succes !');

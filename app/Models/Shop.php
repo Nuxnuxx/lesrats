@@ -20,6 +20,7 @@ class Shop extends Model
         'ai_specific_prompts',
         'ai_image_enabled',
         'ai_backgrounds',
+        'default_ai_background',
         'etsy_categories',
         'available_tags',
         'default_margin_us',

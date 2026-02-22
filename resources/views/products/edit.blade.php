@@ -625,8 +625,9 @@
                             productId: {{ $product->id }},
                             defaultPrompt: {{ json_encode($product->shop->getEffectiveAiImagePrompt()) }},
                             specificPrompts: {{ json_encode($product->shop->ai_specific_prompts ?? []) }},
-                            csrfToken: '{{ csrf_token() }}',
-                            applyLogo: {{ $product->apply_logo ? 'true' : 'false' }}
+                             csrfToken: '{{ csrf_token() }}',
+                            applyLogo: {{ $product->apply_logo ? 'true' : 'false' }},
+                            defaultBackground: '{{ $product->shop->default_ai_background ? Storage::disk("public")->url($product->shop->default_ai_background) : '' }}'
                          })">
                         <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
 
@@ -638,10 +639,13 @@
                             <div class="relative mb-4 group">
                                 <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                                     @foreach($images as $index => $image)
-                                        <img x-show="currentImageIndex === {{ $index }}"
-                                             src="{{ $image }}"
-                                             alt="{{ $product->title }}"
-                                             class="w-full h-full object-cover">
+                                        <a x-show="currentImageIndex === {{ $index }}"
+                                           href="{{ $image }}" target="_blank"
+                                           title="Ouvrir l'image en taille reelle">
+                                            <img src="{{ $image }}"
+                                                 alt="{{ $product->title }}"
+                                                 class="w-full h-full object-cover cursor-pointer">
+                                        </a>
                                     @endforeach
                                 </div>
 
@@ -954,7 +958,9 @@
                             <div class="grid grid-cols-3 gap-2">
                                 <template x-for="(img, index) in images" :key="index">
                                     <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                        <img :src="img" class="w-full h-full object-cover">
+                                        <a :href="img" target="_blank" title="Ouvrir l'image en taille reelle">
+                                            <img :src="img" class="w-full h-full object-cover cursor-pointer">
+                                        </a>
                                         <button type="button"
                                                 @click="removeImage(index)"
                                                 class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1082,6 +1088,7 @@
                 specificPrompts: config.specificPrompts || [],
                 csrfToken: config.csrfToken,
                 applyLogo: config.applyLogo ?? false,
+                defaultBackground: config.defaultBackground || '',
 
                 // State
                 showModal: false,
@@ -1090,7 +1097,7 @@
                 selectedImageIndex: 0,
                 prompt: config.defaultPrompt || '',
                 selectedSpecificPromptIndex: '',
-                selectedBackground: '',
+                selectedBackground: config.defaultBackground || '',
                 isGenerating: false,
                 generatedImage: null,
                 errorMessage: null,
@@ -1101,7 +1108,7 @@
                     this.selectedImageIndex = this.currentImageIndex;
                     this.prompt = this.defaultPrompt || '';
                     this.selectedSpecificPromptIndex = '';
-                    this.selectedBackground = '';
+                    this.selectedBackground = this.defaultBackground;
                     this.generatedImage = null;
                     this.errorMessage = null;
                     document.body.classList.add('overflow-hidden');
