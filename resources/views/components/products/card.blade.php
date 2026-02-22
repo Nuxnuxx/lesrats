@@ -96,6 +96,10 @@
             <div>
                 <p class="text-lg font-bold text-gray-900">
                     {{ number_format($product->price, 2) }} {{ $product->shop->currency }}
+                    @php $disc = (float)($product->shop->discount_percentage ?? 0); @endphp
+                    @if($disc > 0)
+                        <span class="text-sm font-normal text-gray-400 line-through ml-1">{{ number_format($product->price / (1 - $disc / 100), 2) }}</span>
+                    @endif
                 </p>
                 @if($product->cost_price > 0)
                     <p class="text-xs text-green-600">

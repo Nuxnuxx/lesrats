@@ -23,7 +23,7 @@ class Shop extends Model
         'default_ai_background',
         'etsy_categories',
         'available_tags',
-
+        'discount_percentage',
         'total_revenue',
         'total_orders',
     ];
@@ -88,7 +88,7 @@ PROMPT;
         'ai_backgrounds' => 'array',
         'etsy_categories' => 'array',
         'available_tags' => 'array',
-
+        'discount_percentage' => 'decimal:2',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
     ];

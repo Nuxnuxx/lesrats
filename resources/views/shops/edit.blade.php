@@ -103,6 +103,56 @@
                 </form>
             </div>
 
+            {{-- Discount Settings --}}
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Reduction Etsy</h3>
+                <p class="text-sm text-gray-500 mb-4">
+                    Si votre boutique Etsy a une reduction active, indiquez-la ici pour que les prix soient gonfles automatiquement lors de la publication.
+                </p>
+
+                <form method="POST" action="{{ route('shops.update', $shop) }}">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="name" value="{{ $shop->name }}">
+                    <input type="hidden" name="currency" value="{{ $shop->currency }}">
+                    <input type="hidden" name="is_active" value="{{ $shop->is_active ? '1' : '0' }}">
+
+                    <div>
+                        <label for="discount_percentage" class="block text-sm font-medium text-gray-700 mb-1">
+                            Reduction boutique Etsy (%)
+                        </label>
+                        <div class="relative">
+                            <input type="number" name="discount_percentage" id="discount_percentage"
+                                   step="1" min="0" max="99"
+                                   value="{{ old('discount_percentage', $shop->discount_percentage ?? 0) }}"
+                                   class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-10">
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 text-sm">%</span>
+                            </div>
+                        </div>
+                        @php $discount = (float)($shop->discount_percentage ?? 0); @endphp
+                        @if($discount > 0)
+                            <p class="mt-1 text-xs text-green-700">
+                                Prix Etsy liste = prix souhaite &divide; {{ number_format(1 - $discount/100, 2) }}
+                                &mdash; Ex: &euro;10.00 &rarr; &euro;{{ number_format(10 / (1 - $discount/100), 2) }} sur Etsy
+                            </p>
+                        @else
+                            <p class="mt-1 text-xs text-gray-500">0 = pas de reduction (prix envoye tel quel)</p>
+                        @endif
+                        @error('discount_percentage')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="flex items-center justify-end mt-4">
+                        <button type="submit"
+                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
+                            Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+
             {{-- AI Settings --}}
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Parametres IA</h3>
