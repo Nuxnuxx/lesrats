@@ -642,7 +642,7 @@
                                             <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                                             </svg>
-                                            <span x-text="step === 'select' ? 'Modifier l\'image avec l\'IA' : 'Resultat'"></span>
+                                            <span x-text="step === 'select' ? 'Generer des images avec l\'IA' : 'Resultat'"></span>
                                         </h3>
                                         <button type="button" @click="closeModal()" class="text-gray-400 hover:text-gray-600">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -653,21 +653,37 @@
 
                                     {{-- Modal Body --}}
                                     <div class="p-6">
-                                        {{-- Step 1: Select Image & Configure --}}
+                                        {{-- Step 1: Select Images & Configure --}}
                                         <div x-show="step === 'select'">
-                                            {{-- Image Selection --}}
+                                            {{-- Image Selection (Multi-select) --}}
                                             <div class="mb-6">
-                                                <label class="block text-sm font-medium text-gray-700 mb-3">Selectionnez l'image source:</label>
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <label class="block text-sm font-medium text-gray-700">Selectionnez les images:</label>
+                                                    <button type="button" @click="selectAll()"
+                                                            class="text-xs font-medium text-purple-600 hover:text-purple-800 transition-colors">
+                                                        <span x-text="allSelected ? 'Tout deselectionner' : 'Tout selectionner'"></span>
+                                                    </button>
+                                                </div>
                                                 <div class="grid grid-cols-4 gap-2">
                                                     <template x-for="(img, index) in images" :key="index">
                                                         <button type="button"
-                                                                @click="selectedImageIndex = index"
-                                                                :class="selectedImageIndex === index ? 'ring-2 ring-purple-500 ring-offset-2' : 'hover:opacity-75'"
-                                                                class="aspect-square rounded-lg overflow-hidden bg-gray-100 transition-all">
+                                                                @click="toggleImageSelection(index)"
+                                                                :class="isSelected(index) ? 'ring-2 ring-purple-500 ring-offset-2' : 'hover:opacity-75'"
+                                                                class="relative aspect-square rounded-lg overflow-hidden bg-gray-100 transition-all">
                                                             <img :src="img" class="w-full h-full object-cover">
+                                                            {{-- Checkbox overlay --}}
+                                                            <div class="absolute top-1 right-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors"
+                                                                 :class="isSelected(index) ? 'bg-purple-600 border-purple-600' : 'bg-white/80 border-gray-400'">
+                                                                <svg x-show="isSelected(index)" class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                                                </svg>
+                                                            </div>
                                                         </button>
                                                     </template>
                                                 </div>
+                                                <p class="mt-2 text-xs text-gray-500" x-show="selectedIndexes.length > 0">
+                                                    <span x-text="selectedIndexes.length"></span> image(s) selectionnee(s)
+                                                </p>
                                             </div>
 
                                             {{-- Specific Prompt Selection --}}
@@ -733,27 +749,29 @@
                                             </div>
                                         </div>
 
-                                        {{-- Step 2: Show Result --}}
+                                        {{-- Step 2: Show Results --}}
                                         <div x-show="step === 'result'">
-                                            <div class="grid grid-cols-2 gap-4 mb-6">
-                                                {{-- Original --}}
-                                                <div>
-                                                    <p class="text-xs font-medium text-gray-500 mb-2 text-center">Original</p>
+                                            <div class="grid grid-cols-3 gap-3 mb-6">
+                                                <template x-for="(img, index) in generatedResults" :key="index">
                                                     <div class="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                                        <img :src="images[selectedImageIndex]" class="w-full h-full object-cover">
+                                                        <template x-if="img">
+                                                            <img :src="img" class="w-full h-full object-cover">
+                                                        </template>
+                                                        <template x-if="!img">
+                                                            <div class="w-full h-full flex items-center justify-center bg-red-50">
+                                                                <svg class="w-8 h-8 text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                                                                </svg>
+                                                            </div>
+                                                        </template>
                                                     </div>
-                                                </div>
-                                                {{-- Generated --}}
-                                                <div>
-                                                    <p class="text-xs font-medium text-gray-500 mb-2 text-center">Generee par IA</p>
-                                                    <div class="aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                                        <img :src="generatedImage" class="w-full h-full object-cover">
-                                                    </div>
-                                                </div>
+                                                </template>
                                             </div>
 
                                             <div class="p-3 bg-green-50 border border-green-200 rounded-lg">
-                                                <p class="text-sm text-green-700">Image ajoutee aux "Images reelles" avec succes!</p>
+                                                <p class="text-sm text-green-700">
+                                                    <span x-text="generatedResults.filter(r => r !== null).length"></span>/<span x-text="generatedResults.length"></span> image(s) generee(s) et ajoutee(s) aux "Images reelles"!
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -761,37 +779,37 @@
                                     {{-- Modal Footer --}}
                                     <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
                                         <template x-if="step === 'select'">
-                                            <div class="flex items-center gap-3 w-full justify-end">
-                                                <button type="button"
-                                                        @click="closeModal()"
-                                                        class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
-                                                    Annuler
-                                                </button>
-                                                <button type="button"
-                                                        @click="generateImage()"
-                                                        :disabled="isGenerating || !prompt.trim()"
-                                                        class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
-                                                    <template x-if="isGenerating">
-                                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                            <div class="flex items-center gap-3 w-full justify-between">
+                                                <span class="text-xs text-gray-500" x-show="isGenerating" x-text="'Generation ' + generatingProgress + '/' + generatingTotal + '...'"></span>
+                                                <div class="flex items-center gap-3 ml-auto">
+                                                    <button type="button"
+                                                            @click="closeModal()"
+                                                            :disabled="isGenerating"
+                                                            class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 disabled:opacity-50">
+                                                        Annuler
+                                                    </button>
+                                                    <button type="button"
+                                                            @click="generateImages()"
+                                                            :disabled="isGenerating || !prompt.trim() || selectedIndexes.length === 0"
+                                                            class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                                        <svg x-show="isGenerating" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                         </svg>
-                                                    </template>
-                                                    <template x-if="!isGenerating">
-                                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg x-show="!isGenerating" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                                                         </svg>
-                                                    </template>
-                                                    <span x-text="isGenerating ? 'Generation en cours...' : 'Generer l\'image'"></span>
-                                                </button>
+                                                        <span x-text="isGenerating ? 'Generation ' + generatingProgress + '/' + generatingTotal : (selectedIndexes.length > 1 ? 'Generer ' + selectedIndexes.length + ' images' : 'Generer l\'image')"></span>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </template>
                                         <template x-if="step === 'result'">
                                             <div class="flex items-center gap-3 w-full justify-end">
                                                 <button type="button"
-                                                        @click="step = 'select'; generatedImage = null;"
+                                                        @click="step = 'select'; generatedResults = []; selectedIndexes = [];"
                                                         class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
-                                                    Generer une autre
+                                                    Generer d'autres
                                                 </button>
                                                 <button type="button"
                                                         @click="closeModal()"
@@ -808,19 +826,6 @@
                             </div>
                         </div>
                     </div>
-
-                    {{-- DEBUG TEMP: Test logo overlay --}}
-                    @if($product->shop->logo_path)
-                    <div class="bg-yellow-50 border border-yellow-300 rounded-lg p-3 flex items-center gap-3">
-                        <span class="text-xs font-bold text-yellow-800">DEBUG</span>
-                        <form action="{{ route('products.debug-apply-logo', $product) }}" method="POST" target="_blank">
-                            @csrf
-                            <button type="submit" class="text-xs bg-yellow-600 text-white px-3 py-1.5 rounded hover:bg-yellow-700">
-                                Appliquer logo sur image AliExpress #1
-                            </button>
-                        </form>
-                    </div>
-                    @endif
 
                     {{-- Real Images Section (AI Generated) --}}
                     <div class="bg-white rounded-lg shadow-sm border border-purple-200 p-6"
@@ -979,22 +984,26 @@
                 showModal: false,
                 step: 'select', // 'select' or 'result'
                 currentImageIndex: 0,
-                selectedImageIndex: 0,
+                selectedIndexes: [],
                 prompt: config.defaultPrompt || '',
                 selectedSpecificPromptIndex: '',
                 selectedBackground: config.defaultBackground || '',
                 isGenerating: false,
-                generatedImage: null,
+                generatingProgress: 0,
+                generatingTotal: 0,
+                generatedResults: [],
                 errorMessage: null,
 
                 openModal() {
                     this.showModal = true;
                     this.step = 'select';
-                    this.selectedImageIndex = this.currentImageIndex;
+                    this.selectedIndexes = [];
                     this.prompt = this.defaultPrompt || '';
                     this.selectedSpecificPromptIndex = '';
                     this.selectedBackground = this.defaultBackground;
-                    this.generatedImage = null;
+                    this.generatedResults = [];
+                    this.generatingProgress = 0;
+                    this.generatingTotal = 0;
                     this.errorMessage = null;
                     document.body.classList.add('overflow-hidden');
                 },
@@ -1004,56 +1013,104 @@
                     document.body.classList.remove('overflow-hidden');
                 },
 
-                async generateImage() {
+                toggleImageSelection(index) {
+                    const pos = this.selectedIndexes.indexOf(index);
+                    if (pos === -1) {
+                        this.selectedIndexes.push(index);
+                    } else {
+                        this.selectedIndexes.splice(pos, 1);
+                    }
+                },
+
+                isSelected(index) {
+                    return this.selectedIndexes.includes(index);
+                },
+
+                selectAll() {
+                    if (this.selectedIndexes.length === this.images.length) {
+                        this.selectedIndexes = [];
+                    } else {
+                        this.selectedIndexes = this.images.map((_, i) => i);
+                    }
+                },
+
+                get allSelected() {
+                    return this.selectedIndexes.length === this.images.length && this.images.length > 0;
+                },
+
+                async generateImages() {
                     if (!this.prompt.trim()) {
                         this.errorMessage = 'Veuillez entrer un prompt de transformation.';
+                        return;
+                    }
+                    if (this.selectedIndexes.length === 0) {
+                        this.errorMessage = 'Veuillez selectionner au moins une image.';
                         return;
                     }
 
                     this.isGenerating = true;
                     this.errorMessage = null;
+                    this.generatedResults = [];
+                    this.generatingTotal = this.selectedIndexes.length;
+                    this.generatingProgress = 0;
 
-                    try {
-                        // Combine general prompt + specific prompt
-                        let finalPrompt = this.prompt;
-                        if (this.selectedSpecificPromptIndex !== '' && this.specificPrompts[this.selectedSpecificPromptIndex]) {
-                            finalPrompt = this.prompt + "\n\n" + this.specificPrompts[this.selectedSpecificPromptIndex].prompt;
+                    // Combine general prompt + specific prompt
+                    let finalPrompt = this.prompt;
+                    if (this.selectedSpecificPromptIndex !== '' && this.specificPrompts[this.selectedSpecificPromptIndex]) {
+                        finalPrompt = this.prompt + "\n\n" + this.specificPrompts[this.selectedSpecificPromptIndex].prompt;
+                    }
+
+                    let successCount = 0;
+
+                    for (const idx of this.selectedIndexes) {
+                        this.generatingProgress++;
+
+                        try {
+                            const response = await fetch(`/products/${this.productId}/transform-single-image`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': this.csrfToken,
+                                    'Accept': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    image_url: this.images[idx],
+                                    prompt: finalPrompt,
+                                    background_url: this.selectedBackground || null,
+                                    apply_logo: this.applyLogo,
+                                }),
+                            });
+
+                            const data = await response.json();
+
+                            if (data.success) {
+                                this.generatedResults.push(data.data.transformed_image);
+                                this.realImages = data.data.real_images;
+                                successCount++;
+                            } else {
+                                this.generatedResults.push(null);
+                                console.error('Generation failed for image ' + idx + ':', data.message);
+                            }
+                        } catch (error) {
+                            this.generatedResults.push(null);
+                            console.error('Error generating image ' + idx + ':', error);
                         }
+                    }
 
-                        const response = await fetch(`/products/${this.productId}/transform-single-image`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': this.csrfToken,
-                                'Accept': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                image_url: this.images[this.selectedImageIndex],
-                                prompt: finalPrompt,
-                                background_url: this.selectedBackground || null,
-                                apply_logo: this.applyLogo,
-                            }),
-                        });
+                    // Update default background client-side so next modal open remembers it
+                    this.defaultBackground = this.selectedBackground;
 
-                        const data = await response.json();
+                    // Dispatch event to update real images section
+                    window.dispatchEvent(new CustomEvent('real-images-updated', {
+                        detail: { images: this.realImages }
+                    }));
 
-                        if (data.success) {
-                            this.generatedImage = data.data.transformed_image;
-                            this.realImages = data.data.real_images;
-                            this.step = 'result';
+                    this.isGenerating = false;
 
-                            // Dispatch event to update real images section
-                            window.dispatchEvent(new CustomEvent('real-images-updated', {
-                                detail: { images: data.data.real_images }
-                            }));
-                        } else {
-                            this.errorMessage = data.message || 'Une erreur est survenue.';
-                        }
-                    } catch (error) {
-                        console.error('Error generating image:', error);
-                        this.errorMessage = 'Erreur de connexion. Veuillez reessayer.';
-                    } finally {
-                        this.isGenerating = false;
+                    if (successCount > 0) {
+                        this.step = 'result';
+                    } else {
+                        this.errorMessage = 'Aucune image n\'a pu etre generee. Verifiez les logs.';
                     }
                 },
 

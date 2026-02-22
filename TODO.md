@@ -5,18 +5,17 @@
 
 ## Photos / Images
 - [x] Sélectionner un dossier de destination pour les photos IA générées - LE L A TRY PAS REUSSI
-- [ ] Rajouter prompt mannequin : 4 photos humaines + 2 photos mannequin (LAYWENS)
 - [x] Ajouter le logo automatiquement sur les photos (trouver une librairie adaptée)
 - [x] Améliorer la qualité d'image
 - [ ] Mettre les fonds d'écran par défaut 
-- [ ] Image IA cliquable pour visualiser
+- [x] Image IA cliquable pour visualiser
 
 
 ## Produits
 - [x] Possibilité de changer le lien AliExpress
-- [ ] Automatiser les tailles des vêtements
+- [ ] Automatiser les tailles
 
 ## Automatisation
-- [ ] Automatiser les envois (futur)
+- [ ] Automatiser les envois
 
 ## Objectif app utilisable pour le mois de Mars
