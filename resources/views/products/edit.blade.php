@@ -533,7 +533,7 @@
                                              src="{{ $image }}"
                                              alt="{{ $product->title }}"
                                              class="w-full h-full object-cover cursor-pointer"
-                                             @click="$dispatch('lightbox-open', '{{ $image }}'); document.body.classList.add('overflow-hidden')">
+                                             @click="$dispatch('lightbox-open', { images: {{ json_encode($images) }}, index: {{ $index }} })">
                                     @endforeach
                                 </div>
 
@@ -847,7 +847,7 @@
                                 <template x-for="(img, index) in images" :key="index">
                                     <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
                                         <img :src="img" class="w-full h-full object-cover cursor-pointer"
-                                             @click="$dispatch('lightbox-open', img); document.body.classList.add('overflow-hidden')">
+                                             @click="$dispatch('lightbox-open', { images: images, index: index })">
                                         <button type="button"
                                                 @click="removeImage(index)"
                                                 class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1226,11 +1226,35 @@
     @endpush
 
     {{-- Image Lightbox Modal --}}
-    <div x-data="{ lightboxImage: null }"
+    <div x-data="{
+            images: [],
+            currentIndex: 0,
+            get isOpen() { return this.images.length > 0; },
+            get currentImage() { return this.images[this.currentIndex] || null; },
+            get hasMultiple() { return this.images.length > 1; },
+            open(detail) {
+                this.images = detail.images || [detail];
+                this.currentIndex = detail.index || 0;
+                document.body.classList.add('overflow-hidden');
+            },
+            close() {
+                this.images = [];
+                this.currentIndex = 0;
+                document.body.classList.remove('overflow-hidden');
+            },
+            prev() {
+                this.currentIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.images.length - 1;
+            },
+            next() {
+                this.currentIndex = this.currentIndex < this.images.length - 1 ? this.currentIndex + 1 : 0;
+            }
+         }"
          x-cloak
-         @lightbox-open.window="lightboxImage = $event.detail"
-         @keydown.escape.window="lightboxImage = null; document.body.classList.remove('overflow-hidden')">
-        <div x-show="lightboxImage"
+         @lightbox-open.window="open($event.detail)"
+         @keydown.escape.window="close()"
+         @keydown.left.window="if (isOpen) prev()"
+         @keydown.right.window="if (isOpen) next()">
+        <div x-show="isOpen"
              x-transition:enter="ease-out duration-200"
              x-transition:enter-start="opacity-0"
              x-transition:enter-end="opacity-100"
@@ -1238,13 +1262,37 @@
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
              class="fixed inset-0 z-[60] flex items-center justify-center p-4"
-             @click.self="lightboxImage = null; document.body.classList.remove('overflow-hidden')">
+             @click.self="close()">
             <div class="fixed inset-0 bg-black/80"></div>
-            <img :src="lightboxImage"
+            <img :src="currentImage"
                  class="relative z-10 max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
                  @click.stop>
-            <button type="button"
-                    @click="lightboxImage = null; document.body.classList.remove('overflow-hidden')"
+
+            {{-- Navigation arrows --}}
+            <template x-if="hasMultiple">
+                <button type="button" @click.stop="prev()"
+                        class="absolute left-4 z-20 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+            </template>
+            <template x-if="hasMultiple">
+                <button type="button" @click.stop="next()"
+                        class="absolute right-4 z-20 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </template>
+
+            {{-- Counter --}}
+            <div x-show="hasMultiple" class="absolute bottom-4 z-20 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+                <span x-text="(currentIndex + 1) + ' / ' + images.length"></span>
+            </div>
+
+            {{-- Close button --}}
+            <button type="button" @click="close()"
                     class="absolute top-4 right-4 z-20 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
