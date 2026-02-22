@@ -666,16 +666,6 @@
                                                 </div>
                                             </div>
 
-                                            {{-- Prompt Input (General) --}}
-                                            <div class="mb-6">
-                                                <label for="ai-prompt" class="block text-sm font-medium text-gray-700 mb-2">Prompt general:</label>
-                                                <textarea id="ai-prompt"
-                                                          x-model="prompt"
-                                                          rows="4"
-                                                          class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm"
-                                                          placeholder="Decrivez comment transformer l'image..."></textarea>
-                                            </div>
-
                                             {{-- Specific Prompt Selection --}}
                                             <div class="mb-6" x-show="specificPrompts.length > 0">
                                                 <label class="block text-sm font-medium text-gray-700 mb-2">Prompt specifique:</label>

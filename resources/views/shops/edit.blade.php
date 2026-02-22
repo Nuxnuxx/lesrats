@@ -191,21 +191,9 @@
                         </div>
 
                         <div class="pt-4 border-t border-gray-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <label for="ai_image_enabled" class="text-sm font-medium text-gray-700">Transformation d'images IA</label>
-                                    <p class="text-xs text-gray-500">Transforme les images des produits lors de l'import (necessite une cle API Fal.ai)</p>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" name="ai_image_enabled" value="1" {{ old('ai_image_enabled', $shop->ai_image_enabled) ? 'checked' : '' }}
-                                        class="sr-only peer" id="ai_image_enabled">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                                </label>
-                            </div>
-
                             <div>
                                 <div class="flex items-center justify-between mb-1">
-                                    <label for="ai_image_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les images</label>
+                                    <label for="ai_image_prompt" class="block text-sm font-medium text-gray-700">Prompt de generation d'images</label>
                                     <button type="button" onclick="document.getElementById('ai_image_prompt').value = ''; this.closest('form').submit();"
                                         class="text-xs text-orange-600 hover:text-orange-700">Restaurer par defaut</button>
                                 </div>
