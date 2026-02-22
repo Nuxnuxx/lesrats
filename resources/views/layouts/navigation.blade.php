@@ -15,14 +15,8 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('shops.index')" :active="request()->routeIs('shops.*')">
-                        {{ __('Boutiques') }}
-                    </x-nav-link>
                     <x-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
                         {{ __('Produits') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('orders.index')" :active="request()->routeIs('orders.*')">
-                        {{ __('Commandes') }}
                     </x-nav-link>
                 </div>
             </div>
@@ -79,14 +73,8 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('shops.index')" :active="request()->routeIs('shops.*')">
-                {{ __('Boutiques') }}
-            </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('products.index')" :active="request()->routeIs('products.*')">
                 {{ __('Produits') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('orders.index')" :active="request()->routeIs('orders.*')">
-                {{ __('Commandes') }}
             </x-responsive-nav-link>
         </div>
 

@@ -598,10 +598,10 @@
                 <div class="flex items-center justify-between">
                     <div>
                         <p class="text-sm font-medium text-gray-900">Supprimer cette boutique</p>
-                        <p class="text-xs text-gray-500">Cette action supprimera tous les produits et commandes associes.</p>
+                        <p class="text-xs text-gray-500">Cette action supprimera tous les produits associes.</p>
                     </div>
                     <form action="{{ route('shops.destroy', $shop) }}" method="POST"
-                          onsubmit="return confirm('ATTENTION: Cette action est irreversible. Tous les produits et commandes seront supprimes. Continuer ?');">
+                          onsubmit="return confirm('ATTENTION: Cette action est irreversible. Tous les produits seront supprimes. Continuer ?');">
                         @csrf
                         @method('DELETE')
                         <button type="submit" 

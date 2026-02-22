@@ -11,15 +11,11 @@ class ShopController extends Controller
 {
     /**
      * Display a listing of the resource.
+     * Redirects to dashboard (kept for route compatibility).
      */
     public function index()
     {
-        $shops = auth()->user()->shops()
-            ->with('members')
-            ->withCount(['products', 'orders'])
-            ->get();
-
-        return view('shops.index', compact('shops'));
+        return redirect()->route('dashboard');
     }
 
     /**

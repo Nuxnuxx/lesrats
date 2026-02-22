@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShopController;
@@ -34,8 +33,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile/tokens/{token}', [ProfileController::class, 'revokeToken'])->name('profile.revoke-token');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Shop management routes
-    Route::get('/shops', [ShopController::class, 'index'])->name('shops.index');
+    // Shop management routes (shops.index redirects to dashboard)
+    Route::get('/shops', function () {
+        return redirect()->route('dashboard');
+    })->name('shops.index');
     Route::get('/shops/create', [ShopController::class, 'create'])->name('shops.create');
     Route::post('/shops', [ShopController::class, 'store'])->name('shops.store');
     Route::get('/shops/{shop}', [ShopController::class, 'edit'])->name('shops.edit');
@@ -70,12 +71,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');
     Route::delete('/products/{product}/remove-image', [ProductController::class, 'removeImage'])->name('products.remove-image');
     Route::get('/products/{product}/download-images', [ProductController::class, 'downloadImages'])->name('products.download-images');
-
-    // Order management routes
-    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
-    Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
-    Route::post('/orders/{order}/note', [OrderController::class, 'addNote'])->name('orders.add-note');
 });
 
 require __DIR__.'/auth.php';
