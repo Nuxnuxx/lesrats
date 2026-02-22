@@ -85,7 +85,7 @@
                             defaultPrompt: @js($product->shop->getEffectiveAiImagePrompt()),
                             specificPrompts: @js($product->shop->ai_specific_prompts ?? []),
                             csrfToken: '{{ csrf_token() }}',
-                            applyLogo: {{ $product->apply_logo ? 'true' : 'false' }},
+                            applyLogo: {{ $product->shop->logo_path ? 'true' : 'false' }},
                             defaultBackground: @js($product->shop->default_ai_background ? Storage::disk('public')->url($product->shop->default_ai_background) : '')
                          })">
                         <div class="flex items-center justify-between mb-3">
