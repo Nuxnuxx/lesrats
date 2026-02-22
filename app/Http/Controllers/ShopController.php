@@ -86,6 +86,7 @@ class ShopController extends Controller
             'ai_image_prompt' => 'nullable|string|max:5000',
             'ai_image_enabled' => 'boolean',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'shipping_fee' => 'nullable|numeric|min:0',
             'discount_percentage' => 'nullable|numeric|min:0|max:99',
         ]);
 

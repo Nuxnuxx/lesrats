@@ -76,8 +76,9 @@
                     @endif
                 </p>
                 @if($product->cost_price > 0)
-                    <p class="text-xs text-green-600">
-                        +{{ number_format($product->price - $product->cost_price, 2) }} profit
+                    @php $etsyProfit = $product->etsy_profit; @endphp
+                    <p class="text-xs {{ $etsyProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                        {{ ($etsyProfit >= 0 ? '+' : '') }}{{ number_format($etsyProfit, 2) }} profit
                     </p>
                 @endif
             </div>

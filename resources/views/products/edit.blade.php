@@ -330,25 +330,55 @@
                                 </div>
                             </div>
 
-                            {{-- Profit Display --}}
+                            {{-- Etsy Profit Estimator --}}
                             @php
-                                $initialProfit = round($product->price - ($product->cost_price ?? 0), 2);
+                                $k = \App\Models\Product::ETSY_FEE_RATE;
+                                $f = \App\Models\Product::ETSY_FIXED_FEE;
+                                $shippingFee = (float) ($product->shop->shipping_fee ?? 0);
+                                $initPrice = (float) $product->price;
+                                $initCost = (float) ($product->cost_price ?? 0);
+                                $initRevenue = ($initPrice + $shippingFee) * (1 - $k) - $f;
+                                $initFees = ($initPrice + $shippingFee) * $k + $f;
+                                $initProfit = round($initRevenue - $initCost, 2);
                             @endphp
                             <div class="mt-4 p-4 bg-gray-50 rounded-lg" x-data="{
-                                profit: {{ $initialProfit }},
+                                k: {{ $k }},
+                                f: {{ $f }},
+                                shipping: {{ $shippingFee }},
+                                profit: {{ $initProfit }},
+                                fees: {{ round($initFees, 2) }},
+                                revenue: {{ round($initRevenue, 2) }},
+                                recalc() {
+                                    let p = parseFloat(document.getElementById('price').value) || 0;
+                                    let c = parseFloat(document.getElementById('cost_price').value) || 0;
+                                    this.revenue = Math.round(((p + this.shipping) * (1 - this.k) - this.f) * 100) / 100;
+                                    this.fees = Math.round(((p + this.shipping) * this.k + this.f) * 100) / 100;
+                                    this.profit = Math.round((this.revenue - c) * 100) / 100;
+                                }
                             }" x-init="
-                                document.getElementById('price').addEventListener('input', () => {
-                                    profit = Math.round(((parseFloat(document.getElementById('price').value) || 0) - (parseFloat(document.getElementById('cost_price').value) || 0)) * 100) / 100;
-                                });
-                                document.getElementById('cost_price').addEventListener('input', () => {
-                                    profit = Math.round(((parseFloat(document.getElementById('price').value) || 0) - (parseFloat(document.getElementById('cost_price').value) || 0)) * 100) / 100;
-                                });
+                                document.getElementById('price').addEventListener('input', () => recalc());
+                                document.getElementById('cost_price').addEventListener('input', () => recalc());
                             ">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm text-gray-600">Profit par vente</span>
-                                    <span class="text-lg font-bold"
-                                          :class="profit >= 0 ? 'text-green-600' : 'text-red-600'"
-                                          x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-3">Rentabilite estimee par vente</h4>
+                                <div class="space-y-2">
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-500">Frais de livraison (client)</span>
+                                        <span class="text-gray-700">{{ number_format($shippingFee, 2) }} {{ $product->shop->currency }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-500">Frais Etsy ({{ round($k * 100, 1) }}% + {{ number_format($f, 2) }})</span>
+                                        <span class="text-red-600" x-text="'-' + fees.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-500">Revenu net Etsy</span>
+                                        <span class="text-gray-700" x-text="revenue.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                    </div>
+                                    <div class="border-t border-gray-200 pt-2 flex items-center justify-between">
+                                        <span class="text-sm font-medium text-gray-700">Profit par vente</span>
+                                        <span class="text-lg font-bold"
+                                              :class="profit >= 0 ? 'text-green-600' : 'text-red-600'"
+                                              x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -899,20 +929,11 @@
                     </div>
 
 
-                    {{-- Stats --}}
+                    {{-- Info --}}
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <h3 class="text-sm font-semibold text-gray-900 mb-4">Statistiques</h3>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4">Informations</h3>
 
                         <div class="space-y-3">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-500">Ventes totales</span>
-                                <span class="font-medium text-gray-900">{{ $product->total_sold ?? 0 }}</span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-500">Revenus</span>
-                                <span class="font-medium text-gray-900">{{ number_format($product->total_revenue ?? 0, 2) }} {{ $product->shop->currency }}</span>
-                            </div>
-
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-500">Cree le</span>
                                 <span class="font-medium text-gray-900">{{ $product->created_at->format('d/m/Y') }}</span>

@@ -85,26 +85,48 @@ class Product extends Model
     }
 
     /**
-     * Calculate profit margin.
+     * Etsy fee constants.
      */
-    public function getProfitMarginAttribute(): float
+    public const ETSY_FEE_RATE = 0.105;   // 10.5% commission
+
+    public const ETSY_FIXED_FEE = 0.47;    // Fixed fee per transaction
+
+    /**
+     * Calculate estimated Etsy profit per sale.
+     *
+     * Formula: ((P + shipping) * (1 - k)) - f - cost
+     */
+    public function getEtsyProfitAttribute(): float
     {
-        if (! $this->price || $this->price == 0) {
-            return 0;
-        }
+        $price = (float) ($this->price ?? 0);
+        $shipping = (float) ($this->shop->shipping_fee ?? 0);
+        $cost = (float) ($this->cost_price ?? 0);
 
-        $cost = $this->cost_price ?? 0;
-        $profit = $this->price - $cost;
+        $etsyRevenue = ($price + $shipping) * (1 - self::ETSY_FEE_RATE) - self::ETSY_FIXED_FEE;
 
-        return round(($profit / $this->price) * 100, 1);
+        return round($etsyRevenue - $cost, 2);
     }
 
     /**
-     * Calculate profit amount.
+     * Get the Etsy revenue (after fees, before cost).
      */
-    public function getProfitAmountAttribute(): float
+    public function getEtsyRevenueAttribute(): float
     {
-        return $this->price - ($this->cost_price ?? 0);
+        $price = (float) ($this->price ?? 0);
+        $shipping = (float) ($this->shop->shipping_fee ?? 0);
+
+        return round(($price + $shipping) * (1 - self::ETSY_FEE_RATE) - self::ETSY_FIXED_FEE, 2);
+    }
+
+    /**
+     * Get Etsy fees amount for this product.
+     */
+    public function getEtsyFeesAttribute(): float
+    {
+        $price = (float) ($this->price ?? 0);
+        $shipping = (float) ($this->shop->shipping_fee ?? 0);
+
+        return round(($price + $shipping) * self::ETSY_FEE_RATE + self::ETSY_FIXED_FEE, 2);
     }
 
     /**
@@ -183,24 +205,6 @@ class Product extends Model
         }
 
         return $maxCountry;
-    }
-
-    /**
-     * Get total sold count from order items.
-     */
-    public function getTotalSoldAttribute(): int
-    {
-        return $this->orderItems()->sum('quantity');
-    }
-
-    /**
-     * Get total revenue from this product.
-     */
-    public function getTotalRevenueAttribute(): float
-    {
-        return (float) $this->orderItems()
-            ->selectRaw('SUM(price * quantity) as total')
-            ->value('total') ?? 0;
     }
 
     // ============================================
