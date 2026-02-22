@@ -293,37 +293,19 @@
                                 @endif
                             </h3>
 
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="price" class="block text-sm font-medium text-gray-700">Prix de vente</label>
-                                    <div class="mt-1 relative">
-                                        <input type="number" name="price" id="price" step="0.01" min="0"
-                                               value="{{ old('price', number_format($product->price, 2, '.', '')) }}" required
-                                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
-                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                            <span class="text-gray-500 text-sm">{{ $product->shop->currency }}</span>
-                                        </div>
+                            <div>
+                                <label for="price" class="block text-sm font-medium text-gray-700">Prix de vente</label>
+                                <div class="mt-1 relative">
+                                    <input type="number" name="price" id="price" step="0.01" min="0"
+                                           value="{{ old('price', number_format($product->price, 2, '.', '')) }}" required
+                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-500 text-sm">{{ $product->shop->currency }}</span>
                                     </div>
-                                    @error('price')
-                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
                                 </div>
-
-                                <div>
-                                    <label for="cost_price" class="block text-sm font-medium text-gray-700">
-                                        Cout d'achat (AliExpress)
-                                    </label>
-                                    <div class="mt-1 relative">
-                                        <input type="number" id="cost_price" step="0.01" min="0"
-                                               value="{{ number_format($product->cost_price ?? 0, 2, '.', '') }}"
-                                               readonly
-                                               class="block w-full rounded-lg border-gray-300 bg-gray-100 text-gray-500 shadow-sm pr-12 cursor-not-allowed">
-                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                            <span class="text-gray-400 text-sm">{{ $product->shop->currency }}</span>
-                                        </div>
-                                    </div>
-                                    <p class="mt-1 text-xs text-gray-400">Prix d'achat importe automatiquement</p>
-                                </div>
+                                @error('price')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             {{-- Etsy Profit Estimator --}}
@@ -341,19 +323,17 @@
                                 k: {{ $k }},
                                 f: {{ $f }},
                                 shipping: {{ $shippingFee }},
+                                cost: {{ $initCost }},
                                 profit: {{ $initProfit }},
                                 fees: {{ round($initFees, 2) }},
-                                revenue: {{ round($initRevenue, 2) }},
                                 recalc() {
                                     let p = parseFloat(document.getElementById('price').value) || 0;
-                                    let c = parseFloat(document.getElementById('cost_price').value) || 0;
-                                    this.revenue = Math.round(((p + this.shipping) * (1 - this.k) - this.f) * 100) / 100;
                                     this.fees = Math.round(((p + this.shipping) * this.k + this.f) * 100) / 100;
-                                    this.profit = Math.round((this.revenue - c) * 100) / 100;
+                                    let revenue = Math.round(((p + this.shipping) * (1 - this.k) - this.f) * 100) / 100;
+                                    this.profit = Math.round((revenue - this.cost) * 100) / 100;
                                 }
                             }" x-init="
                                 document.getElementById('price').addEventListener('input', () => recalc());
-                                document.getElementById('cost_price').addEventListener('input', () => recalc());
                             ">
                                 <h4 class="text-sm font-semibold text-gray-700 mb-3">Rentabilite estimee par vente</h4>
                                 <div class="space-y-2">
