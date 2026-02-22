@@ -41,18 +41,30 @@ async function extractProductData(includeCountryPrices = false) {
   // Attendre que la page soit chargée
   await waitForPageLoad();
 
+  // Debug log accumulator
+  const _debug = [];
+
   // Essayer d'abord d'extraire depuis les données JSON de la page
-  let data = extractFromPageData();
+  let data = extractFromPageData(_debug);
 
   // Si pas de données JSON, fallback sur le DOM
   if (!data.title) {
     data.title = extractTitleFromDOM();
+    _debug.push({ step: 'title', status: data.title ? 'ok' : 'fail', source: 'dom', data: data.title || null });
+  } else {
+    _debug.push({ step: 'title', status: 'ok', source: 'json', data: data.title });
   }
   if (!data.price) {
     data.price = extractPriceFromDOM();
+    _debug.push({ step: 'price', status: data.price ? 'ok' : 'fail', source: 'dom', data: data.price || null });
+  } else {
+    _debug.push({ step: 'price', status: 'ok', source: 'json', data: data.price });
   }
   if (!data.images || data.images.length === 0) {
     data.images = extractImagesFromDOM();
+    _debug.push({ step: 'images', status: data.images.length > 0 ? 'ok' : 'fail', source: 'dom', data: `${data.images.length} found` });
+  } else {
+    _debug.push({ step: 'images', status: 'ok', source: 'json', data: `${data.images.length} found` });
   }
   if (!data.description) {
     data.description = extractDescriptionFromDOM();
@@ -60,10 +72,12 @@ async function extractProductData(includeCountryPrices = false) {
 
   // Fallback: extraire les tailles depuis le DOM si pas trouvées en JSON
   if (!data.variants || data.variants.length === 0) {
-    const domSizes = extractSizesFromDOM();
+    const domSizes = extractSizesFromDOM(_debug);
     if (domSizes.length > 0) {
       data.variants = [{ name: 'Size', values: domSizes }];
       console.log('🐀 AliExpress - Sizes extracted from DOM:', domSizes);
+    } else {
+      _debug.push({ step: 'sizes_dom', status: 'fail', source: 'dom', data: 'No sizes found in DOM' });
     }
   }
 
@@ -83,6 +97,9 @@ async function extractProductData(includeCountryPrices = false) {
     }
   }
 
+  // Attach debug info
+  data._debug = _debug;
+
   console.log('🐀 Données finales:', data);
   return data;
 }
@@ -98,7 +115,7 @@ function waitForPageLoad() {
 }
 
 // Extraire depuis les données JSON embarquées dans la page
-function extractFromPageData() {
+function extractFromPageData(_debug = []) {
   const data = {
     title: null,
     description: null,
@@ -183,10 +200,16 @@ function extractFromPageData() {
                   .filter(Boolean)
               }];
               console.log('🐀 AliExpress - Sizes extracted:', data.variants[0].values);
+              _debug.push({ step: 'sizes_json', status: 'ok', source: 'json (productSKUPropertyList)', data: data.variants[0].values });
+            } else {
+              _debug.push({ step: 'sizes_json', status: 'fail', source: 'json', data: 'No size property in skuPropertyList' });
             }
+          } else {
+            _debug.push({ step: 'sizes_json', status: 'fail', source: 'json', data: 'productSKUPropertyList not found' });
           }
         } catch (e) {
           console.log('🐀 AliExpress - SKU extraction failed:', e.message);
+          _debug.push({ step: 'sizes_json', status: 'fail', source: 'json', data: e.message });
         }
       }
     }
@@ -384,7 +407,7 @@ function extractDescriptionFromDOM() {
 }
 
 // Extraire les tailles depuis le DOM (fallback)
-function extractSizesFromDOM() {
+function extractSizesFromDOM(_debug = []) {
   const sizes = [];
 
   // Méthode 1: éléments SKU avec attribut title (structure sku-item--text--)
@@ -396,10 +419,11 @@ function extractSizesFromDOM() {
       const title = item.getAttribute('title');
       if (title) values.push(title.trim());
     }
-    // Vérifier si c'est bien une row de tailles (S, M, L, XL, etc.)
-    const sizePatterns = /^(XXS|XS|S|M|L|XL|XXL|XXXL|4XL|5XL|6XL|\d{2,3}(cm)?)$/i;
+    // Vérifier si c'est bien une row de tailles (S, M, L, XL, ring sizes, etc.)
+    const sizePatterns = /^(XXS|XS|S|M|L|XL|XXL|XXXL|4XL|5XL|6XL|\d{1,3}([.,]\d)?(cm)?)$/i;
     const looksLikeSizes = values.length > 0 && values.some(v => sizePatterns.test(v));
     if (looksLikeSizes) {
+      _debug.push({ step: 'sizes_dom', status: 'ok', source: 'dom (method: sku-item pattern match)', data: values });
       return values;
     }
   }
@@ -415,7 +439,10 @@ function extractSizesFromDOM() {
         const title = item.getAttribute('title') || item.textContent?.trim();
         if (title) sizes.push(title);
       }
-      if (sizes.length > 0) return sizes;
+      if (sizes.length > 0) {
+        _debug.push({ step: 'sizes_dom', status: 'ok', source: `dom (method: label match "${labelText.trim()}")`, data: sizes });
+        return sizes;
+      }
     }
   }
 

@@ -64,6 +64,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Event listeners - Settings
   document.getElementById('btn-settings').addEventListener('click', openSettings);
 
+  // Event listeners - Debug toggle
+  document.getElementById('btn-debug-toggle').addEventListener('click', toggleDebugPanel);
+
   // Event listeners - Import
   document.getElementById('btn-import').addEventListener('click', importProduct);
   document.getElementById('btn-retry').addEventListener('click', retryExtraction);
@@ -229,6 +232,7 @@ async function checkCurrentPage() {
     if (response && response.success) {
       currentProduct = response.data;
       displayProduct(currentProduct);
+      displayDebugInfo(currentProduct._debug);
       showState(states.READY);
     } else {
       showError(response?.error || 'Impossible d\'extraire les données du produit');
@@ -317,6 +321,7 @@ async function importProduct() {
   }
 
   showState(states.SENDING);
+  clearApiDebugSteps();
 
   try {
     const headers = {
@@ -333,9 +338,15 @@ async function importProduct() {
       ...currentProduct,
       shop_id: parseInt(shopId)
     };
+    // Don't send _debug to API
+    delete productData._debug;
 
     // Remove trailing slash from URL
     const baseUrl = apiUrl.replace(/\/+$/, '');
+
+    // Log what we're sending
+    const variantSummary = (productData.variants || []).map(v => `{name:"${v.name}", values: ${v.values.length}}`).join(', ');
+    addApiDebugStep('sent', `Sent: {title, price, images: ${(productData.images || []).length}, variants: [${variantSummary}]}`);
 
     const response = await fetch(`${baseUrl}/api/extension/import`, {
       method: 'POST',
@@ -347,12 +358,16 @@ async function importProduct() {
 
     if (response.ok && data.success) {
       importedProductUrl = data.product_url || `${apiUrl}/products/${data.product_id}/edit`;
+      addApiDebugStep('ok', `Response: product #${data.product_id} created`);
       showState(states.SUCCESS);
     } else {
-      showError(data.message || data.error || 'Erreur lors de l\'import');
+      const errMsg = data.message || data.error || 'Erreur lors de l\'import';
+      addApiDebugStep('fail', `Error: ${errMsg}`);
+      showError(errMsg);
     }
   } catch (error) {
     console.error('Erreur d\'import:', error);
+    addApiDebugStep('fail', `Network error: ${error.message}`);
     showError('Impossible de se connecter au serveur. Vérifiez l\'URL et que le serveur est démarré.');
   }
 }
@@ -398,6 +413,72 @@ function retryExtraction() {
 function showError(message) {
   document.getElementById('error-message').textContent = message;
   showState(states.ERROR);
+}
+
+// ============== DEBUG PANEL ==============
+
+// Toggle debug panel visibility
+function toggleDebugPanel() {
+  const panel = document.getElementById('import-debug-panel');
+  const btn = document.getElementById('btn-debug-toggle');
+  const isHidden = panel.classList.toggle('hidden');
+  btn.classList.toggle('active', !isHidden);
+}
+
+// Render extraction debug steps
+function displayDebugInfo(debugData) {
+  const container = document.getElementById('debug-extraction-steps');
+  if (!container || !debugData) return;
+
+  container.innerHTML = '';
+
+  const stepLabels = {
+    title: 'Title',
+    price: 'Price',
+    images: 'Images',
+    sizes_json: 'Sizes (JSON)',
+    sizes_dom: 'Sizes (DOM)'
+  };
+
+  for (const entry of debugData) {
+    const label = stepLabels[entry.step] || entry.step;
+    const icon = entry.status === 'ok' ? '\u2713' : '\u2717';
+    const dataStr = Array.isArray(entry.data) ? `[${entry.data.join(', ')}]` : String(entry.data ?? '');
+
+    const div = document.createElement('div');
+    div.className = `debug-step ${entry.status}`;
+    div.innerHTML = `<span class="debug-step-icon">${icon}</span>` +
+      `<span class="debug-step-text"><span class="debug-step-label">${label}:</span> ` +
+      `<span class="debug-step-data">${escapeHtml(dataStr)}</span>` +
+      ` <span class="debug-step-label">(${escapeHtml(entry.source)})</span></span>`;
+    container.appendChild(div);
+  }
+}
+
+// Add an API step to the debug panel
+function addApiDebugStep(status, text) {
+  const container = document.getElementById('debug-api-steps');
+  if (!container) return;
+
+  const icons = { sent: '\u2192', ok: '\u2713', fail: '\u2717' };
+  const div = document.createElement('div');
+  div.className = `debug-step ${status}`;
+  div.innerHTML = `<span class="debug-step-icon">${icons[status] || '-'}</span>` +
+    `<span class="debug-step-text"><span class="debug-step-data">${escapeHtml(text)}</span></span>`;
+  container.appendChild(div);
+}
+
+// Clear API debug steps
+function clearApiDebugSteps() {
+  const container = document.getElementById('debug-api-steps');
+  if (container) container.innerHTML = '';
+}
+
+// Simple HTML escape
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 // ============== ETSY FUNCTIONS ==============
