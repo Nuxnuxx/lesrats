@@ -529,13 +529,11 @@
                             <div class="relative mb-4 group">
                                 <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                                     @foreach($images as $index => $image)
-                                        <a x-show="currentImageIndex === {{ $index }}"
-                                           href="{{ $image }}" target="_blank"
-                                           title="Ouvrir l'image en taille reelle">
-                                            <img src="{{ $image }}"
-                                                 alt="{{ $product->title }}"
-                                                 class="w-full h-full object-cover cursor-pointer">
-                                        </a>
+                                        <img x-show="currentImageIndex === {{ $index }}"
+                                             src="{{ $image }}"
+                                             alt="{{ $product->title }}"
+                                             class="w-full h-full object-cover cursor-pointer"
+                                             @click="$dispatch('lightbox-open', '{{ $image }}'); document.body.classList.add('overflow-hidden')">
                                     @endforeach
                                 </div>
 
@@ -848,9 +846,8 @@
                             <div class="grid grid-cols-3 gap-2">
                                 <template x-for="(img, index) in images" :key="index">
                                     <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                        <a :href="img" target="_blank" title="Ouvrir l'image en taille reelle">
-                                            <img :src="img" class="w-full h-full object-cover cursor-pointer">
-                                        </a>
+                                        <img :src="img" class="w-full h-full object-cover cursor-pointer"
+                                             @click="$dispatch('lightbox-open', img); document.body.classList.add('overflow-hidden')">
                                         <button type="button"
                                                 @click="removeImage(index)"
                                                 class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1227,4 +1224,32 @@
 
     </script>
     @endpush
+
+    {{-- Image Lightbox Modal --}}
+    <div x-data="{ lightboxImage: null }"
+         x-cloak
+         @lightbox-open.window="lightboxImage = $event.detail"
+         @keydown.escape.window="lightboxImage = null; document.body.classList.remove('overflow-hidden')">
+        <div x-show="lightboxImage"
+             x-transition:enter="ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-[60] flex items-center justify-center p-4"
+             @click.self="lightboxImage = null; document.body.classList.remove('overflow-hidden')">
+            <div class="fixed inset-0 bg-black/80"></div>
+            <img :src="lightboxImage"
+                 class="relative z-10 max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                 @click.stop>
+            <button type="button"
+                    @click="lightboxImage = null; document.body.classList.remove('overflow-hidden')"
+                    class="absolute top-4 right-4 z-20 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
 </x-app-layout>
