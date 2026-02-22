@@ -71,30 +71,21 @@ class Product extends Model
     }
 
     // ============================================
+    // CONSTANTS
+    // ============================================
+
+    public const ETSY_FEE_RATE = 0.105;    // 10.5% Etsy commission
+
+    public const ETSY_FIXED_FEE = 0.47;     // Fixed fee per transaction
+
+    public const URSSAF_RATE = 0.123;        // 12.3% URSSAF micro-entrepreneur
+
+    // ============================================
     // ACCESSORS
     // ============================================
 
     /**
-     * Get the first image URL.
-     */
-    public function getFirstImageAttribute(): ?string
-    {
-        $images = $this->images ?? [];
-
-        return $images[0] ?? null;
-    }
-
-    /**
-     * Etsy fee constants.
-     */
-    public const ETSY_FEE_RATE = 0.105;   // 10.5% commission
-
-    public const ETSY_FIXED_FEE = 0.47;    // Fixed fee per transaction
-
-    /**
-     * Calculate estimated Etsy profit per sale.
-     *
-     * Formula: ((P + shipping) * (1 - k)) - f - cost
+     * Calculate estimated net profit per sale (after Etsy fees, cost, and URSSAF).
      */
     public function getEtsyProfitAttribute(): float
     {
@@ -103,19 +94,9 @@ class Product extends Model
         $cost = (float) ($this->cost_price ?? 0);
 
         $etsyRevenue = ($price + $shipping) * (1 - self::ETSY_FEE_RATE) - self::ETSY_FIXED_FEE;
+        $urssaf = $etsyRevenue * self::URSSAF_RATE;
 
-        return round($etsyRevenue - $cost, 2);
-    }
-
-    /**
-     * Get the Etsy revenue (after fees, before cost).
-     */
-    public function getEtsyRevenueAttribute(): float
-    {
-        $price = (float) ($this->price ?? 0);
-        $shipping = (float) ($this->shop->shipping_fee ?? 0);
-
-        return round(($price + $shipping) * (1 - self::ETSY_FEE_RATE) - self::ETSY_FIXED_FEE, 2);
+        return round($etsyRevenue - $cost - $urssaf, 2);
     }
 
     /**
@@ -127,6 +108,16 @@ class Product extends Model
         $shipping = (float) ($this->shop->shipping_fee ?? 0);
 
         return round(($price + $shipping) * self::ETSY_FEE_RATE + self::ETSY_FIXED_FEE, 2);
+    }
+
+    /**
+     * Get the first image URL.
+     */
+    public function getFirstImageAttribute(): ?string
+    {
+        $images = $this->images ?? [];
+
+        return $images[0] ?? null;
     }
 
     /**

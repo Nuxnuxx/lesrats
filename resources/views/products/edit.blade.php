@@ -312,25 +312,30 @@
                             @php
                                 $k = \App\Models\Product::ETSY_FEE_RATE;
                                 $f = \App\Models\Product::ETSY_FIXED_FEE;
+                                $u = \App\Models\Product::URSSAF_RATE;
                                 $shippingFee = (float) ($product->shop->shipping_fee ?? 0);
                                 $initPrice = (float) $product->price;
                                 $initCost = (float) ($product->cost_price ?? 0);
+                                $initEtsyFees = ($initPrice + $shippingFee) * $k + $f;
                                 $initRevenue = ($initPrice + $shippingFee) * (1 - $k) - $f;
-                                $initFees = ($initPrice + $shippingFee) * $k + $f;
-                                $initProfit = round($initRevenue - $initCost, 2);
+                                $initUrssaf = $initRevenue * $u;
+                                $initProfit = round($initRevenue - $initCost - $initUrssaf, 2);
                             @endphp
                             <div class="mt-4 p-4 bg-gray-50 rounded-lg" x-data="{
                                 k: {{ $k }},
                                 f: {{ $f }},
+                                u: {{ $u }},
                                 shipping: {{ $shippingFee }},
                                 cost: {{ $initCost }},
                                 profit: {{ $initProfit }},
-                                fees: {{ round($initFees, 2) }},
+                                etsyFees: {{ round($initEtsyFees, 2) }},
+                                urssaf: {{ round($initUrssaf, 2) }},
                                 recalc() {
                                     let p = parseFloat(document.getElementById('price').value) || 0;
-                                    this.fees = Math.round(((p + this.shipping) * this.k + this.f) * 100) / 100;
+                                    this.etsyFees = Math.round(((p + this.shipping) * this.k + this.f) * 100) / 100;
                                     let revenue = Math.round(((p + this.shipping) * (1 - this.k) - this.f) * 100) / 100;
-                                    this.profit = Math.round((revenue - this.cost) * 100) / 100;
+                                    this.urssaf = Math.round((revenue * this.u) * 100) / 100;
+                                    this.profit = Math.round((revenue - this.cost - this.urssaf) * 100) / 100;
                                 }
                             }" x-init="
                                 document.getElementById('price').addEventListener('input', () => recalc());
@@ -343,14 +348,18 @@
                                     </div>
                                     <div class="flex items-center justify-between text-sm">
                                         <span class="text-gray-500">Frais Etsy ({{ round($k * 100, 1) }}% + {{ number_format($f, 2) }})</span>
-                                        <span class="text-red-600" x-text="'-' + fees.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                        <span class="text-red-600" x-text="'-' + etsyFees.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
                                     </div>
                                     <div class="flex items-center justify-between text-sm">
                                         <span class="text-gray-500">Cout d'achat (AliExpress)</span>
                                         <span class="text-red-600">-{{ number_format($initCost, 2) }} {{ $product->shop->currency }}</span>
                                     </div>
+                                    <div class="flex items-center justify-between text-sm">
+                                        <span class="text-gray-500">URSSAF ({{ round($u * 100, 1) }}%)</span>
+                                        <span class="text-red-600" x-text="'-' + urssaf.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                    </div>
                                     <div class="border-t border-gray-200 pt-2 flex items-center justify-between">
-                                        <span class="text-sm font-medium text-gray-700">Profit par vente</span>
+                                        <span class="text-sm font-medium text-gray-700">Profit net par vente</span>
                                         <span class="text-lg font-bold"
                                               :class="profit >= 0 ? 'text-green-600' : 'text-red-600'"
                                               x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
