@@ -311,22 +311,18 @@
 
                                 <div>
                                     <label for="cost_price" class="block text-sm font-medium text-gray-700">
-                                        Cout d'achat
+                                        Cout d'achat (AliExpress)
                                     </label>
                                     <div class="mt-1 relative">
-                                        <input type="number" name="cost_price" id="cost_price" step="0.01" min="0"
-                                               value="{{ old('cost_price', number_format($product->cost_price ?? 0, 2, '.', '')) }}"
-                                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
+                                        <input type="number" id="cost_price" step="0.01" min="0"
+                                               value="{{ number_format($product->cost_price ?? 0, 2, '.', '') }}"
+                                               readonly
+                                               class="block w-full rounded-lg border-gray-300 bg-gray-100 text-gray-500 shadow-sm pr-12 cursor-not-allowed">
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                            <span class="text-gray-500 text-sm">{{ $product->shop->currency }}</span>
+                                            <span class="text-gray-400 text-sm">{{ $product->shop->currency }}</span>
                                         </div>
                                     </div>
-                                    @if($product->source_type === 'printables' || $product->is_digital)
-                                        <p class="mt-1 text-xs text-gray-500">Fichier digital = generalement 0</p>
-                                    @endif
-                                    @error('cost_price')
-                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                    @enderror
+                                    <p class="mt-1 text-xs text-gray-400">Prix d'achat importe automatiquement</p>
                                 </div>
                             </div>
 
