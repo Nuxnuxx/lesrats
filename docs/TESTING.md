@@ -1,11 +1,11 @@
 # Testing with Mock Data
 
-Pour tester l'application sans configurer les APIs externes (Etsy, OpenAI, Firecrawl), utilisez le mode mock.
+Pour tester l'application sans configurer les APIs externes (Groq, Firecrawl, fal.ai), utilisez les donnees de demo.
 
 ## Setup rapide
 
 ```bash
-cp .env.example .env && php artisan key:generate && sed -i 's/ETSY_MOCK_ENABLED=false/ETSY_MOCK_ENABLED=true/' .env && php artisan migrate:fresh && php artisan db:seed --class=DemoDataSeeder && php artisan serve
+cp .env.example .env && php artisan key:generate && php artisan migrate:fresh && php artisan db:seed --class=DemoDataSeeder && php artisan serve
 ```
 
 Puis ouvrir http://localhost:8000 avec `demo@lesrats.fr` / `password`
@@ -14,19 +14,7 @@ Puis ouvrir http://localhost:8000 avec `demo@lesrats.fr` / `password`
 
 ## Setup detaille
 
-### 1. Activer le mode mock Etsy
-
-Dans `.env`:
-```env
-ETSY_MOCK_ENABLED=true
-```
-
-Cela permet de:
-- Simuler la connexion OAuth Etsy sans vraies credentials
-- Tester le flow de connexion boutique
-- Importer des produits/commandes fictifs
-
-### 2. Charger les donnees de demo
+### 1. Charger les donnees de demo
 
 ```bash
 php artisan migrate:fresh
@@ -40,7 +28,7 @@ Cela cree:
 - ~69 commandes avec differents statuts
 - Donnees de profit/marge calculees
 
-### 3. Lancer les serveurs
+### 2. Lancer les serveurs
 
 ```bash
 # Terminal 1 - Backend
@@ -56,7 +44,6 @@ npm run dev
 
 | Fonctionnalite | Sans API | Comportement |
 |----------------|----------|--------------|
-| Connexion Etsy | `ETSY_MOCK_ENABLED=true` | Simule OAuth, cree faux tokens |
 | Import AliExpress | Aucune config | Retourne erreur, fallback manuel |
 | Import Printables | Aucune config | Retourne erreur, fallback manuel |
 | Optimisation IA | Sans `GROQ_API_KEY` | Utilise regles basiques (pas d'IA) |
@@ -74,7 +61,6 @@ npm run dev
 ### Boutiques (`/shops`)
 - Liste des boutiques
 - Detail avec stats et graphique revenus
-- Connexion Etsy (mockee)
 - Edition parametres
 
 ### Produits (`/products`)

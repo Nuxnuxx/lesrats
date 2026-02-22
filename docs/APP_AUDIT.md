@@ -23,15 +23,13 @@ graph TD
         subgraph Shops
             SHOP_LIST["/shops"]
             SHOP_CREATE["/shops/create"]
-            SHOP_SHOW["/shops/:id"]
-            SHOP_EDIT["/shops/:id/edit"]
+            SHOP_EDIT["/shops/:id  edit"]
         end
 
         subgraph Products
             PROD_LIST["/products"]
             PROD_CREATE["/products/create"]
-            PROD_SHOW["/products/:id"]
-            PROD_EDIT["/products/:id/edit"]
+            PROD_EDIT["/products/:id  edit"]
         end
 
         subgraph Orders
@@ -78,25 +76,17 @@ graph TD
     DASH -->|"product attention"| PROD_EDIT
 
     %% Shop flows
-    SHOP_LIST -->|"Create"| SHOP_CREATE
-    SHOP_LIST -->|"View"| SHOP_SHOW
-    SHOP_LIST -->|"Edit"| SHOP_EDIT
-    SHOP_CREATE -->|submit| SHOP_SHOW
+    SHOP_LIST -->|"Gerer"| SHOP_EDIT
+    SHOP_CREATE -->|submit| SHOP_EDIT
     SHOP_CREATE -->|cancel| SHOP_LIST
-    SHOP_SHOW -->|"Settings"| SHOP_EDIT
-    SHOP_SHOW -->|"New product"| PROD_CREATE
-    SHOP_SHOW -->|"product link"| PROD_EDIT
-    SHOP_SHOW -->|back| DASH
     SHOP_EDIT -->|submit| SHOP_EDIT
-    SHOP_EDIT -->|back| SHOP_SHOW
+    SHOP_EDIT -->|back| DASH
 
     %% Product flows
     PROD_LIST -->|"New"| PROD_CREATE
     PROD_LIST -->|"card click"| PROD_EDIT
-    PROD_CREATE -->|submit| PROD_SHOW
+    PROD_CREATE -->|submit| PROD_EDIT
     PROD_CREATE -->|back| PROD_LIST
-    PROD_SHOW -->|"Edit"| PROD_EDIT
-    PROD_SHOW -->|back| PROD_LIST
     PROD_EDIT -->|submit| PROD_EDIT
     PROD_EDIT -->|back| PROD_LIST
     PROD_EDIT -->|"shop backgrounds"| SHOP_EDIT
@@ -106,8 +96,8 @@ graph TD
     ORDER_SHOW -->|back| ORDER_LIST
 
     %% Extension API
-    API_IMPORT -.->|creates| PROD_SHOW
-    API_ETSY -.->|reads| PROD_SHOW
+    API_IMPORT -.->|creates| PROD_EDIT
+    API_ETSY -.->|reads| PROD_EDIT
 ```
 
 ---
@@ -145,19 +135,7 @@ graph TD
 | Logo upload | OK | |
 | Form validation | OK | |
 
-### `/shops/:id` - Shop Detail
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Shop info (name, description, logo) | OK | |
-| Stats cards (products, orders, revenue, profit) | OK | |
-| Revenue chart (30 days) | OK | |
-| Recent products list | OK | |
-| Orders by status breakdown | OK | |
-| Quick actions (new product, settings) | OK | |
-| Best selling product | OK | |
-
-### `/shops/:id/edit` - Shop Settings
+### `/shops/:id` - Shop Settings
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -205,18 +183,7 @@ graph TD
 | Country-specific pricing from extension | OK | Via API import |
 | Error handling (CAPTCHA, invalid URL) | OK | |
 
-### `/products/:id` - Product Detail
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Product info display | OK | |
-| Source images gallery | OK | |
-| AI-generated images gallery | OK | |
-| Source URL link | OK | External |
-| Edit button | OK | |
-| Stats (sold, revenue, profit) | OK | |
-
-### `/products/:id/edit` - Product Edit
+### `/products/:id` - Product Edit
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -320,20 +287,16 @@ graph LR
     end
 
     subgraph ShopFlow["Shop Flow"]
-        S1[Shop List] -->|Create| S2[Shop Create]
-        S1 -->|View| S3[Shop Detail]
-        S1 -->|Edit| S4[Shop Edit]
-        S2 -->|submit| S3
-        S3 -->|Settings| S4
-        S4 -->|back| S3
-        S3 -->|back| DASH2[Dashboard]
+        S1[Shop List] -->|Gerer| S4[Shop Edit]
+        S1 -->|Create| S2[Shop Create]
+        S2 -->|submit| S4
+        S4 -->|back| DASH2[Dashboard]
     end
 
     subgraph ProductFlow["Product Flow"]
         P1[Product List] -->|New| P2[Product Create]
         P1 -->|Click card| P4[Product Edit]
-        P2 -->|submit| P3[Product Show]
-        P3 -->|Edit| P4
+        P2 -->|submit| P4
         P4 -->|back| P1
         P4 -->|backgrounds| S4
     end
@@ -346,7 +309,7 @@ graph LR
     subgraph ExtFlow["Extension Flow"]
         EXT_ALI[AliExpress Page] -->|Import| API[API /import]
         EXT_PRI[Printables Page] -->|Import| API
-        API -->|creates| P3
+        API -->|creates| P4
         EXT_ETSY[Etsy Editor] -->|reads| API2[API /etsy-data]
     end
 ```
@@ -368,36 +331,35 @@ graph LR
 | # | Issue | Location | Impact |
 |---|-------|----------|--------|
 | **D4** | **Dead code: ShopMembership roles** | `ShopMembership`, `ShopPolicy` | `owner`/`admin` roles exist but there's no UI to invite users, manage members, or assign roles. The policy checks run but serve a single user. Either implement multi-user or simplify to single-owner. |
-| **D5** | **Dead code: Etsy OAuth config** | `.env` (`ETSY_CLIENT_ID`, `ETSY_CLIENT_SECRET`) | Config exists but no OAuth routes, no callback handler, no Etsy API service. Either implement or remove to avoid confusion. |
-| **D6** | **No error monitoring** | Missing | No Sentry, Bugsnag, or similar. A SaaS needs production error tracking. |
-| **D7** | **SQLite in production** | `database.sqlite` | Fine for development. Will not scale for a multi-user SaaS. Need PostgreSQL or MySQL migration plan. |
-| **D8** | **No rate limiting on scraping endpoints** | `ProductController` | `analyze-aliexpress` and `analyze-printables` call external APIs (Firecrawl) with no rate limiting. A user could exhaust your API quota. |
-| **D9** | **No queue for AI operations** | `ProductController` | AI image generation and content optimization run synchronously in HTTP requests. With Fal.ai + upscaling, this can take 30+ seconds. Should be queued jobs. |
-| **D10** | **API tokens shown only once** | `ProfileController@createToken` | Sanctum plain-text token flashed to session. If user misses it, they must create a new one. Standard practice but worth noting. |
+| **D5** | **No error monitoring** | Missing | No Sentry, Bugsnag, or similar. A SaaS needs production error tracking. |
+| **D6** | **SQLite in production** | `database.sqlite` | Fine for development. Will not scale for a multi-user SaaS. Need PostgreSQL or MySQL migration plan. |
+| **D7** | **No rate limiting on scraping endpoints** | `ProductController` | `analyze-aliexpress` and `analyze-printables` call external APIs (Firecrawl) with no rate limiting. A user could exhaust your API quota. |
+| **D8** | **No queue for AI operations** | `ProductController` | AI image generation and content optimization run synchronously in HTTP requests. With Fal.ai + upscaling, this can take 30+ seconds. Should be queued jobs. |
+| **D9** | **API tokens shown only once** | `ProfileController@createToken` | Sanctum plain-text token flashed to session. If user misses it, they must create a new one. Standard practice but worth noting. |
 
 ### MEDIUM (should fix)
 
 | # | Issue | Location | Impact |
 |---|-------|----------|--------|
-| **D11** | **No pagination on shop detail products** | `shops/show.blade.php` | Shows "recent products" but no pagination for shops with many products. |
-| **D12** | **Hardcoded pricing formula** | `AliExpressScraperService` | 3x markup with psychological pricing is hardcoded. Should be configurable per shop (partially addressed by margins, but initial import price is fixed). |
-| **D13** | **No image cleanup** | Product deletion | When products are deleted, generated images in `public/products/` are not cleaned up. Storage will grow indefinitely. |
-| **D14** | **Country prices are read-only after import** | `products/edit.blade.php` | Country-specific prices set during extension import cannot be edited in the web UI. |
-| **D15** | **No test coverage for business logic** | `tests/` | Only Breeze auth tests + 1 shop isolation test. No tests for scrapers, AI services, order workflow, product CRUD. |
-| **D16** | **Mixed language UI** | Various views | Mix of French ("Boutiques", "Produits", "Commandes") and English. For a SaaS, need to pick one or implement i18n. |
-| **D17** | **No CSRF on API routes** | `api.php` | API routes use Sanctum tokens (correct), but CORS config should be reviewed for production. |
-| **D18** | **`storage.serve` route serves any file** | `web.php` | Custom storage serving route may bypass access controls. Should scope to specific directories. |
-| **D19** | **No email sending in practice** | Config exists | Postmark/Resend configured but no transactional emails beyond auth (no order confirmations, no alerts). |
+| **D10** | **No pagination on shop detail products** | N/A (shop show page removed) | Previously showed "recent products" without pagination. Consider adding product summary to shop edit page. |
+| **D11** | **Hardcoded pricing formula** | `AliExpressScraperService` | 3x markup with psychological pricing is hardcoded. Should be configurable per shop (partially addressed by margins, but initial import price is fixed). |
+| **D12** | **No image cleanup** | Product deletion | When products are deleted, generated images in `public/products/` are not cleaned up. Storage will grow indefinitely. |
+| **D13** | **Country prices are read-only after import** | `products/edit.blade.php` | Country-specific prices set during extension import cannot be edited in the web UI. |
+| **D14** | **No test coverage for business logic** | `tests/` | Only Breeze auth tests + 1 shop isolation test. No tests for scrapers, AI services, order workflow, product CRUD. |
+| **D15** | **Mixed language UI** | Various views | Mix of French ("Boutiques", "Produits", "Commandes") and English. For a SaaS, need to pick one or implement i18n. |
+| **D16** | **No CSRF on API routes** | `api.php` | API routes use Sanctum tokens (correct), but CORS config should be reviewed for production. |
+| **D17** | **`storage.serve` route serves any file** | `web.php` | Custom storage serving route may bypass access controls. Should scope to specific directories. |
+| **D18** | **No email sending in practice** | Config exists | Postmark/Resend configured but no transactional emails beyond auth (no order confirmations, no alerts). |
 
 ### LOW (nice to fix)
 
 | # | Issue | Location | Impact |
 |---|-------|----------|--------|
-| **D20** | **No loading states for AI operations** | `products/edit.blade.php` | AI generation buttons don't show loading spinners during the (long) AJAX calls. |
-| **D21** | **No undo for bulk delete** | `products/index.blade.php` | Bulk delete is immediate with only a confirm modal. No soft delete or undo. |
-| **D22** | **Console Commands directory empty** | `app/Console/Commands/` | No artisan commands for maintenance tasks (cleanup images, recalculate stats, etc.) |
-| **D23** | **No product duplication** | `ProductController` | No way to duplicate a product (common need when creating variants). |
-| **D24** | **No export functionality** | Missing | No CSV/Excel export for products or orders. Essential for accounting/reporting. |
+| **D19** | **No loading states for AI operations** | `products/edit.blade.php` | AI generation buttons don't show loading spinners during the (long) AJAX calls. |
+| **D20** | **No undo for bulk delete** | `products/index.blade.php` | Bulk delete is immediate with only a confirm modal. No soft delete or undo. |
+| **D21** | **Console Commands directory empty** | `app/Console/Commands/` | No artisan commands for maintenance tasks (cleanup images, recalculate stats, etc.) |
+| **D22** | **No product duplication** | `ProductController` | No way to duplicate a product (common need when creating variants). |
+| **D23** | **No export functionality** | Missing | No CSV/Excel export for products or orders. Essential for accounting/reporting. |
 
 ---
 
@@ -489,7 +451,7 @@ Based on the audit, here's what's missing for a viable SaaS:
 | # | Feature | Why |
 |---|---------|-----|
 | **C1** | Multi-user collaboration | Grow into team plans |
-| **C2** | Direct Etsy API integration | Remove extension dependency |
+| **C2** | Direct Etsy API integration | Remove extension dependency (if needed) |
 | **C3** | Product duplication | Power user feature |
 | **C4** | Analytics dashboard (per product ROI) | Value-add for sellers |
 | **C5** | Automated image cleanup | Prevent storage bloat |

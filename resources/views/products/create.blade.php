@@ -526,13 +526,9 @@
 
                             {{-- Profit Calculator --}}
                             <div class="p-4 bg-gray-50 rounded-lg mb-6">
-                                <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center justify-between">
                                     <span class="text-sm text-gray-600">Profit par vente</span>
                                     <span class="text-lg font-bold" :class="profit >= 0 ? 'text-green-600' : 'text-red-600'" x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $shop->currency }}'"></span>
-                                </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-sm text-gray-600">Marge</span>
-                                    <span class="text-sm font-medium" :class="margin >= 30 ? 'text-green-600' : (margin >= 15 ? 'text-yellow-600' : 'text-red-600')" x-text="margin.toFixed(1) + '%'"></span>
                                 </div>
                             </div>
 
@@ -691,12 +687,6 @@
                 
                 get profit() {
                     return (parseFloat(this.sellingPrice) || 0) - (parseFloat(this.costPrice) || 0);
-                },
-                
-                get margin() {
-                    const price = parseFloat(this.sellingPrice) || 0;
-                    if (price <= 0) return 0;
-                    return (this.profit / price) * 100;
                 },
                 
                 nextStep() {

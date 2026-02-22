@@ -1,6 +1,6 @@
 @props(['shop'])
 
-<a href="{{ route('shops.show', $shop) }}" 
+<a href="{{ route('shops.edit', $shop) }}" 
    class="block bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md hover:border-orange-200 transition-all duration-200">
     <div class="p-5">
         {{-- Header with shop name and status --}}

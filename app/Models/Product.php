@@ -20,8 +20,7 @@ class Product extends Model
         'country_prices',
         'price_us',
         'price_other',
-        'margin_us',
-        'margin_other',
+
         'is_digital',
         'quantity',
         'low_stock_threshold',
@@ -41,8 +40,7 @@ class Product extends Model
         'country_prices' => 'array',
         'price_us' => 'decimal:2',
         'price_other' => 'decimal:2',
-        'margin_us' => 'decimal:2',
-        'margin_other' => 'decimal:2',
+
         'quantity' => 'integer',
         'images' => 'array',
         'real_images' => 'array',
@@ -145,30 +143,6 @@ class Product extends Model
     }
 
     /**
-     * Get effective margin for US (product override or shop default).
-     */
-    public function getEffectiveMarginUs(): float
-    {
-        if ($this->margin_us !== null) {
-            return (float) $this->margin_us;
-        }
-
-        return (float) ($this->shop->default_margin_us ?? 2.5);
-    }
-
-    /**
-     * Get effective margin for "Autres pays" (product override or shop default).
-     */
-    public function getEffectiveMarginOther(): float
-    {
-        if ($this->margin_other !== null) {
-            return (float) $this->margin_other;
-        }
-
-        return (float) ($this->shop->default_margin_other ?? 2.5);
-    }
-
-    /**
      * Get the US total cost from country_prices.
      */
     public function getUsTotalCost(): ?float
@@ -220,20 +194,6 @@ class Product extends Model
         }
 
         return $maxCountry;
-    }
-
-    /**
-     * Calculate suggested selling prices based on margins.
-     */
-    public function calculateSuggestedPrices(): array
-    {
-        $usCost = $this->getUsTotalCost();
-        $otherCost = $this->getHighestOtherCountryTotal();
-
-        return [
-            'price_us' => $usCost !== null ? round($usCost * $this->getEffectiveMarginUs(), 2) : null,
-            'price_other' => $otherCost !== null ? round($otherCost * $this->getEffectiveMarginOther(), 2) : null,
-        ];
     }
 
     /**

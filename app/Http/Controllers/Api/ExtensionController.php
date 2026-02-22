@@ -128,19 +128,15 @@ class ExtensionController extends Controller
                     'selling_price' => $sellingPrice,
                 ]);
             } else {
-                // Logique existante pour AliExpress (marge de 2.5x par défaut)
+                // Logique existante pour AliExpress (marge de 2.5x)
                 $costPrice = $validated['price'] ?? 0;
                 $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
 
                 // Process country-specific pricing if available
                 if ($countryPrices && ! empty($countryPrices)) {
-                    // Get shop's default margins
-                    $marginUs = (float) ($shop->default_margin_us ?? 2.5);
-                    $marginOther = (float) ($shop->default_margin_other ?? 2.5);
-
-                    // Calculate US price
+                    // Calculate US price (2.5x multiplier)
                     if (isset($countryPrices['US']['total'])) {
-                        $priceUs = round((float) $countryPrices['US']['total'] * $marginUs, 2);
+                        $priceUs = round((float) $countryPrices['US']['total'] * 2.5, 2);
                     }
 
                     // Calculate "Autres pays" price (highest of DE, AT, FR, CA, ES)
@@ -155,13 +151,11 @@ class ExtensionController extends Controller
                         }
                     }
                     if ($maxOtherTotal !== null) {
-                        $priceOther = round($maxOtherTotal * $marginOther, 2);
+                        $priceOther = round($maxOtherTotal * 2.5, 2);
                     }
 
                     Log::info('Country prices processed', [
                         'country_prices' => $countryPrices,
-                        'margin_us' => $marginUs,
-                        'margin_other' => $marginOther,
                         'price_us' => $priceUs,
                         'price_other' => $priceOther,
                     ]);

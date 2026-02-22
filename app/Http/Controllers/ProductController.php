@@ -107,18 +107,8 @@ class ProductController extends Controller
 
         $product = Product::create($validated);
 
-        return redirect()->route('products.show', $product)
+        return redirect()->route('products.edit', $product)
             ->with('success', 'Produit cree avec succes !');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Product $product)
-    {
-        Gate::authorize('view', $product->shop);
-
-        return view('products.show', compact('product'));
     }
 
     /**
@@ -150,8 +140,7 @@ class ProductController extends Controller
             'cost_price' => 'nullable|numeric|min:0',
             'price_us' => 'nullable|numeric|min:0',
             'price_other' => 'nullable|numeric|min:0',
-            'margin_us' => 'nullable|numeric|min:1|max:10',
-            'margin_other' => 'nullable|numeric|min:1|max:10',
+
             'quantity' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'source_url' => 'nullable|url',
@@ -561,6 +550,15 @@ class ProductController extends Controller
             $realImages = $product->real_images ?? [];
             $realImages[] = $transformedPath;
             $product->update(['real_images' => $realImages]);
+
+            // Remember last used background on the shop
+            $shop = $product->shop;
+            if ($backgroundUrl) {
+                $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
+                $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
+            } else {
+                $shop->update(['default_ai_background' => null]);
+            }
 
             return response()->json([
                 'success' => true,

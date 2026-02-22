@@ -228,60 +228,27 @@
                             <div class="mt-6 pt-4 border-t border-gray-200">
                                 <h4 class="text-sm font-semibold text-gray-900 mb-3">Prix de vente Etsy</h4>
 
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-data="{
-                                    marginUs: {{ $product->margin_us ?? $product->shop->default_margin_us ?? 2.5 }},
-                                    marginOther: {{ $product->margin_other ?? $product->shop->default_margin_other ?? 2.5 }},
-                                    usCost: {{ $product->getUsTotalCost() ?? 0 }},
-                                    otherCost: {{ $product->getHighestOtherCountryTotal() ?? 0 }},
-                                    priceUs: {{ $product->price_us ?? 0 }},
-                                    priceOther: {{ $product->price_other ?? 0 }},
-
-                                    recalculateUs() {
-                                        this.priceUs = Math.round(this.usCost * this.marginUs * 100) / 100;
-                                        document.getElementById('price_us').value = this.priceUs.toFixed(2);
-                                    },
-                                    recalculateOther() {
-                                        this.priceOther = Math.round(this.otherCost * this.marginOther * 100) / 100;
-                                        document.getElementById('price_other').value = this.priceOther.toFixed(2);
-                                    }
-                                }">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {{-- US Price --}}
                                     <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-sm font-medium text-blue-800">🇺🇸 Etats-Unis</span>
                                             <span class="text-xs text-blue-600">Cout: {{ number_format($product->getUsTotalCost() ?? 0, 2) }} EUR</span>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <div class="flex-1">
-                                                <label class="block text-xs text-gray-600 mb-1">Prix de vente</label>
-                                                <div class="relative">
-                                                    <input type="number" name="price_us" id="price_us" step="0.01" min="0"
-                                                           x-model.number="priceUs"
-                                                           value="{{ old('price_us', number_format($product->price_us ?? 0, 2, '.', '')) }}"
-                                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-12 text-sm">
-                                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                                        <span class="text-gray-500 text-xs">{{ $product->shop->currency }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="w-20">
-                                                <label class="block text-xs text-gray-600 mb-1">Marge</label>
-                                                <div class="relative">
-                                                    <input type="number" name="margin_us" id="margin_us" step="0.1" min="1" max="10"
-                                                           x-model.number="marginUs"
-                                                           @input="recalculateUs()"
-                                                           value="{{ old('margin_us', $product->margin_us ?? '') }}"
-                                                           placeholder="{{ $product->shop->default_margin_us ?? 2.5 }}"
-                                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-6 text-sm">
-                                                    <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                                                        <span class="text-gray-500 text-xs">x</span>
-                                                    </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">Prix de vente</label>
+                                            <div class="relative">
+                                                <input type="number" name="price_us" id="price_us" step="0.01" min="0"
+                                                       value="{{ old('price_us', number_format($product->price_us ?? 0, 2, '.', '')) }}"
+                                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 pr-12 text-sm">
+                                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <span class="text-gray-500 text-xs">{{ $product->shop->currency }}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="mt-2 flex justify-between text-xs">
-                                            <span class="text-gray-500">Profit: <span class="font-medium" :class="priceUs - usCost >= 0 ? 'text-green-600' : 'text-red-600'" x-text="(priceUs - usCost).toFixed(2) + ' EUR'"></span></span>
-                                            <button type="button" @click="recalculateUs()" class="text-blue-600 hover:text-blue-800">Recalculer</button>
+                                        @php $usCost = $product->getUsTotalCost() ?? 0; @endphp
+                                        <div class="mt-2 text-xs">
+                                            <span class="text-gray-500">Profit: <span class="font-medium {{ ($product->price_us ?? 0) - $usCost >= 0 ? 'text-green-600' : 'text-red-600' }}">{{ number_format(($product->price_us ?? 0) - $usCost, 2) }} EUR</span></span>
                                         </div>
                                     </div>
 
@@ -291,44 +258,26 @@
                                             <span class="text-sm font-medium text-orange-800">🌍 Autres pays</span>
                                             <span class="text-xs text-orange-600">Cout max: {{ number_format($product->getHighestOtherCountryTotal() ?? 0, 2) }} EUR</span>
                                         </div>
-                                        <div class="flex items-center gap-2">
-                                            <div class="flex-1">
-                                                <label class="block text-xs text-gray-600 mb-1">Prix de vente</label>
-                                                <div class="relative">
-                                                    <input type="number" name="price_other" id="price_other" step="0.01" min="0"
-                                                           x-model.number="priceOther"
-                                                           value="{{ old('price_other', number_format($product->price_other ?? 0, 2, '.', '')) }}"
-                                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12 text-sm">
-                                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                                        <span class="text-gray-500 text-xs">{{ $product->shop->currency }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="w-20">
-                                                <label class="block text-xs text-gray-600 mb-1">Marge</label>
-                                                <div class="relative">
-                                                    <input type="number" name="margin_other" id="margin_other" step="0.1" min="1" max="10"
-                                                           x-model.number="marginOther"
-                                                           @input="recalculateOther()"
-                                                           value="{{ old('margin_other', $product->margin_other ?? '') }}"
-                                                           placeholder="{{ $product->shop->default_margin_other ?? 2.5 }}"
-                                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-6 text-sm">
-                                                    <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
-                                                        <span class="text-gray-500 text-xs">x</span>
-                                                    </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">Prix de vente</label>
+                                            <div class="relative">
+                                                <input type="number" name="price_other" id="price_other" step="0.01" min="0"
+                                                       value="{{ old('price_other', number_format($product->price_other ?? 0, 2, '.', '')) }}"
+                                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12 text-sm">
+                                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <span class="text-gray-500 text-xs">{{ $product->shop->currency }}</span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div class="mt-2 flex justify-between text-xs">
-                                            <span class="text-gray-500">Profit: <span class="font-medium" :class="priceOther - otherCost >= 0 ? 'text-green-600' : 'text-red-600'" x-text="(priceOther - otherCost).toFixed(2) + ' EUR'"></span></span>
-                                            <button type="button" @click="recalculateOther()" class="text-orange-600 hover:text-orange-800">Recalculer</button>
+                                        @php $otherCost = $product->getHighestOtherCountryTotal() ?? 0; @endphp
+                                        <div class="mt-2 text-xs">
+                                            <span class="text-gray-500">Profit: <span class="font-medium {{ ($product->price_other ?? 0) - $otherCost >= 0 ? 'text-green-600' : 'text-red-600' }}">{{ number_format(($product->price_other ?? 0) - $otherCost, 2) }} EUR</span></span>
                                         </div>
                                     </div>
                                 </div>
 
                                 <p class="mt-3 text-xs text-gray-500">
                                     <strong>Note:</strong> "Autres pays" utilise le cout le plus eleve parmi DE, AT, FR, CA, ES pour garantir la marge.
-                                    Laissez la marge vide pour utiliser la valeur par defaut de la boutique.
                                 </p>
                             </div>
                         </div>
@@ -381,84 +330,25 @@
                                 </div>
                             </div>
 
-                            {{-- Margin Input --}}
+                            {{-- Profit Display --}}
                             @php
                                 $initialProfit = round($product->price - ($product->cost_price ?? 0), 2);
-                                $initialMargin = $product->price > 0 ? round((($product->price - ($product->cost_price ?? 0)) / $product->price) * 100, 1) : 0;
                             @endphp
-                            <div class="mt-4" x-data="{
-                                price: {{ round($product->price, 2) }},
-                                cost: {{ round($product->cost_price ?? 0, 2) }},
-                                margin: {{ $initialMargin }},
+                            <div class="mt-4 p-4 bg-gray-50 rounded-lg" x-data="{
                                 profit: {{ $initialProfit }},
-
-                                updateFromPrice() {
-                                    this.profit = Math.round((this.price - this.cost) * 100) / 100;
-                                    this.margin = this.price > 0 ? Math.round(((this.price - this.cost) / this.price) * 1000) / 10 : 0;
-                                },
-
-                                updateFromMargin() {
-                                    if (this.margin < 100) {
-                                        this.price = (this.cost * 100) / (100 - this.margin);
-                                        this.price = Math.round(this.price * 100) / 100;
-                                        this.profit = this.price - this.cost;
-                                        document.getElementById('price').value = this.price.toFixed(2);
-                                    }
-                                },
-
-                                setMargin(val) {
-                                    this.margin = val;
-                                    this.updateFromMargin();
-                                }
                             }" x-init="
-                                document.getElementById('price').addEventListener('input', (e) => { price = parseFloat(e.target.value) || 0; updateFromPrice(); });
-                                document.getElementById('cost_price').addEventListener('input', (e) => { cost = parseFloat(e.target.value) || 0; updateFromPrice(); });
+                                document.getElementById('price').addEventListener('input', () => {
+                                    profit = Math.round(((parseFloat(document.getElementById('price').value) || 0) - (parseFloat(document.getElementById('cost_price').value) || 0)) * 100) / 100;
+                                });
+                                document.getElementById('cost_price').addEventListener('input', () => {
+                                    profit = Math.round(((parseFloat(document.getElementById('price').value) || 0) - (parseFloat(document.getElementById('cost_price').value) || 0)) * 100) / 100;
+                                });
                             ">
-                                <label for="margin_input" class="block text-sm font-medium text-gray-700">Marge souhaitee (%)</label>
-                                <div class="mt-1 flex items-center gap-3">
-                                    <div class="relative flex-1">
-                                        <input type="number" id="margin_input" step="1" min="0" max="100"
-                                               x-model.number="margin"
-                                               @input="updateFromMargin()"
-                                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-8">
-                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                            <span class="text-gray-500 text-sm">%</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex gap-1">
-                                        <button type="button" @click="setMargin(20)"
-                                                class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
-                                                :class="Math.round(margin) === 20 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
-                                            20%
-                                        </button>
-                                        <button type="button" @click="setMargin(30)"
-                                                class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
-                                                :class="Math.round(margin) === 30 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
-                                            30%
-                                        </button>
-                                        <button type="button" @click="setMargin(50)"
-                                                class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
-                                                :class="Math.round(margin) === 50 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
-                                            50%
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {{-- Profit Calculator --}}
-                                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-gray-600">Profit par vente</span>
-                                        <span class="text-lg font-bold"
-                                              :class="profit >= 0 ? 'text-green-600' : 'text-red-600'"
-                                              x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
-                                    </div>
-                                    <div class="flex items-center justify-between mt-1">
-                                        <span class="text-sm text-gray-600">Marge effective</span>
-                                        <span class="text-sm font-medium"
-                                              :class="margin >= 30 ? 'text-green-600' : (margin >= 15 ? 'text-yellow-600' : 'text-red-600')"
-                                              x-text="margin.toFixed(1) + '%'"></span>
-                                    </div>
-                                    <p x-show="margin < 15" class="mt-2 text-xs text-red-600">Attention: marge faible</p>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm text-gray-600">Profit par vente</span>
+                                    <span class="text-lg font-bold"
+                                          :class="profit >= 0 ? 'text-green-600' : 'text-red-600'"
+                                          x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
                                 </div>
                             </div>
                         </div>
@@ -626,7 +516,8 @@
                             defaultPrompt: {{ json_encode($product->shop->getEffectiveAiImagePrompt()) }},
                             specificPrompts: {{ json_encode($product->shop->ai_specific_prompts ?? []) }},
                             csrfToken: '{{ csrf_token() }}',
-                            applyLogo: {{ $product->shop->logo_path ? 'true' : 'false' }}
+                            applyLogo: {{ $product->apply_logo ? 'true' : 'false' }},
+                            defaultBackground: '{{ $product->shop->default_ai_background ? Storage::disk("public")->url($product->shop->default_ai_background) : '' }}'
                          })">
                         <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
 
@@ -641,7 +532,8 @@
                                         <img x-show="currentImageIndex === {{ $index }}"
                                              src="{{ $image }}"
                                              alt="{{ $product->title }}"
-                                             class="w-full h-full object-cover">
+                                             class="w-full h-full object-cover cursor-pointer"
+                                             @click="$dispatch('lightbox-open', { images: {{ json_encode($images) }}, index: {{ $index }} })">
                                     @endforeach
                                 </div>
 
@@ -967,7 +859,8 @@
                             <div class="grid grid-cols-3 gap-2">
                                 <template x-for="(img, index) in images" :key="index">
                                     <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                        <img :src="img" class="w-full h-full object-cover">
+                                        <img :src="img" class="w-full h-full object-cover cursor-pointer"
+                                             @click="$dispatch('lightbox-open', { images: images, index: index })">
                                         <button type="button"
                                                 @click="removeImage(index)"
                                                 class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1095,6 +988,7 @@
                 specificPrompts: config.specificPrompts || [],
                 csrfToken: config.csrfToken,
                 applyLogo: config.applyLogo ?? false,
+                defaultBackground: config.defaultBackground || '',
 
                 // State
                 showModal: false,
@@ -1103,7 +997,7 @@
                 selectedImageIndex: 0,
                 prompt: config.defaultPrompt || '',
                 selectedSpecificPromptIndex: '',
-                selectedBackground: '',
+                selectedBackground: config.defaultBackground || '',
                 isGenerating: false,
                 generatedImage: null,
                 errorMessage: null,
@@ -1114,7 +1008,7 @@
                     this.selectedImageIndex = this.currentImageIndex;
                     this.prompt = this.defaultPrompt || '';
                     this.selectedSpecificPromptIndex = '';
-                    this.selectedBackground = '';
+                    this.selectedBackground = this.defaultBackground;
                     this.generatedImage = null;
                     this.errorMessage = null;
                     document.body.classList.add('overflow-hidden');
@@ -1326,12 +1220,6 @@
             // Also save to localStorage as fallback
             localStorage.setItem('lesrats_pending_etsy', JSON.stringify(productData));
 
-            // Download images as ZIP
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = '/products/' + productId + '/download-images';
-            document.body.appendChild(iframe);
-
             // Open Etsy
             setTimeout(() => {
                 toast.textContent = 'Ouverture d\'Etsy - Remplissage automatique...';
@@ -1343,4 +1231,80 @@
 
     </script>
     @endpush
+
+    {{-- Image Lightbox Modal --}}
+    <div x-data="{
+            images: [],
+            currentIndex: 0,
+            get isOpen() { return this.images.length > 0; },
+            get currentImage() { return this.images[this.currentIndex] || null; },
+            get hasMultiple() { return this.images.length > 1; },
+            open(detail) {
+                this.images = detail.images || [detail];
+                this.currentIndex = detail.index || 0;
+                document.body.classList.add('overflow-hidden');
+            },
+            close() {
+                this.images = [];
+                this.currentIndex = 0;
+                document.body.classList.remove('overflow-hidden');
+            },
+            prev() {
+                this.currentIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.images.length - 1;
+            },
+            next() {
+                this.currentIndex = this.currentIndex < this.images.length - 1 ? this.currentIndex + 1 : 0;
+            }
+         }"
+         x-cloak
+         @lightbox-open.window="open($event.detail)"
+         @keydown.escape.window="close()"
+         @keydown.left.window="if (isOpen) prev()"
+         @keydown.right.window="if (isOpen) next()">
+        <div x-show="isOpen"
+             x-transition:enter="ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 z-[60] flex items-center justify-center p-4"
+             @click.self="close()">
+            <div class="fixed inset-0 bg-black/80"></div>
+            <img :src="currentImage"
+                 class="relative z-10 max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                 @click.stop>
+
+            {{-- Navigation arrows --}}
+            <template x-if="hasMultiple">
+                <button type="button" @click.stop="prev()"
+                        class="absolute left-4 z-20 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </button>
+            </template>
+            <template x-if="hasMultiple">
+                <button type="button" @click.stop="next()"
+                        class="absolute right-4 z-20 bg-white/10 hover:bg-white/20 text-white rounded-full p-3 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </template>
+
+            {{-- Counter --}}
+            <div x-show="hasMultiple" class="absolute bottom-4 z-20 bg-black/60 text-white px-3 py-1 rounded-full text-sm">
+                <span x-text="(currentIndex + 1) + ' / ' + images.length"></span>
+            </div>
+
+            {{-- Close button --}}
+            <button type="button" @click="close()"
+                    class="absolute top-4 right-4 z-20 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
 </x-app-layout>
