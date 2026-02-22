@@ -49,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/shops/{shop}', [ShopController::class, 'edit'])->name('shops.edit');
     Route::put('/shops/{shop}', [ShopController::class, 'update'])->name('shops.update');
     Route::patch('/shops/{shop}', [ShopController::class, 'update']);
+    Route::post('/shops/{shop}/autosave', [ShopController::class, 'autosave'])->name('shops.autosave');
     Route::delete('/shops/{shop}', [ShopController::class, 'destroy'])->name('shops.destroy');
     Route::post('/shops/{shop}/switch', [ShopController::class, 'switch'])->name('shops.switch');
     Route::put('/shops/{shop}/categories', [ShopController::class, 'updateCategories'])->name('shops.update-categories');

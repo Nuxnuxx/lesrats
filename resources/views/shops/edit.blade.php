@@ -1,660 +1,512 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center space-x-4">
-            <a href="{{ route('dashboard') }}" class="text-gray-400 hover:text-gray-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
-            </a>
-            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                Parametres - {{ $shop->name }}
-            </h2>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <a href="{{ route('dashboard') }}" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                </a>
+                <div>
+                    <h2 class="font-semibold text-xl text-gray-800 leading-tight">{{ $shop->name }}</h2>
+                    <p class="text-sm text-gray-500">Parametres de la boutique</p>
+                </div>
+            </div>
+            <span id="autosave-status" class="text-xs text-gray-400 hidden">Sauvegarde...</span>
         </div>
     </x-slot>
 
-    <div class="py-8">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="py-4" x-data="shopAutoSave()">
+        <div class="mx-auto px-4 sm:px-6 lg:px-8">
 
-            {{-- Shop Settings --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Informations de la boutique</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-                <form method="POST" action="{{ route('shops.update', $shop) }}" enctype="multipart/form-data">
-                    @csrf
-                    @method('PUT')
+                {{-- LEFT COLUMN --}}
+                <div class="space-y-4">
 
-                    <div class="mb-4">
-                        <label for="name" class="block text-sm font-medium text-gray-700">Nom de la boutique</label>
-                        <input id="name" type="text" name="name" value="{{ old('name', $shop->name) }}" required
-                            class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm">
-                        @error('name')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                    {{-- Shop Info --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Boutique</h3>
 
-                    <div class="mb-4">
-                        <label for="description" class="block text-sm font-medium text-gray-700">Description / Niche</label>
-                        <textarea id="description" name="description" rows="3"
-                            class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
-                            placeholder="Ex: outdoor equipment and garden tools, 3D printed figurines, handmade jewelry...">{{ old('description', $shop->description) }}</textarea>
-                        <p class="mt-1 text-xs text-gray-500">Decrivez votre niche/specialite. Sera utilise dans les prompts IA pour personnaliser les contenus.</p>
-                        @error('description')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Logo de la boutique</label>
-                        <div class="flex items-start gap-4">
-                            @if($shop->logo_path)
-                                <div class="flex-shrink-0">
-                                    <img src="{{ $shop->logo_url }}" alt="Logo" class="w-20 h-20 object-contain rounded-lg border border-gray-200 bg-gray-50">
-                                </div>
-                            @endif
-                            <div class="flex-1">
-                                <input type="file" name="logo" id="logo" accept="image/*"
-                                    class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
-                                <p class="mt-1 text-xs text-gray-500">PNG ou JPG recommande. Sera utilise pour la generation d'images IA.</p>
-                                @if($shop->logo_path)
-                                    <label class="mt-2 inline-flex items-center text-sm text-red-600 cursor-pointer">
-                                        <input type="checkbox" name="remove_logo" value="1" class="rounded border-gray-300 text-red-600 mr-2">
-                                        Supprimer le logo actuel
-                                    </label>
-                                @endif
-                            </div>
-                        </div>
-                        @error('logo')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="mb-4">
-                        <label for="currency" class="block text-sm font-medium text-gray-700">Devise</label>
-                        <select id="currency" name="currency" required
-                            class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm">
-                            <option value="EUR" {{ old('currency', $shop->currency) == 'EUR' ? 'selected' : '' }}>EUR (Euro)</option>
-                            <option value="USD" {{ old('currency', $shop->currency) == 'USD' ? 'selected' : '' }}>USD (Dollar US)</option>
-                            <option value="GBP" {{ old('currency', $shop->currency) == 'GBP' ? 'selected' : '' }}>GBP (Livre Sterling)</option>
-                            <option value="CAD" {{ old('currency', $shop->currency) == 'CAD' ? 'selected' : '' }}>CAD (Dollar Canadien)</option>
-                        </select>
-                        @error('currency')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="mb-4" x-data="{ type: '{{ old('product_type', $shop->product_type ?? 'physical') }}' }">
-                        <label for="product_type" class="block text-sm font-medium text-gray-700">Type de produits</label>
-                        <select id="product_type" name="product_type" required x-model="type"
-                            class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm">
-                            <option value="physical">Produits physiques (dropshipping)</option>
-                            <option value="virtual">Produits virtuels (fichiers numeriques)</option>
-                        </select>
-                        @error('product_type')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-
-                        <div x-show="type === 'virtual'" x-cloak class="mt-3">
-                            <label for="default_price" class="block text-sm font-medium text-gray-700">Prix par defaut</label>
-                            <div class="mt-1 relative">
-                                <input type="number" name="default_price" id="default_price" step="0.01" min="0"
-                                       value="{{ old('default_price', number_format($shop->default_price ?? 0, 2, '.', '')) }}"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 text-sm">{{ $shop->currency }}</span>
-                                </div>
-                            </div>
-                            <p class="mt-1 text-xs text-gray-500">Prix applique automatiquement aux nouveaux produits. Modifiable par produit.</p>
-                            @error('default_price')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-                        <a href="{{ route('dashboard') }}" 
-                           class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                            Annuler
-                        </a>
-                        <button type="submit" 
-                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                            Enregistrer
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {{-- Etsy Settings (Shipping + Discount) --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Parametres Etsy</h3>
-                <p class="text-sm text-gray-500 mb-4">
-                    Frais de livraison et reduction active sur votre boutique Etsy.
-                </p>
-
-                <form method="POST" action="{{ route('shops.update', $shop) }}">
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="name" value="{{ $shop->name }}">
-                    <input type="hidden" name="currency" value="{{ $shop->currency }}">
-
-                    <div class="space-y-4">
-                        {{-- Shipping Fee --}}
-                        <div>
-                            <label for="shipping_fee" class="block text-sm font-medium text-gray-700 mb-1">
-                                Frais de livraison factures au client
-                            </label>
-                            <div class="relative">
-                                <input type="number" name="shipping_fee" id="shipping_fee"
-                                       step="0.01" min="0"
-                                       value="{{ old('shipping_fee', number_format($shop->shipping_fee ?? 0, 2, '.', '')) }}"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 text-sm">{{ $shop->currency }}</span>
-                                </div>
-                            </div>
-                            <p class="mt-1 text-xs text-gray-500">Montant que le client paie pour la livraison sur Etsy. Utilise pour calculer la rentabilite.</p>
-                            @error('shipping_fee')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        {{-- Discount --}}
-                        <div>
-                            <label for="discount_percentage" class="block text-sm font-medium text-gray-700 mb-1">
-                                Reduction boutique Etsy (%)
-                            </label>
-                            <div class="relative">
-                                <input type="number" name="discount_percentage" id="discount_percentage"
-                                       step="1" min="0" max="99"
-                                       value="{{ old('discount_percentage', $shop->discount_percentage ?? 0) }}"
-                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-10">
-                                <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <span class="text-gray-500 text-sm">%</span>
-                                </div>
-                            </div>
-                            @php $discount = (float)($shop->discount_percentage ?? 0); @endphp
-                            @if($discount > 0)
-                                <p class="mt-1 text-xs text-green-700">
-                                    Prix Etsy liste = prix souhaite &divide; {{ number_format(1 - $discount/100, 2) }}
-                                    &mdash; Ex: &euro;10.00 &rarr; &euro;{{ number_format(10 / (1 - $discount/100), 2) }} sur Etsy
-                                </p>
-                            @else
-                                <p class="mt-1 text-xs text-gray-500">0 = pas de reduction (prix envoye tel quel)</p>
-                            @endif
-                            @error('discount_percentage')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-end mt-4">
-                        <button type="submit"
-                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                            Enregistrer
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {{-- AI Settings --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Parametres IA</h3>
-                <p class="text-sm text-gray-500 mb-4">
-                    Personnalisez les prompts utilises pour generer les titres, descriptions et images de vos produits.
-                    <br><span class="text-orange-600">Utilisez [SHOP_NICHE] pour inserer automatiquement la description de votre boutique.</span>
-                </p>
-
-                <form method="POST" action="{{ route('shops.update', $shop) }}">
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="name" value="{{ $shop->name }}">
-                    <input type="hidden" name="currency" value="{{ $shop->currency }}">
-                    <div class="space-y-4">
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label for="ai_description_prompt" class="block text-sm font-medium text-gray-700">Prompt pour titres/descriptions/tags</label>
-                                <button type="button" onclick="document.getElementById('ai_description_prompt').value = ''; this.closest('form').submit();"
-                                    class="text-xs text-orange-600 hover:text-orange-700">Restaurer par defaut</button>
-                            </div>
-                            <textarea id="ai_description_prompt" name="ai_description_prompt" rows="8"
-                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm font-mono"
-                                placeholder="Laissez vide pour utiliser le prompt par defaut...">{{ old('ai_description_prompt', $shop->ai_description_prompt) }}</textarea>
-                            <p class="mt-1 text-xs text-gray-500">
-                                @if(!$shop->ai_description_prompt)
-                                    <span class="text-green-600">Utilise le prompt par defaut (expert SEO Etsy)</span>
-                                @else
-                                    Prompt personnalise actif
-                                @endif
-                            </p>
-                            @error('ai_description_prompt')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="pt-4 border-t border-gray-200">
-                            <div class="flex items-center justify-between mb-3">
-                                <div>
-                                    <label for="ai_image_enabled" class="text-sm font-medium text-gray-700">Transformation d'images IA</label>
-                                    <p class="text-xs text-gray-500">Transforme les images des produits lors de l'import (necessite une cle API Fal.ai)</p>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" name="ai_image_enabled" value="1" {{ old('ai_image_enabled', $shop->ai_image_enabled) ? 'checked' : '' }}
-                                        class="sr-only peer" id="ai_image_enabled">
-                                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
-                                </label>
-                            </div>
-
+                        <div class="grid grid-cols-2 gap-3 mb-3">
                             <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <label for="ai_image_prompt" class="block text-sm font-medium text-gray-700">Prompt pour les images</label>
-                                    <button type="button" onclick="document.getElementById('ai_image_prompt').value = ''; this.closest('form').submit();"
-                                        class="text-xs text-orange-600 hover:text-orange-700">Restaurer par defaut</button>
+                                <label for="name" class="text-xs font-medium text-gray-700">Nom</label>
+                                <input id="name" type="text" value="{{ $shop->name }}"
+                                    @input.debounce.800ms="save({ name: $el.value })"
+                                    class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm">
+                            </div>
+                            <div>
+                                <label for="currency" class="text-xs font-medium text-gray-700">Devise</label>
+                                <select id="currency" @change="save({ currency: $el.value })"
+                                    class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm">
+                                    <option value="EUR" {{ $shop->currency == 'EUR' ? 'selected' : '' }}>EUR</option>
+                                    <option value="USD" {{ $shop->currency == 'USD' ? 'selected' : '' }}>USD</option>
+                                    <option value="GBP" {{ $shop->currency == 'GBP' ? 'selected' : '' }}>GBP</option>
+                                    <option value="CAD" {{ $shop->currency == 'CAD' ? 'selected' : '' }}>CAD</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="text-xs font-medium text-gray-700">Niche / Description</label>
+                            <textarea id="description" rows="2"
+                                @input.debounce.800ms="save({ description: $el.value })"
+                                class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
+                                placeholder="Ex: bijoux fantaisie, fichiers 3D...">{{ $shop->description }}</textarea>
+                            <p class="mt-1 text-xs text-gray-400">Utilisee dans les prompts IA.</p>
+                        </div>
+
+                        <div class="mb-3" x-data="{ type: '{{ $shop->product_type ?? 'physical' }}' }">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label for="product_type" class="text-xs font-medium text-gray-700">Type de produits</label>
+                                    <select id="product_type" x-model="type"
+                                        @change="save({ product_type: $el.value })"
+                                        class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm">
+                                        <option value="physical">Physiques (dropshipping)</option>
+                                        <option value="virtual">Virtuels (fichiers)</option>
+                                    </select>
                                 </div>
-                                <textarea id="ai_image_prompt" name="ai_image_prompt" rows="6"
-                                    class="mt-1 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm font-mono"
-                                    placeholder="Laissez vide pour utiliser le prompt par defaut...">{{ old('ai_image_prompt', $shop->ai_image_prompt) }}</textarea>
-                                <p class="mt-1 text-xs text-gray-500">
-                                    @if(!$shop->ai_image_prompt)
-                                        <span class="text-green-600">Utilise le prompt par defaut (generateur images Etsy)</span>
-                                    @else
-                                        Prompt personnalise actif
+                                <div x-show="type === 'virtual'" x-cloak>
+                                    <label for="default_price" class="text-xs font-medium text-gray-700">Prix par defaut</label>
+                                    <div class="mt-1 relative">
+                                        <input type="number" id="default_price" step="0.01" min="0"
+                                               value="{{ number_format($shop->default_price ?? 0, 2, '.', '') }}"
+                                               @input.debounce.800ms="save({ default_price: $el.value })"
+                                               class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12 text-sm">
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 text-xs">{{ $shop->currency }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Logo (file upload — needs traditional form) --}}
+                        <div class="pt-3 border-t border-gray-100">
+                            <label class="text-xs font-medium text-gray-700">Logo</label>
+                            <form method="POST" action="{{ route('shops.update', $shop) }}" enctype="multipart/form-data" class="mt-1">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="name" value="{{ $shop->name }}">
+                                <input type="hidden" name="currency" value="{{ $shop->currency }}">
+                                <div class="flex items-center gap-3">
+                                    @if($shop->logo_path)
+                                        <img src="{{ $shop->logo_url }}" alt="Logo" class="w-12 h-12 object-contain rounded-lg border border-gray-200 bg-gray-50">
                                     @endif
-                                </p>
-                                @error('ai_image_prompt')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                    <input type="file" name="logo" accept="image/*"
+                                        class="flex-1 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                                        onchange="this.closest('form').submit()">
+                                    @if($shop->logo_path)
+                                        <label class="inline-flex items-center text-xs text-red-500 cursor-pointer whitespace-nowrap">
+                                            <input type="checkbox" name="remove_logo" value="1"
+                                                class="rounded border-gray-300 text-red-600 mr-1 w-3 h-3"
+                                                onchange="this.closest('form').submit()">
+                                            Suppr.
+                                        </label>
+                                    @endif
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    {{-- Etsy Settings --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Parametres Etsy</h3>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="shipping_fee" class="text-xs font-medium text-gray-700">Frais de livraison</label>
+                                <div class="mt-1 relative">
+                                    <input type="number" id="shipping_fee" step="0.01" min="0"
+                                           value="{{ number_format($shop->shipping_fee ?? 0, 2, '.', '') }}"
+                                           @input.debounce.800ms="save({ shipping_fee: $el.value })"
+                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12 text-sm">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-500 text-xs">{{ $shop->currency }}</span>
+                                    </div>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-400">Facture au client sur Etsy</p>
+                            </div>
+                            <div>
+                                <label for="discount_percentage" class="text-xs font-medium text-gray-700">Reduction boutique</label>
+                                <div class="mt-1 relative">
+                                    <input type="number" id="discount_percentage" step="1" min="0" max="99"
+                                           value="{{ $shop->discount_percentage ?? 0 }}"
+                                           @input.debounce.800ms="save({ discount_percentage: $el.value })"
+                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-10 text-sm">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-500 text-xs">%</span>
+                                    </div>
+                                </div>
+                                @php $discount = (float)($shop->discount_percentage ?? 0); @endphp
+                                @if($discount > 0)
+                                    <p class="mt-1 text-xs text-green-600">10EUR &rarr; {{ number_format(10 / (1 - $discount/100), 2) }}EUR sur Etsy</p>
+                                @else
+                                    <p class="mt-1 text-xs text-gray-400">0 = pas de reduction</p>
+                                @endif
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-end mt-6">
-                        <button type="submit"
-                                class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                            Enregistrer les prompts IA
-                        </button>
-                    </div>
-                </form>
+                    {{-- Etsy Categories --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" x-data="etsyCategoriesManager(@js($shop->etsy_categories ?? []))">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Categories Etsy</h3>
 
-                {{-- Specific Prompts Section --}}
-                <div class="pt-6 mt-6 border-t border-gray-200">
-                    <h4 class="text-sm font-semibold text-gray-900 mb-2">Prompts specifiques (images)</h4>
-                    <p class="text-xs text-gray-500 mb-4">
-                        Ajoutez des prompts specifiques nommes. Ils seront disponibles dans le menu deroulant lors de la modification des images produit.
-                        <br><span class="text-orange-600">Le prompt general ci-dessus est toujours utilise. Le prompt specifique est ajoute en complement.</span>
-                    </p>
-
-                    {{-- Liste des prompts specifiques existants --}}
-                    @php $specificPrompts = $shop->ai_specific_prompts ?? []; @endphp
-                    @if(count($specificPrompts) > 0)
-                        <div class="mb-4 space-y-3">
-                            @foreach($specificPrompts as $index => $sp)
-                                <div class="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div class="flex-1 min-w-0">
-                                        <p class="text-sm font-medium text-gray-900">{{ $sp['name'] }}</p>
-                                        <p class="text-xs text-gray-500 mt-1 line-clamp-2">{{ $sp['prompt'] }}</p>
-                                    </div>
-                                    <form method="POST" action="{{ route('shops.delete-specific-prompt', $shop) }}"
-                                          onsubmit="return confirm('Supprimer ce prompt specifique ?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <input type="hidden" name="index" value="{{ $index }}">
-                                        <button type="submit" class="text-red-500 hover:text-red-700 p-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        <div class="space-y-2">
+                            <template x-for="(category, index) in categories" :key="index">
+                                <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="text-xs font-medium text-gray-600" x-text="'#' + (index + 1)"></span>
+                                        <button type="button" @click="removeCategory(index)" class="text-red-400 hover:text-red-600">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                             </svg>
                                         </button>
-                                    </form>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-
-                    {{-- Formulaire d'ajout --}}
-                    <form method="POST" action="{{ route('shops.add-specific-prompt', $shop) }}" x-data="{ showForm: false }">
-                        @csrf
-                        <button type="button" @click="showForm = !showForm"
-                                x-show="!showForm"
-                                class="inline-flex items-center px-3 py-2 text-sm font-medium text-orange-600 border border-orange-300 rounded-lg hover:bg-orange-50">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                            Ajouter un prompt specifique
-                        </button>
-
-                        <div x-show="showForm" x-cloak class="space-y-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                            <div>
-                                <label for="specific_prompt_name" class="block text-sm font-medium text-gray-700 mb-1">Nom du prompt</label>
-                                <input type="text" name="name" id="specific_prompt_name" required
-                                       class="w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm"
-                                       placeholder="Ex: Fond blanc studio, Photo lifestyle...">
-                            </div>
-                            <div>
-                                <label for="specific_prompt_text" class="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
-                                <textarea name="prompt" id="specific_prompt_text" rows="4" required
-                                          class="w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-sm font-mono"
-                                          placeholder="Decrivez les instructions specifiques pour ce type de transformation..."></textarea>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button type="submit"
-                                        class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                                    Ajouter
-                                </button>
-                                <button type="button" @click="showForm = false"
-                                        class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
-                                    Annuler
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                    @error('name')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                    @error('prompt')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
-                </div>
-            </div>
-
-            {{-- AI Backgrounds --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Images de reference (Backgrounds)</h3>
-                <p class="text-sm text-gray-500 mb-4">
-                    Uploadez des images de fond qui seront utilisees comme reference lors de la generation d'images IA.
-                    <br><span class="text-orange-600">Ces backgrounds seront disponibles dans le menu deroulant lors de la modification des images produit.</span>
-                </p>
-
-                {{-- Liste des backgrounds existants --}}
-                @php $backgrounds = $shop->ai_backgrounds ?? []; @endphp
-                @if(count($backgrounds) > 0)
-                    <div class="mb-6">
-                        <h4 class="text-sm font-medium text-gray-700 mb-3">Backgrounds enregistres ({{ count($backgrounds) }})</h4>
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            @foreach($backgrounds as $index => $bg)
-                                <div class="relative group">
-                                    <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                                        <img src="{{ Storage::disk('public')->url($bg['path']) }}"
-                                             alt="{{ $bg['name'] }}"
-                                             class="w-full h-full object-cover">
                                     </div>
-                                    <div class="mt-2 flex items-center justify-between">
-                                        <span class="text-xs font-medium text-gray-700 truncate flex-1" title="{{ $bg['name'] }}">{{ $bg['name'] }}</span>
-                                        <form method="POST" action="{{ route('shops.delete-background', $shop) }}" class="inline ml-2"
-                                              onsubmit="return confirm('Supprimer ce background ?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <input type="hidden" name="index" value="{{ $index }}">
-                                            <button type="submit" class="text-red-500 hover:text-red-700">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                </svg>
-                                            </button>
-                                        </form>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="text" x-model="category.name" placeholder="Nom interne"
+                                            @input.debounce.800ms="saveCategories()"
+                                            class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
+                                        <input type="text" x-model="category.etsy_name" placeholder="Nom Etsy exact"
+                                            @input.debounce.800ms="saveCategories()"
+                                            class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
+                                        <input type="text" x-model="category.etsy_id" placeholder="ID checkbox Etsy"
+                                            @input.debounce.800ms="saveCategories()"
+                                            class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
+                                        <input type="text" x-model="category.keywords" placeholder="Mots-cles (auto-detect)"
+                                            @input.debounce.800ms="saveCategories()"
+                                            class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
                                     </div>
                                 </div>
-                            @endforeach
+                            </template>
                         </div>
-                    </div>
-                @else
-                    <div class="mb-6 p-4 bg-gray-50 rounded-lg text-center">
-                        <svg class="w-8 h-8 mx-auto text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                        <p class="text-sm text-gray-500">Aucun background enregistre</p>
-                    </div>
-                @endif
 
-                {{-- Formulaire d'upload --}}
-                <form method="POST" action="{{ route('shops.upload-background', $shop) }}" enctype="multipart/form-data" class="border-t border-gray-200 pt-4">
-                    @csrf
-                    <h4 class="text-sm font-medium text-gray-700 mb-3">Ajouter un nouveau background</h4>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="background_name" class="block text-sm font-medium text-gray-600 mb-1">Nom du background</label>
-                            <input type="text" name="name" id="background_name" required
-                                   class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
-                                   placeholder="Ex: Fond blanc studio">
-                            @error('name')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        <div>
-                            <label for="background_file" class="block text-sm font-medium text-gray-600 mb-1">Image</label>
-                            <input type="file" name="background" id="background_file" accept="image/*" required
-                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100">
-                            @error('background')
-                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="mt-4 flex justify-end">
-                        <button type="submit"
-                                class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                            </svg>
-                            Ajouter le background
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {{-- Etsy Categories --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" x-data="etsyCategoriesManager()">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Categories Etsy</h3>
-                <p class="text-sm text-gray-500 mb-4">
-                    Definissez les categories Etsy disponibles pour cette boutique. Chaque categorie peut avoir des mots-cles pour l'auto-detection.
-                </p>
-
-                <form method="POST" action="{{ route('shops.update-categories', $shop) }}">
-                    @csrf
-                    @method('PUT')
-
-                    <div class="space-y-3" id="categories-container">
-                        <template x-for="(category, index) in categories" :key="index">
-                            <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                                <div class="flex items-start justify-between mb-3">
-                                    <span class="text-sm font-medium text-gray-700" x-text="'Categorie ' + (index + 1)"></span>
-                                    <button type="button" @click="removeCategory(index)" class="text-red-500 hover:text-red-700">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                        </svg>
-                                    </button>
-                                </div>
-                                
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Nom (interne)</label>
-                                        <input type="text" x-model="category.name" 
-                                            class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
-                                            placeholder="Ex: Fichiers 3D">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Nom Etsy (exact)</label>
-                                        <input type="text" x-model="category.etsy_name" 
-                                            class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
-                                            placeholder="Ex: Fichiers pour imprimante 3D">
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">ID Checkbox Etsy</label>
-                                        <input type="text" x-model="category.etsy_id" 
-                                            class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
-                                            placeholder="Ex: category-12380">
-                                        <p class="mt-1 text-xs text-gray-400">Inspecter l'element sur Etsy pour trouver l'ID</p>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs font-medium text-gray-600 mb-1">Mots-cles (auto-detect)</label>
-                                        <input type="text" x-model="category.keywords" 
-                                            class="block w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
-                                            placeholder="Ex: 3d, stl, print, figurine">
-                                        <p class="mt-1 text-xs text-gray-400">Separes par virgules</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-
-                    <input type="hidden" name="etsy_categories" :value="JSON.stringify(categories)">
-
-                    <div class="mt-4 flex items-center justify-between">
-                        <button type="button" @click="addCategory()" 
-                            class="inline-flex items-center px-3 py-2 text-sm font-medium text-orange-600 hover:text-orange-700">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                            </svg>
-                            Ajouter une categorie
-                        </button>
-                        <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                            Enregistrer les categories
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            {{-- Available Tags --}}
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" x-data="availableTagsManager()">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Tags disponibles</h3>
-                <p class="text-sm text-gray-500 mb-4">
-                    Definissez les tags disponibles pour cette boutique. Lors de l'import d'un produit, l'IA selectionnera les 13 tags les plus pertinents parmi cette liste.
-                    <br><span class="text-orange-600">Si aucun tag n'est defini, l'IA generera des tags librement.</span>
-                </p>
-
-                <form method="POST" action="{{ route('shops.update-tags', $shop) }}">
-                    @csrf
-                    @method('PUT')
-
-                    {{-- Tags pills display --}}
-                    <div class="flex flex-wrap gap-2 mb-4 min-h-[40px] p-3 border border-gray-200 rounded-lg bg-gray-50">
-                        <template x-if="tags.length === 0">
-                            <span class="text-sm text-gray-400 italic">Aucun tag defini - l'IA generera des tags librement</span>
-                        </template>
-                        <template x-for="(tag, index) in tags" :key="index">
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
-                                <span x-text="tag"></span>
-                                <button type="button" @click="removeTag(index)" class="ml-2 text-orange-600 hover:text-orange-800">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                    </svg>
-                                </button>
-                            </span>
-                        </template>
-                    </div>
-
-                    {{-- Add tag input --}}
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" x-model="newTag" 
-                            @keydown.enter.prevent="addTag()"
-                            @keydown.comma.prevent="addTag()"
-                            class="flex-1 text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
-                            placeholder="Ajouter un tag (Entree ou virgule pour valider)">
-                        <button type="button" @click="addTag()" 
-                            class="px-4 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200">
-                            Ajouter
-                        </button>
-                    </div>
-
-                    {{-- Bulk add --}}
-                    <div class="mb-4">
-                        <label class="block text-xs font-medium text-gray-600 mb-1">Ajout en masse (collez une liste separee par virgules)</label>
-                        <div class="flex gap-2">
-                            <input type="text" x-model="bulkTags" 
-                                class="flex-1 text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
-                                placeholder="tag1, tag2, tag3, ...">
-                            <button type="button" @click="addBulkTags()" 
-                                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
-                                Ajouter tout
+                        <div class="mt-3">
+                            <button type="button" @click="addCategory()"
+                                class="inline-flex items-center text-xs font-medium text-orange-600 hover:text-orange-700">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Ajouter
                             </button>
                         </div>
                     </div>
 
-                    <input type="hidden" name="available_tags" :value="JSON.stringify(tags)">
+                    {{-- Available Tags --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4" x-data="availableTagsManager(@js($shop->available_tags ?? []))">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Tags disponibles</h3>
+                        <p class="text-xs text-gray-400 mb-3">L'IA selectionnera les 13 plus pertinents parmi cette liste. Vide = tags libres.</p>
 
-                    <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                        <span class="text-sm text-gray-500" x-text="tags.length + ' tags definis'"></span>
-                        <button type="submit" 
-                            class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                            Enregistrer les tags
-                        </button>
+                        <div class="flex flex-wrap gap-1.5 mb-3 min-h-[36px] p-2 border border-gray-200 rounded-lg bg-gray-50">
+                            <template x-if="tags.length === 0">
+                                <span class="text-xs text-gray-400 italic">Aucun tag - IA libre</span>
+                            </template>
+                            <template x-for="(tag, index) in tags" :key="index">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                    <span x-text="tag"></span>
+                                    <button type="button" @click="removeTag(index)" class="ml-1 text-orange-600 hover:text-orange-800">
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
+                                </span>
+                            </template>
+                        </div>
+
+                        <div class="flex gap-2 mb-2">
+                            <input type="text" x-model="newTag"
+                                @keydown.enter.prevent="addTag()"
+                                @keydown.comma.prevent="addTag()"
+                                class="flex-1 text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                placeholder="Ajouter un tag...">
+                            <button type="button" @click="addTag()" class="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200">+</button>
+                        </div>
+
+                        <div class="flex gap-2 mb-3">
+                            <input type="text" x-model="bulkTags"
+                                class="flex-1 text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                placeholder="Ajout en masse: tag1, tag2, tag3...">
+                            <button type="button" @click="addBulkTags()" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">Ajouter</button>
+                        </div>
+
+                        <div class="pt-3 border-t border-gray-100">
+                            <span class="text-xs text-gray-500" x-text="tags.length + ' tags'"></span>
+                        </div>
                     </div>
-                </form>
-            </div>
-
-            @push('scripts')
-            <script>
-                function etsyCategoriesManager() {
-                    return {
-                        categories: @json($shop->etsy_categories ?? []),
-                        
-                        addCategory() {
-                            this.categories.push({
-                                name: '',
-                                etsy_name: '',
-                                etsy_id: '',
-                                keywords: ''
-                            });
-                        },
-                        
-                        removeCategory(index) {
-                            this.categories.splice(index, 1);
-                        }
-                    }
-                }
-
-                function availableTagsManager() {
-                    return {
-                        tags: @json($shop->available_tags ?? []),
-                        newTag: '',
-                        bulkTags: '',
-                        
-                        addTag() {
-                            const tag = this.newTag.trim().toLowerCase();
-                            if (tag && !this.tags.includes(tag)) {
-                                this.tags.push(tag);
-                            }
-                            this.newTag = '';
-                        },
-                        
-                        addBulkTags() {
-                            const newTags = this.bulkTags.split(',')
-                                .map(t => t.trim().toLowerCase())
-                                .filter(t => t && !this.tags.includes(t));
-                            this.tags.push(...newTags);
-                            this.bulkTags = '';
-                        },
-                        
-                        removeTag(index) {
-                            this.tags.splice(index, 1);
-                        }
-                    }
-                }
-            </script>
-            @endpush
-
-            {{-- Danger Zone --}}
-            <div class="bg-white rounded-lg shadow-sm border border-red-200 p-6">
-                <h3 class="text-lg font-semibold text-red-600 mb-4">Zone dangereuse</h3>
-                
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-900">Supprimer cette boutique</p>
-                        <p class="text-xs text-gray-500">Cette action supprimera tous les produits associes.</p>
-                    </div>
-                    <form action="{{ route('shops.destroy', $shop) }}" method="POST"
-                          onsubmit="return confirm('ATTENTION: Cette action est irreversible. Tous les produits seront supprimes. Continuer ?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" 
-                                class="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                            </svg>
-                            Supprimer
-                        </button>
-                    </form>
                 </div>
-            </div>
 
+                {{-- RIGHT COLUMN --}}
+                <div class="space-y-4">
+
+                    {{-- AI Prompts --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Prompts IA</h3>
+                        <p class="text-xs text-gray-400 mb-3">
+                            <span class="text-orange-600">[SHOP_NICHE]</span> = description boutique
+                        </p>
+
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex items-center justify-between mb-1">
+                                    <label for="ai_description_prompt" class="text-xs font-medium text-gray-700">Titres / descriptions / tags</label>
+                                    <button type="button"
+                                        @click="document.getElementById('ai_description_prompt').value = ''; save({ ai_description_prompt: '' })"
+                                        class="text-xs text-orange-600 hover:text-orange-700">Reset</button>
+                                </div>
+                                <textarea id="ai_description_prompt" rows="6"
+                                    @input.debounce.800ms="save({ ai_description_prompt: $el.value })"
+                                    class="block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-xs font-mono"
+                                    placeholder="Vide = prompt par defaut...">{{ $shop->ai_description_prompt }}</textarea>
+                                <p class="mt-1 text-xs {{ $shop->ai_description_prompt ? 'text-orange-600' : 'text-green-600' }}">
+                                    {{ $shop->ai_description_prompt ? 'Personnalise' : 'Par defaut' }}
+                                </p>
+                            </div>
+
+                            <div class="pt-3 border-t border-gray-100">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center gap-3">
+                                        <label for="ai_image_enabled" class="text-xs font-medium text-gray-700">Transformation images IA</label>
+                                        <label class="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" value="1" {{ $shop->ai_image_enabled ? 'checked' : '' }}
+                                                @change="save({ ai_image_enabled: $el.checked })"
+                                                class="sr-only peer" id="ai_image_enabled">
+                                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>
+                                        </label>
+                                    </div>
+                                    <button type="button"
+                                        @click="document.getElementById('ai_image_prompt').value = ''; save({ ai_image_prompt: '' })"
+                                        class="text-xs text-orange-600 hover:text-orange-700">Reset</button>
+                                </div>
+                                <textarea id="ai_image_prompt" rows="6"
+                                    @input.debounce.800ms="save({ ai_image_prompt: $el.value })"
+                                    class="block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500 rounded-lg shadow-sm text-xs font-mono"
+                                    placeholder="Vide = prompt par defaut...">{{ $shop->ai_image_prompt }}</textarea>
+                                <p class="mt-1 text-xs {{ $shop->ai_image_prompt ? 'text-orange-600' : 'text-green-600' }}">
+                                    {{ $shop->ai_image_prompt ? 'Personnalise' : 'Par defaut' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Specific Prompts --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-2">Prompts specifiques (images)</h3>
+                        <p class="text-xs text-gray-400 mb-3">Ajoutes en complement du prompt general. Disponibles dans le menu lors de la generation.</p>
+
+                        @php $specificPrompts = $shop->ai_specific_prompts ?? []; @endphp
+                        @if(count($specificPrompts) > 0)
+                            <div class="mb-3 space-y-2">
+                                @foreach($specificPrompts as $index => $sp)
+                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-medium text-gray-900">{{ $sp['name'] }}</p>
+                                            <p class="text-xs text-gray-500 truncate">{{ $sp['prompt'] }}</p>
+                                        </div>
+                                        <form method="POST" action="{{ route('shops.delete-specific-prompt', $shop) }}"
+                                              onsubmit="return confirm('Supprimer ?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="index" value="{{ $index }}">
+                                            <button type="submit" class="text-red-400 hover:text-red-600 p-1">
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <form method="POST" action="{{ route('shops.add-specific-prompt', $shop) }}" x-data="{ showForm: false }">
+                            @csrf
+                            <button type="button" @click="showForm = !showForm" x-show="!showForm"
+                                    class="inline-flex items-center text-xs font-medium text-orange-600 hover:text-orange-700">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                                Ajouter
+                            </button>
+
+                            <div x-show="showForm" x-cloak class="space-y-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                <input type="text" name="name" required
+                                       class="w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                       placeholder="Nom du prompt">
+                                <textarea name="prompt" rows="3" required
+                                          class="w-full text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500 font-mono"
+                                          placeholder="Instructions specifiques..."></textarea>
+                                <div class="flex gap-2">
+                                    <button type="submit" class="px-3 py-1.5 bg-orange-600 text-white rounded-lg text-xs font-medium hover:bg-orange-700">Ajouter</button>
+                                    <button type="button" @click="showForm = false" class="text-xs text-gray-500 hover:text-gray-700">Annuler</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    {{-- Backgrounds --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Backgrounds (images IA)</h3>
+
+                        @php $backgrounds = $shop->ai_backgrounds ?? []; @endphp
+                        @if(count($backgrounds) > 0)
+                            <div class="grid grid-cols-4 gap-2 mb-3">
+                                @foreach($backgrounds as $index => $bg)
+                                    <div class="relative group">
+                                        <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                                            <img src="{{ Storage::disk('public')->url($bg['path']) }}" alt="{{ $bg['name'] }}"
+                                                 class="w-full h-full object-cover">
+                                        </div>
+                                        <p class="text-xs text-gray-600 mt-1 truncate" title="{{ $bg['name'] }}">{{ $bg['name'] }}</p>
+                                        <form method="POST" action="{{ route('shops.delete-background', $shop) }}"
+                                              onsubmit="return confirm('Supprimer ?')" class="absolute top-1 right-1">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="index" value="{{ $index }}">
+                                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-xs text-gray-400 text-center py-3 mb-3">Aucun background</p>
+                        @endif
+
+                        <form method="POST" action="{{ route('shops.upload-background', $shop) }}" enctype="multipart/form-data"
+                              class="pt-3 border-t border-gray-100">
+                            @csrf
+                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                <input type="text" name="name" required
+                                       class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                       placeholder="Nom du background">
+                                <input type="file" name="background" accept="image/*" required
+                                       class="text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="px-4 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
+                                    Ajouter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    {{-- Danger Zone --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-red-200 p-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-red-600">Supprimer la boutique</p>
+                                <p class="text-xs text-gray-500">Irreversible. Supprime tous les produits.</p>
+                            </div>
+                            <form action="{{ route('shops.destroy', $shop) }}" method="POST"
+                                  onsubmit="return confirm('ATTENTION: Tous les produits seront supprimes. Continuer ?');">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="px-3 py-1.5 bg-red-600 text-white text-xs rounded-lg hover:bg-red-700">
+                                    Supprimer
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        // Shared autosave helper — used by all components on this page
+        const _shopAutoSave = {
+            shopId: {{ $shop->id }},
+            csrfToken: '{{ csrf_token() }}',
+            async save(data) {
+                const status = document.getElementById('autosave-status');
+                status.classList.remove('hidden');
+                status.textContent = 'Sauvegarde...';
+                status.className = 'text-xs text-gray-400';
+
+                try {
+                    const response = await fetch(`/shops/${this.shopId}/autosave`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': this.csrfToken,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(data),
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        status.textContent = 'Sauvegarde!';
+                        status.className = 'text-xs text-green-500';
+                    } else {
+                        status.textContent = 'Erreur';
+                        status.className = 'text-xs text-red-500';
+                    }
+                } catch (error) {
+                    status.textContent = 'Erreur';
+                    status.className = 'text-xs text-red-500';
+                    console.error('Autosave error:', error);
+                }
+
+                setTimeout(() => status.classList.add('hidden'), 2000);
+            }
+        };
+
+        function shopAutoSave() {
+            return {
+                save(data) { return _shopAutoSave.save(data); }
+            };
+        }
+
+        function etsyCategoriesManager(initialCategories) {
+            return {
+                categories: initialCategories,
+                addCategory() {
+                    this.categories.push({ name: '', etsy_name: '', etsy_id: '', keywords: '' });
+                },
+                removeCategory(index) {
+                    this.categories.splice(index, 1);
+                    this.saveCategories();
+                },
+                saveCategories() {
+                    _shopAutoSave.save({ etsy_categories: JSON.stringify(this.categories) });
+                }
+            }
+        }
+
+        function availableTagsManager(initialTags) {
+            return {
+                tags: initialTags,
+                newTag: '',
+                bulkTags: '',
+                addTag() {
+                    const tag = this.newTag.trim().toLowerCase();
+                    if (tag && !this.tags.includes(tag)) { this.tags.push(tag); }
+                    this.newTag = '';
+                    this.saveTags();
+                },
+                addBulkTags() {
+                    const newTags = this.bulkTags.split(',').map(t => t.trim().toLowerCase()).filter(t => t && !this.tags.includes(t));
+                    this.tags.push(...newTags);
+                    this.bulkTags = '';
+                    this.saveTags();
+                },
+                removeTag(index) {
+                    this.tags.splice(index, 1);
+                    this.saveTags();
+                },
+                saveTags() {
+                    _shopAutoSave.save({ available_tags: JSON.stringify(this.tags) });
+                }
+            }
+        }
+    </script>
+    @endpush
 </x-app-layout>

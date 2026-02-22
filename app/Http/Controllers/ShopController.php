@@ -124,6 +124,58 @@ class ShopController extends Controller
     }
 
     /**
+     * Auto-save shop fields (partial update via AJAX).
+     */
+    public function autosave(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'description' => 'sometimes|nullable|string|max:5000',
+            'currency' => 'sometimes|string|size:3',
+            'product_type' => 'sometimes|in:physical,virtual',
+            'default_price' => 'sometimes|nullable|numeric|min:0',
+            'shipping_fee' => 'sometimes|nullable|numeric|min:0',
+            'discount_percentage' => 'sometimes|nullable|numeric|min:0|max:99',
+            'ai_description_prompt' => 'sometimes|nullable|string|max:5000',
+            'ai_image_prompt' => 'sometimes|nullable|string|max:5000',
+            'ai_image_enabled' => 'sometimes|boolean',
+            'etsy_categories' => 'sometimes|nullable|string',
+            'available_tags' => 'sometimes|nullable|string',
+        ]);
+
+        // Decode JSON strings for array fields
+        if (isset($validated['etsy_categories']) && is_string($validated['etsy_categories'])) {
+            $categories = json_decode($validated['etsy_categories'], true) ?? [];
+            $validated['etsy_categories'] = collect($categories)
+                ->filter(fn ($cat) => ! empty($cat['name']) || ! empty($cat['etsy_name']))
+                ->map(fn ($cat) => [
+                    'name' => $cat['name'] ?? '',
+                    'etsy_name' => $cat['etsy_name'] ?? '',
+                    'etsy_id' => $cat['etsy_id'] ?? '',
+                    'keywords' => $cat['keywords'] ?? '',
+                ])
+                ->values()
+                ->toArray();
+        }
+
+        if (isset($validated['available_tags']) && is_string($validated['available_tags'])) {
+            $tags = json_decode($validated['available_tags'], true) ?? [];
+            $validated['available_tags'] = collect($tags)
+                ->map(fn ($tag) => strtolower(trim($tag)))
+                ->filter(fn ($tag) => ! empty($tag))
+                ->unique()
+                ->values()
+                ->toArray();
+        }
+
+        $shop->update($validated);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Shop $shop)
