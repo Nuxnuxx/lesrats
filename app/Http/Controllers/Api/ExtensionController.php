@@ -128,19 +128,15 @@ class ExtensionController extends Controller
                     'selling_price' => $sellingPrice,
                 ]);
             } else {
-                // Logique existante pour AliExpress (marge de 2.5x par défaut)
+                // Logique existante pour AliExpress (marge de 2.5x)
                 $costPrice = $validated['price'] ?? 0;
                 $sellingPrice = $costPrice > 0 ? round($costPrice * 2.5, 2) : 0;
 
                 // Process country-specific pricing if available
                 if ($countryPrices && ! empty($countryPrices)) {
-                    // Get shop's default margins
-                    $marginUs = (float) ($shop->default_margin_us ?? 2.5);
-                    $marginOther = (float) ($shop->default_margin_other ?? 2.5);
-
-                    // Calculate US price
+                    // Calculate US price (2.5x multiplier)
                     if (isset($countryPrices['US']['total'])) {
-                        $priceUs = round((float) $countryPrices['US']['total'] * $marginUs, 2);
+                        $priceUs = round((float) $countryPrices['US']['total'] * 2.5, 2);
                     }
 
                     // Calculate "Autres pays" price (highest of DE, AT, FR, CA, ES)
@@ -155,13 +151,11 @@ class ExtensionController extends Controller
                         }
                     }
                     if ($maxOtherTotal !== null) {
-                        $priceOther = round($maxOtherTotal * $marginOther, 2);
+                        $priceOther = round($maxOtherTotal * 2.5, 2);
                     }
 
                     Log::info('Country prices processed', [
                         'country_prices' => $countryPrices,
-                        'margin_us' => $marginUs,
-                        'margin_other' => $marginOther,
                         'price_us' => $priceUs,
                         'price_other' => $priceOther,
                     ]);
@@ -430,19 +424,15 @@ class ExtensionController extends Controller
                 }
             }
 
-            // Inflate prices if shop has an active discount (so Etsy shows the right final price after discount)
-            $discount = (float) ($product->shop->discount_percentage ?? 0);
-            $factor = $discount > 0 ? (1 / (1 - $discount / 100)) : 1;
-
             return response()->json([
                 'success' => true,
                 'data' => [
                     'id' => $product->id,
                     'title' => $product->title,
                     'description' => $product->description,
-                    'price' => round((float) $product->price * $factor, 2),
-                    'price_us' => $product->price_us ? round((float) $product->price_us * $factor, 2) : null,
-                    'price_other' => $product->price_other ? round((float) $product->price_other * $factor, 2) : null,
+                    'price' => round((float) $product->price, 2),
+                    'price_us' => $product->price_us ? round((float) $product->price_us, 2) : null,
+                    'price_other' => $product->price_other ? round((float) $product->price_other, 2) : null,
                     'tags' => $tags,
                     'images' => $imagesToUse,
                     'sizes' => $product->sizes ?? [],

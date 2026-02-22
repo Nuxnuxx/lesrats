@@ -91,9 +91,7 @@ class ShopController extends Controller
             'ai_image_prompt' => 'nullable|string|max:5000',
             'ai_image_enabled' => 'boolean',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'default_margin_us' => 'nullable|numeric|min:1|max:10',
-            'default_margin_other' => 'nullable|numeric|min:1|max:10',
-            'discount_percentage' => 'nullable|numeric|min:0|max:99',
+
         ]);
 
         // Handle unchecked checkboxes

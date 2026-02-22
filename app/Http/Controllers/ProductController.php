@@ -138,8 +138,7 @@ class ProductController extends Controller
             'cost_price' => 'nullable|numeric|min:0',
             'price_us' => 'nullable|numeric|min:0',
             'price_other' => 'nullable|numeric|min:0',
-            'margin_us' => 'nullable|numeric|min:1|max:10',
-            'margin_other' => 'nullable|numeric|min:1|max:10',
+
             'quantity' => 'required|integer|min:0',
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'source_url' => 'nullable|url',
