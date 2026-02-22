@@ -88,14 +88,10 @@ class ShopController extends Controller
             'ai_title_prompt' => 'nullable|string|max:5000',
             'ai_description_prompt' => 'nullable|string|max:5000',
             'ai_image_prompt' => 'nullable|string|max:5000',
-            'ai_image_enabled' => 'boolean',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'shipping_fee' => 'nullable|numeric|min:0',
             'discount_percentage' => 'nullable|numeric|min:0|max:99',
         ]);
-
-        // Handle unchecked checkboxes
-        $validated['ai_image_enabled'] = $request->boolean('ai_image_enabled');
 
         // Handle logo removal
         if ($request->boolean('remove_logo') && $shop->logo_path) {
@@ -140,7 +136,6 @@ class ShopController extends Controller
             'discount_percentage' => 'sometimes|nullable|numeric|min:0|max:99',
             'ai_description_prompt' => 'sometimes|nullable|string|max:5000',
             'ai_image_prompt' => 'sometimes|nullable|string|max:5000',
-            'ai_image_enabled' => 'sometimes|boolean',
             'etsy_categories' => 'sometimes|nullable|string',
             'available_tags' => 'sometimes|nullable|string',
         ]);

@@ -265,15 +265,7 @@
 
                             <div class="pt-3 border-t border-gray-100">
                                 <div class="flex items-center justify-between mb-2">
-                                    <div class="flex items-center gap-3">
-                                        <label for="ai_image_enabled" class="text-xs font-medium text-gray-700">Transformation images IA</label>
-                                        <label class="relative inline-flex items-center cursor-pointer">
-                                            <input type="checkbox" value="1" {{ $shop->ai_image_enabled ? 'checked' : '' }}
-                                                @change="save({ ai_image_enabled: $el.checked })"
-                                                class="sr-only peer" id="ai_image_enabled">
-                                            <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>
-                                        </label>
-                                    </div>
+                                    <label class="text-xs font-medium text-gray-700">Transformation images IA</label>
                                     <button type="button"
                                         @click="document.getElementById('ai_image_prompt').value = ''; save({ ai_image_prompt: '' })"
                                         class="text-xs text-orange-600 hover:text-orange-700">Reset</button>
