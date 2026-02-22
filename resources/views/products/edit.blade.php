@@ -123,7 +123,7 @@
 
                                 {{-- Sizes --}}
                                 <div x-data="{
-                                    sizes: @json($product->sizes ?? []),
+                                    sizes: {{ Js::from($product->sizes ?? []) }},
                                     newSize: '',
                                     addSize() {
                                         const s = this.newSize.trim().toUpperCase();
@@ -138,9 +138,7 @@
                                 }">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Tailles disponibles</label>
                                     <div class="flex flex-wrap gap-2 mb-2 min-h-[36px] p-2 border border-gray-200 rounded-lg bg-gray-50">
-                                        <template x-if="sizes.length === 0">
-                                            <span class="text-sm text-gray-400 italic">Aucune taille</span>
-                                        </template>
+                                        <span x-show="sizes.length === 0" class="text-sm text-gray-400 italic">Aucune taille</span>
                                         <template x-for="(size, index) in sizes" :key="index">
                                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
                                                 <span x-text="size"></span>
@@ -174,7 +172,7 @@
                         @if($product->country_prices && count($product->country_prices) > 0)
                         <div class="bg-white rounded-lg shadow-sm border border-blue-200 p-6 mt-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Prix par pays (AliExpress)</h3>
-                            
+
                             {{-- Country prices table --}}
                             <div class="overflow-x-auto">
                                 <table class="min-w-full text-sm">
@@ -229,7 +227,7 @@
                             {{-- Etsy Selling Prices --}}
                             <div class="mt-6 pt-4 border-t border-gray-200">
                                 <h4 class="text-sm font-semibold text-gray-900 mb-3">Prix de vente Etsy</h4>
-                                
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" x-data="{
                                     marginUs: {{ $product->margin_us ?? $product->shop->default_margin_us ?? 2.5 }},
                                     marginOther: {{ $product->margin_other ?? $product->shop->default_margin_other ?? 2.5 }},
@@ -237,7 +235,7 @@
                                     otherCost: {{ $product->getHighestOtherCountryTotal() ?? 0 }},
                                     priceUs: {{ $product->price_us ?? 0 }},
                                     priceOther: {{ $product->price_other ?? 0 }},
-                                    
+
                                     recalculateUs() {
                                         this.priceUs = Math.round(this.usCost * this.marginUs * 100) / 100;
                                         document.getElementById('price_us').value = this.priceUs.toFixed(2);
@@ -350,7 +348,7 @@
                                 <div>
                                     <label for="price" class="block text-sm font-medium text-gray-700">Prix de vente</label>
                                     <div class="mt-1 relative">
-                                        <input type="number" name="price" id="price" step="0.01" min="0" 
+                                        <input type="number" name="price" id="price" step="0.01" min="0"
                                                value="{{ old('price', number_format($product->price, 2, '.', '')) }}" required
                                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -367,7 +365,7 @@
                                         Cout d'achat
                                     </label>
                                     <div class="mt-1 relative">
-                                        <input type="number" name="cost_price" id="cost_price" step="0.01" min="0" 
+                                        <input type="number" name="cost_price" id="cost_price" step="0.01" min="0"
                                                value="{{ old('cost_price', number_format($product->cost_price ?? 0, 2, '.', '')) }}"
                                                class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12">
                                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -393,12 +391,12 @@
                                 cost: {{ round($product->cost_price ?? 0, 2) }},
                                 margin: {{ $initialMargin }},
                                 profit: {{ $initialProfit }},
-                                
+
                                 updateFromPrice() {
                                     this.profit = Math.round((this.price - this.cost) * 100) / 100;
                                     this.margin = this.price > 0 ? Math.round(((this.price - this.cost) / this.price) * 1000) / 10 : 0;
                                 },
-                                
+
                                 updateFromMargin() {
                                     if (this.margin < 100) {
                                         this.price = (this.cost * 100) / (100 - this.margin);
@@ -407,7 +405,7 @@
                                         document.getElementById('price').value = this.price.toFixed(2);
                                     }
                                 },
-                                
+
                                 setMargin(val) {
                                     this.margin = val;
                                     this.updateFromMargin();
@@ -428,17 +426,17 @@
                                         </div>
                                     </div>
                                     <div class="flex gap-1">
-                                        <button type="button" @click="setMargin(20)" 
+                                        <button type="button" @click="setMargin(20)"
                                                 class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
                                                 :class="Math.round(margin) === 20 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
                                             20%
                                         </button>
-                                        <button type="button" @click="setMargin(30)" 
+                                        <button type="button" @click="setMargin(30)"
                                                 class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
                                                 :class="Math.round(margin) === 30 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
                                             30%
                                         </button>
-                                        <button type="button" @click="setMargin(50)" 
+                                        <button type="button" @click="setMargin(50)"
                                                 class="px-2 py-1 text-xs rounded border hover:bg-gray-100"
                                                 :class="Math.round(margin) === 50 ? 'border-orange-500 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600'">
                                             50%
@@ -450,14 +448,14 @@
                                 <div class="mt-4 p-4 bg-gray-50 rounded-lg">
                                     <div class="flex items-center justify-between">
                                         <span class="text-sm text-gray-600">Profit par vente</span>
-                                        <span class="text-lg font-bold" 
-                                              :class="profit >= 0 ? 'text-green-600' : 'text-red-600'" 
+                                        <span class="text-lg font-bold"
+                                              :class="profit >= 0 ? 'text-green-600' : 'text-red-600'"
                                               x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
                                     </div>
                                     <div class="flex items-center justify-between mt-1">
                                         <span class="text-sm text-gray-600">Marge effective</span>
-                                        <span class="text-sm font-medium" 
-                                              :class="margin >= 30 ? 'text-green-600' : (margin >= 15 ? 'text-yellow-600' : 'text-red-600')" 
+                                        <span class="text-sm font-medium"
+                                              :class="margin >= 30 ? 'text-green-600' : (margin >= 15 ? 'text-yellow-600' : 'text-red-600')"
                                               x-text="margin.toFixed(1) + '%'"></span>
                                     </div>
                                     <p x-show="margin < 15" class="mt-2 text-xs text-red-600">Attention: marge faible</p>
@@ -603,7 +601,7 @@
 
                     {{-- Form Actions --}}
                     <div class="flex items-center justify-between">
-                        <a href="{{ route('products.index', ['shop_id' => $product->shop_id]) }}" 
+                        <a href="{{ route('products.index', ['shop_id' => $product->shop_id]) }}"
                            class="text-sm text-gray-500 hover:text-gray-700">
                             Annuler
                         </a>
@@ -620,7 +618,7 @@
                 {{-- Sidebar --}}
                 <div class="space-y-6">
                     {{-- Product Preview with AI Edit --}}
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6" 
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6"
                          x-data="aiImageEditor({
                             images: {{ json_encode(is_array($product->images) ? $product->images : json_decode($product->images, true) ?? []) }},
                             realImages: {{ json_encode($product->real_images ?? []) }},
@@ -631,7 +629,7 @@
                             applyLogo: {{ $product->shop->logo_path ? 'true' : 'false' }}
                          })">
                         <h3 class="text-sm font-semibold text-gray-900 mb-4">Apercu</h3>
-                        
+
                         @php
                             $images = is_array($product->images) ? $product->images : json_decode($product->images, true) ?? [];
                         @endphp
@@ -719,7 +717,7 @@
                         </p>
 
                         {{-- AI Image Edit Modal --}}
-                        <div x-show="showModal" 
+                        <div x-show="showModal"
                              x-cloak
                              class="fixed inset-0 z-50 overflow-y-auto"
                              x-transition:enter="ease-out duration-300"
@@ -730,7 +728,7 @@
                              x-transition:leave-end="opacity-0">
                             {{-- Backdrop --}}
                             <div class="fixed inset-0 bg-gray-500/75" @click="closeModal()"></div>
-                            
+
                             {{-- Modal Content --}}
                             <div class="flex min-h-full items-center justify-center p-4">
                                 <div class="relative bg-white rounded-xl shadow-xl w-full max-w-2xl"
@@ -741,7 +739,7 @@
                                      x-transition:leave-start="opacity-100 scale-100"
                                      x-transition:leave-end="opacity-0 scale-95"
                                      @click.away="closeModal()">
-                                    
+
                                     {{-- Modal Header --}}
                                     <div class="flex items-center justify-between p-4 border-b border-gray-200">
                                         <h3 class="text-lg font-semibold text-gray-900 flex items-center">
@@ -878,7 +876,7 @@
                                     <div class="flex items-center justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
                                         <template x-if="step === 'select'">
                                             <div class="flex items-center gap-3 w-full justify-end">
-                                                <button type="button" 
+                                                <button type="button"
                                                         @click="closeModal()"
                                                         class="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900">
                                                     Annuler
@@ -954,7 +952,7 @@
                             </h3>
                             <span class="text-xs text-gray-500" x-text="images.length + ' image(s)'"></span>
                         </div>
-                        
+
                         <template x-if="images.length === 0">
                             <div class="text-center py-6">
                                 <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1003,12 +1001,12 @@
                     @endphp
                     <div class="bg-white rounded-lg shadow-sm border border-orange-200 p-6">
                         <h3 class="text-sm font-semibold text-orange-600 mb-4">Publier sur Etsy</h3>
-                        
+
                         <p class="text-xs text-gray-500 mb-3">
                             Publication automatique: categorie, titre, description, prix, tags.
                         </p>
-                        
-                        <button type="button" 
+
+                        <button type="button"
                                 data-product-id="{{ $product->id }}"
                                 data-category-name="{{ $etsyCategoryData['etsy_name'] ?? '' }}"
                                 data-is-digital="{{ $product->is_digital ? 'true' : 'false' }}"
@@ -1037,7 +1035,7 @@
                     {{-- Stats --}}
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                         <h3 class="text-sm font-semibold text-gray-900 mb-4">Statistiques</h3>
-                        
+
                         <div class="space-y-3">
                             <div class="flex justify-between text-sm">
                                 <span class="text-gray-500">Ventes totales</span>
@@ -1058,8 +1056,8 @@
                     {{-- Danger Zone --}}
                     <div class="bg-white rounded-lg shadow-sm border border-red-200 p-6">
                         <h3 class="text-sm font-semibold text-red-600 mb-4">Zone de danger</h3>
-                        
-                        <x-ui.confirm-modal 
+
+                        <x-ui.confirm-modal
                             id="delete-product"
                             title="Supprimer ce produit"
                             message="Cette action est irreversible. Le produit sera supprime de votre boutique."
@@ -1069,7 +1067,7 @@
                             formMethod="DELETE"
                         >
                             <x-slot name="trigger">
-                                <button type="button" 
+                                <button type="button"
                                         class="w-full inline-flex items-center justify-center px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
@@ -1164,10 +1162,10 @@
                             this.generatedImage = data.data.transformed_image;
                             this.realImages = data.data.real_images;
                             this.step = 'result';
-                            
+
                             // Dispatch event to update real images section
-                            window.dispatchEvent(new CustomEvent('real-images-updated', { 
-                                detail: { images: data.data.real_images } 
+                            window.dispatchEvent(new CustomEvent('real-images-updated', {
+                                detail: { images: data.data.real_images }
                             }));
                         } else {
                             this.errorMessage = data.message || 'Une erreur est survenue.';
@@ -1298,12 +1296,12 @@
             const categoryName = dataset.categoryName;
             const isDigital = dataset.isDigital === 'true';
             const productId = dataset.productId;
-            
+
             if (!categoryName) {
                 alert('Veuillez d\'abord selectionner une categorie Etsy pour ce produit.');
                 return;
             }
-            
+
             // Show toast
             const toast = document.createElement('div');
             toast.textContent = 'Preparation des donnees...';

@@ -49,6 +49,18 @@
                                 </span>
                             </dd>
                         </div>
+                        @if($product->sizes && count($product->sizes) > 0)
+                            <div class="sm:col-span-2">
+                                <dt class="text-sm font-medium text-gray-500">Tailles</dt>
+                                <dd class="mt-1 flex flex-wrap gap-2">
+                                    @foreach($product->sizes as $size)
+                                        <span class="px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
+                                            {{ $size }}
+                                        </span>
+                                    @endforeach
+                                </dd>
+                            </div>
+                        @endif
                         <div class="sm:col-span-2">
                             <dt class="text-sm font-medium text-gray-500">Description</dt>
                             <dd class="mt-1 text-sm text-gray-900">{{ $product->description ?? 'Aucune description' }}</dd>
