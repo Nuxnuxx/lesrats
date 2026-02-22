@@ -12,7 +12,9 @@
         @endphp
         
         @if($firstImage)
-            <img src="{{ $firstImage }}" alt="{{ $product->title }}" class="w-full h-full object-cover">
+            <a href="{{ route('products.edit', $product) }}">
+                <img src="{{ $firstImage }}" alt="{{ $product->title }}" class="w-full h-full object-cover cursor-pointer">
+            </a>
         @else
             <div class="w-full h-full flex items-center justify-center">
                 @if($product->source_type === 'printables')
@@ -62,26 +64,7 @@
             </div>
         @endif
 
-        {{-- Quick Actions (on hover) --}}
-        <div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-            <a href="{{ route('products.edit', $product) }}" 
-               class="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
-               title="Modifier">
-                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                </svg>
-            </a>
-            @if($product->source_url)
-                <a href="{{ $product->source_url }}" 
-                   target="_blank"
-                   class="p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
-                   title="Voir la source">
-                    <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                    </svg>
-                </a>
-            @endif
-        </div>
+
     </div>
 
     {{-- Content --}}
