@@ -470,23 +470,7 @@
                             @endif
                         </div>
 
-                        {{-- Settings --}}
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mt-6">
-                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Parametres</h3>
 
-                            <div class="space-y-4">
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="is_active" value="1" {{ old('is_active', $product->is_active) ? 'checked' : '' }}
-                                        class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
-                                    <span class="ml-3">
-                                        <span class="text-sm font-medium text-gray-900">Produit actif</span>
-                                        <span class="block text-xs text-gray-500">Desactiver pour masquer le produit</span>
-                                    </span>
-                                </label>
-
-
-                            </div>
-                        </div>
                     </form>
 
                     {{-- Form Actions --}}

@@ -42,15 +42,6 @@
             @endif
         </div>
 
-        {{-- Active Status Badge --}}
-        <div class="absolute top-2 right-2">
-            @if(!$product->is_active)
-                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                    Inactif
-                </span>
-            @endif
-        </div>
-
         {{-- Selection Checkbox --}}
         @if($selectable)
             <div class="absolute bottom-2 left-2">
@@ -92,12 +83,6 @@
             </div>
 
             <div class="flex flex-col items-end gap-1">
-                @if(!$product->is_active)
-                    <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                        Inactif
-                    </span>
-                @endif
-
                 {{-- Stock Badge --}}
                 @php
                     $qty = $product->quantity ?? 999;

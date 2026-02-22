@@ -81,7 +81,6 @@ class ShopController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:5000',
             'currency' => 'required|string|size:3',
-            'is_active' => 'boolean',
             'ai_title_prompt' => 'nullable|string|max:5000',
             'ai_description_prompt' => 'nullable|string|max:5000',
             'ai_image_prompt' => 'nullable|string|max:5000',
@@ -91,7 +90,6 @@ class ShopController extends Controller
         ]);
 
         // Handle unchecked checkboxes
-        $validated['is_active'] = $request->boolean('is_active');
         $validated['ai_image_enabled'] = $request->boolean('ai_image_enabled');
 
         // Handle logo removal

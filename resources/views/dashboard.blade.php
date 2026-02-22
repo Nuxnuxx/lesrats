@@ -9,7 +9,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
 
             {{-- Global Stats --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-ui.stat-card
                     label="Produits"
                     :value="$totalStats['total_products']"
@@ -21,12 +21,6 @@
                     :value="$shops->count()"
                     icon="shop"
                     color="blue"
-                />
-                <x-ui.stat-card
-                    label="Boutiques actives"
-                    :value="$shops->where('is_active', true)->count()"
-                    icon="shop"
-                    color="green"
                 />
             </div>
 

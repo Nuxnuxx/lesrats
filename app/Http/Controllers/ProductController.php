@@ -54,16 +54,9 @@ class ProductController extends Controller
             $query->where('source_type', $sourceType);
         }
 
-        // Active status filter
-        if ($request->has('is_active')) {
-            $query->where('is_active', $request->boolean('is_active'));
-        }
-
         // Stats for the current shop
         $stats = [
             'total' => $shop->products()->count(),
-            'active' => $shop->products()->where('is_active', true)->count(),
-            'inactive' => $shop->products()->where('is_active', false)->count(),
         ];
 
         $products = $query->latest()->paginate(24)->withQueryString();
@@ -98,7 +91,6 @@ class ProductController extends Controller
             'low_stock_threshold' => 'nullable|integer|min:0|max:100',
             'is_digital' => 'boolean',
             'aliexpress_url' => ['nullable', 'string', 'regex:/^https?:\/\//'],
-            'is_active' => 'boolean',
         ]);
 
         $validated['shop_id'] = $shop->id;
@@ -146,7 +138,6 @@ class ProductController extends Controller
             'source_url' => 'nullable|url',
             'aliexpress_url' => ['nullable', 'string', 'regex:/^https?:\/\//'],
             'sizes' => 'nullable|string',
-            'is_active' => 'boolean',
         ]);
 
         $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;

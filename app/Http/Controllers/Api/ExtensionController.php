@@ -278,7 +278,6 @@ class ExtensionController extends Controller
                 'source_type' => $sourceType,
                 'aliexpress_product_id' => $validated['aliexpress_product_id'] ?? null,
                 'aliexpress_url' => $validated['source_url'],
-                'is_active' => true,
                 'quantity' => $quantity,
                 'is_digital' => $isDigital,
                 'low_stock_threshold' => $lowStockThreshold,

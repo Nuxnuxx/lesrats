@@ -13,7 +13,6 @@ class Shop extends Model
         'description',
         'logo_path',
         'currency',
-        'is_active',
         'ai_title_prompt',
         'ai_description_prompt',
         'ai_image_prompt',
@@ -82,7 +81,6 @@ Boutique: [SHOP_NICHE]
 PROMPT;
 
     protected $casts = [
-        'is_active' => 'boolean',
         'ai_image_enabled' => 'boolean',
         'ai_specific_prompts' => 'array',
         'ai_backgrounds' => 'array',

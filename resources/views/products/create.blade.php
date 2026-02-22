@@ -573,23 +573,7 @@
                                 </div>
                             </div>
 
-                            <div class="mt-6 space-y-4">
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="is_active" value="1" checked
-                                           class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
-                                    <span class="ml-3">
-                                        <span class="text-sm font-medium text-gray-900">Produit actif</span>
-                                    </span>
-                                </label>
 
-                                <label class="flex items-center">
-                                    <input type="checkbox" name="auto_sync" value="1"
-                                           class="w-4 h-4 rounded border-gray-300 text-orange-600 focus:ring-orange-500">
-                                    <span class="ml-3">
-                                        <span class="text-sm font-medium text-gray-900">Produit actif a la creation</span>
-                                    </span>
-                                </label>
-                            </div>
                         </div>
 
                         {{-- Preview --}}

@@ -82,14 +82,6 @@
                         @enderror
                     </div>
 
-                    <div class="mb-4">
-                        <label class="flex items-center">
-                            <input type="checkbox" name="is_active" value="1" {{ old('is_active', $shop->is_active) ? 'checked' : '' }}
-                                class="rounded border-gray-300 text-orange-600 shadow-sm focus:border-orange-500 focus:ring-orange-500">
-                            <span class="ml-2 text-sm text-gray-700">Boutique active</span>
-                        </label>
-                    </div>
-
                     <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                         <a href="{{ route('dashboard') }}" 
                            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
@@ -115,7 +107,6 @@
                     @method('PUT')
                     <input type="hidden" name="name" value="{{ $shop->name }}">
                     <input type="hidden" name="currency" value="{{ $shop->currency }}">
-                    <input type="hidden" name="is_active" value="{{ $shop->is_active ? '1' : '0' }}">
 
                     <div>
                         <label for="discount_percentage" class="block text-sm font-medium text-gray-700 mb-1">
@@ -166,8 +157,6 @@
                     @method('PUT')
                     <input type="hidden" name="name" value="{{ $shop->name }}">
                     <input type="hidden" name="currency" value="{{ $shop->currency }}">
-                    <input type="hidden" name="is_active" value="{{ $shop->is_active ? '1' : '0' }}">
-
                     <div class="space-y-4">
                         <div>
                             <div class="flex items-center justify-between mb-1">

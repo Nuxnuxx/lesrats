@@ -29,7 +29,6 @@ class Product extends Model
         'source_url',
         'images',
         'real_images',
-        'is_active',
         'apply_logo',
     ];
 
@@ -45,7 +44,6 @@ class Product extends Model
         'real_images' => 'array',
         'tags' => 'array',
         'sizes' => 'array',
-        'is_active' => 'boolean',
         'is_digital' => 'boolean',
         'apply_logo' => 'boolean',
     ];

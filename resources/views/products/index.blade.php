@@ -42,10 +42,8 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             
             {{-- Stats Bar --}}
-            <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="mb-6">
                 <x-ui.stat-card label="Total produits" :value="$stats['total']" />
-                <x-ui.stat-card label="Actifs" :value="$stats['active']" color="green" />
-                <x-ui.stat-card label="Inactifs" :value="$stats['inactive']" color="gray" />
             </div>
 
             {{-- Filters & Bulk Actions Bar --}}
@@ -75,13 +73,6 @@
                         <option value="manual" {{ request('source_type') === 'manual' ? 'selected' : '' }}>Manuel</option>
                     </select>
 
-                    {{-- Active Status Filter --}}
-                    <select name="is_active" class="border border-gray-300 rounded-lg text-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
-                        <option value="">Tous statuts</option>
-                        <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>Actifs</option>
-                        <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>Inactifs</option>
-                    </select>
-
                     {{-- Filter Button --}}
                     <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,7 +81,7 @@
                         Filtrer
                     </button>
 
-                    @if(request('search') || request('source_type') || request('is_active'))
+                    @if(request('search') || request('source_type'))
                         <a href="{{ route('products.index', ['shop_id' => $shop->id]) }}" class="text-sm text-gray-500 hover:text-gray-700">
                             Effacer
                         </a>
@@ -125,13 +116,13 @@
                 <x-ui.empty-state 
                     icon="products"
                     title="Aucun produit"
-                    :description="request('search') || request('source_type') || request('is_active') 
+                    :description="request('search') || request('source_type') 
                         ? 'Aucun produit ne correspond a vos filtres.' 
                         : 'Commencez par ajouter votre premier produit.'"
-                    :actionUrl="!(request('search') || request('source_type') || request('is_active')) ? route('products.create') : null"
-                    :actionLabel="!(request('search') || request('source_type') || request('is_active')) ? 'Nouveau produit' : null"
-                    :secondaryActionUrl="request('search') || request('source_type') || request('is_active') ? route('products.index', ['shop_id' => $shop->id]) : null"
-                    :secondaryActionLabel="request('search') || request('source_type') || request('is_active') ? 'Effacer les filtres' : null"
+                    :actionUrl="!(request('search') || request('source_type')) ? route('products.create') : null"
+                    :actionLabel="!(request('search') || request('source_type')) ? 'Nouveau produit' : null"
+                    :secondaryActionUrl="request('search') || request('source_type') ? route('products.index', ['shop_id' => $shop->id]) : null"
+                    :secondaryActionLabel="request('search') || request('source_type') ? 'Effacer les filtres' : null"
                 />
             @else
                 {{-- Select All --}}
