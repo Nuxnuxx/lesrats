@@ -172,6 +172,45 @@ class ProductController extends Controller
     }
 
     /**
+     * Auto-save: partial update via AJAX (accepts any subset of fields).
+     */
+    public function autosave(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $validated = $request->validate([
+            'title' => 'sometimes|string|max:255',
+            'description' => 'sometimes|nullable|string',
+            'tags' => 'sometimes|nullable|string',
+            'etsy_category' => 'sometimes|nullable|string|max:255',
+            'price' => 'sometimes|numeric|min:0',
+            'price_us' => 'sometimes|nullable|numeric|min:0',
+            'price_other' => 'sometimes|nullable|numeric|min:0',
+            'quantity' => 'sometimes|integer|min:0',
+            'low_stock_threshold' => 'sometimes|nullable|integer|min:0|max:100',
+            'aliexpress_url' => ['sometimes', 'nullable', 'string', 'regex:/^https?:\/\//'],
+            'sizes' => 'sometimes|nullable|string',
+        ]);
+
+        // Convert sizes JSON string to array
+        if (isset($validated['sizes']) && is_string($validated['sizes'])) {
+            $validated['sizes'] = json_decode($validated['sizes'], true) ?? [];
+        }
+
+        // Convert tags string to array
+        if (isset($validated['tags']) && is_string($validated['tags'])) {
+            $tagsArray = array_map('trim', explode(',', $validated['tags']));
+            $tagsArray = array_filter($tagsArray);
+            $tagsArray = array_slice($tagsArray, 0, 13);
+            $validated['tags'] = $tagsArray;
+        }
+
+        $product->update($validated);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
      * Remove the specified resource from storage.
      */
     public function destroy(Product $product)
@@ -565,8 +604,8 @@ class ProductController extends Controller
                 'success' => true,
                 'message' => 'Image transformee et ajoutee aux images reelles!',
                 'data' => [
-                    'transformed_image' => $transformedPath,
-                    'real_images' => $realImages,
+                    'transformed_image' => Product::resolveImageUrl($transformedPath),
+                    'real_images' => $product->fresh()->real_image_urls,
                 ],
             ]);
 
@@ -669,7 +708,7 @@ class ProductController extends Controller
             'finished' => $batch->finished(),
             'cancelled' => $batch->cancelled(),
             'progress' => $batch->progress(),
-            'real_images' => $product->real_images ?? [],
+            'real_images' => $product->real_image_urls,
         ]);
     }
 
@@ -720,7 +759,7 @@ class ProductController extends Controller
             'success' => true,
             'message' => 'Image supprimee des images reelles.',
             'data' => [
-                'real_images' => $realImages,
+                'real_images' => $product->fresh()->real_image_urls,
             ],
         ]);
     }
@@ -780,17 +819,39 @@ class ProductController extends Controller
             return back()->with('error', 'Impossible de creer le fichier ZIP.');
         }
 
-        foreach ($images as $index => $imageUrl) {
+        foreach ($images as $index => $imagePath) {
             try {
-                $response = Http::timeout(30)->get($imageUrl);
+                $content = null;
 
-                if (! $response->successful()) {
+                // Try storage disk directly (bare paths like products/2026/02/xxx.png)
+                if (! str_starts_with($imagePath, 'http') && ! str_starts_with($imagePath, '/') && Storage::disk('public')->exists($imagePath)) {
+                    $content = Storage::disk('public')->get($imagePath);
+                }
+
+                // Try /storage/ prefix paths (legacy)
+                if (! $content && str_starts_with($imagePath, '/storage/')) {
+                    $relativePath = substr($imagePath, 9);
+                    if (Storage::disk('public')->exists($relativePath)) {
+                        $content = Storage::disk('public')->get($relativePath);
+                    }
+                }
+
+                // Fallback: HTTP fetch (external URLs like AliExpress)
+                if (! $content && str_starts_with($imagePath, 'http')) {
+                    $response = Http::timeout(30)->get($imagePath);
+                    if (! $response->successful()) {
+                        continue;
+                    }
+                    $content = $response->body();
+                }
+
+                if (! $content) {
                     continue;
                 }
 
-                $ext = pathinfo(parse_url($imageUrl, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'png';
+                $ext = pathinfo(parse_url($imagePath, PHP_URL_PATH), PATHINFO_EXTENSION) ?: 'png';
                 $filename = str_pad($index + 1, 2, '0', STR_PAD_LEFT).'.'.$ext;
-                $zip->addFromString($filename, $response->body());
+                $zip->addFromString($filename, $content);
             } catch (\Exception $e) {
                 continue;
             }

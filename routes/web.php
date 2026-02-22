@@ -11,12 +11,19 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-// Serve storage files without symlink (for Laravel Cloud)
+// Serve storage files: redirect to cloud URL (S3/R2) or serve locally
 Route::get('/storage/{path}', function (string $path) {
     if (! Storage::disk('public')->exists($path)) {
         abort(404);
     }
 
+    // Cloud storage (S3/R2): redirect to the full URL
+    $driver = config('filesystems.disks.public.driver');
+    if ($driver === 's3') {
+        return redirect(Storage::disk('public')->url($path));
+    }
+
+    // Local storage: serve the file directly
     return response()->file(Storage::disk('public')->path($path));
 })->where('path', '.*')->name('storage.serve');
 
@@ -58,6 +65,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/products/{product}', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::patch('/products/{product}', [ProductController::class, 'update']);
+    Route::post('/products/{product}/autosave', [ProductController::class, 'autosave'])->name('products.autosave');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     Route::post('/products/analyze-aliexpress', [ProductController::class, 'analyzeAliExpress'])->name('products.analyze-aliexpress');
     Route::post('/products/analyze-printables', [ProductController::class, 'analyzePrintables'])->name('products.analyze-printables');

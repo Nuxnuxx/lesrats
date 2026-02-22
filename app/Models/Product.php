@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -83,6 +84,31 @@ class Product extends Model
     // ============================================
     // ACCESSORS
     // ============================================
+
+    /**
+     * Resolve a stored image path to a full URL.
+     * Handles: storage-relative paths (products/...), /storage/ paths, full URLs.
+     */
+    public static function resolveImageUrl(string $path): string
+    {
+        // Already a full URL (external or cloud CDN)
+        if (str_starts_with($path, 'http')) {
+            return $path;
+        }
+
+        // Legacy /storage/ prefix — strip it to get the relative path
+        $relativePath = preg_replace('#^/storage/#', '', $path);
+
+        return Storage::disk('public')->url($relativePath);
+    }
+
+    /**
+     * Get real_images as resolved URLs.
+     */
+    public function getRealImageUrlsAttribute(): array
+    {
+        return array_map([self::class, 'resolveImageUrl'], $this->real_images ?? []);
+    }
 
     /**
      * Calculate estimated net profit per sale (after Etsy fees, cost, and URSSAF).
