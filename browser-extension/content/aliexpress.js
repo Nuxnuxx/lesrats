@@ -313,8 +313,10 @@ function extractImagesFromDOM() {
 
   // Sélecteurs pour les images principales
   const imageSelectors = [
-    '[class*="slider--img"] img',
+    '[class*="slider--item"] img',     // Layout AliExpress actuel (slider--item--RpyeewA)
+    '[class*="slider--img"] img',      // Ancien layout
     '[class*="Slider--img"] img',
+    '[class*="image-view"] img',       // image-view-v2--previewWrap
     '.pdp-main-image img',
     '[data-pl="product-image"] img',
     '.images-view-item img',
@@ -330,7 +332,7 @@ function extractImagesFromDOM() {
       if (src) {
         // Prendre la première URL si srcset
         src = src.split(',')[0].split(' ')[0];
-        if (src.startsWith('http')) {
+        if (src.startsWith('http') && src.includes('alicdn.com')) {
           // Convertir en haute résolution
           src = convertToHighRes(src);
           images.add(src);
