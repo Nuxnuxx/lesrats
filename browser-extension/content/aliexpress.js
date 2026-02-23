@@ -143,7 +143,7 @@ function extractFromPageData(_debug = []) {
             data.images = imgUrls
               .map(url => url.replace(/\\u002F/g, '/'))
               .filter(url => !url.includes('_80x80') && !url.includes('_220x220'))
-              .slice(0, 10);
+              .slice(0, 20);
           }
         }
 
@@ -155,7 +155,7 @@ function extractFromPageData(_debug = []) {
               .map(url => url.replace(/\\u002F/g, '/').replace(/\\\//g, '/'))
               .filter(url => !url.includes('_80x80') && !url.includes('_220x220') && !url.includes('_50x50'))
               .map(url => convertToHighRes(url))
-              .slice(0, 10);
+              .slice(0, 20);
           }
         }
 
@@ -369,7 +369,7 @@ function extractImagesFromDOM() {
     });
   }
 
-  return Array.from(images).slice(0, 10);
+  return Array.from(images).slice(0, 20);
 }
 
 // Extraire la description depuis le DOM
