@@ -91,9 +91,21 @@
                          })">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-sm font-semibold text-gray-900">Images source</h3>
-                            @if($product->cost_price > 0)
-                                <span class="text-xs text-gray-500">Achat: <span class="text-red-600 font-bold">{{ number_format($product->cost_price, 2) }} {{ $product->shop->currency }}</span></span>
-                            @endif
+                            <div class="flex items-center gap-2">
+                                <button x-show="deletedImages.length > 0"
+                                        @click="showDeleted = !showDeleted"
+                                        :class="showDeleted ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'"
+                                        class="flex items-center gap-1 text-xs transition-colors"
+                                        title="Images supprimees">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                    </svg>
+                                    <span x-text="deletedImages.length"></span>
+                                </button>
+                                @if($product->cost_price > 0)
+                                    <span class="text-xs text-gray-500">Achat: <span class="text-red-600 font-bold">{{ number_format($product->cost_price, 2) }} {{ $product->shop->currency }}</span></span>
+                                @endif
+                            </div>
                         </div>
 
                         <template x-if="images.length > 0">
@@ -117,29 +129,23 @@
                             <div class="text-center py-4 text-gray-400 text-sm">Aucune image source</div>
                         </template>
 
-                        {{-- Deleted source images (corbeille) --}}
-                        <template x-if="deletedImages.length > 0">
-                            <div class="mt-2">
-                                <p class="text-xs text-gray-400 mb-1 flex items-center gap-1">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    Images supprimees (<span x-text="deletedImages.length"></span>)
-                                </p>
-                                <div class="grid grid-cols-4 gap-2">
-                                    <template x-for="(img, index) in deletedImages" :key="'del-'+index">
-                                        <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                            <img :src="img" class="w-full h-full object-cover opacity-40">
-                                            <button type="button" @click="restoreImage(index)"
-                                                    class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                                                <span class="bg-green-500 hover:bg-green-600 text-white rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                                                    Restaurer
-                                                </span>
-                                            </button>
-                                        </div>
-                                    </template>
-                                </div>
+                        {{-- Deleted source images (panel compact) --}}
+                        <div x-show="showDeleted && deletedImages.length > 0"
+                             class="mt-2 pt-2 border-t border-dashed border-gray-200">
+                            <div class="grid grid-cols-4 gap-2">
+                                <template x-for="(img, index) in deletedImages" :key="'del-'+index">
+                                    <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                        <img :src="img" class="w-full h-full object-cover opacity-40">
+                                        <button type="button" @click="restoreImage(index)"
+                                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                            <span class="bg-green-500 hover:bg-green-600 text-white rounded-full p-1.5">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
-                        </template>
+                        </div>
 
                         {{-- Generate AI button --}}
                         <template x-if="images.length > 0">
@@ -317,7 +323,19 @@
                                 </svg>
                                 Images reelles (IA)
                             </h3>
-                            <span class="text-xs text-gray-500" x-text="images.length + ' image(s)'"></span>
+                            <div class="flex items-center gap-2">
+                                <button x-show="deletedImages.length > 0"
+                                        @click="showDeleted = !showDeleted"
+                                        :class="showDeleted ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'"
+                                        class="flex items-center gap-1 text-xs transition-colors"
+                                        title="Images supprimees">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                    </svg>
+                                    <span x-text="deletedImages.length"></span>
+                                </button>
+                                <span class="text-xs text-gray-500" x-text="images.length + ' image(s)'"></span>
+                            </div>
                         </div>
 
                         <template x-if="images.length === 0">
@@ -341,29 +359,23 @@
                             </div>
                         </template>
 
-                        {{-- Deleted real images (corbeille) --}}
-                        <template x-if="deletedImages.length > 0">
-                            <div class="mt-3 pt-3 border-t border-gray-100">
-                                <p class="text-xs text-gray-400 mb-1 flex items-center gap-1">
-                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                    Images supprimees (<span x-text="deletedImages.length"></span>)
-                                </p>
-                                <div class="grid grid-cols-4 gap-2">
-                                    <template x-for="(img, index) in deletedImages" :key="'del-real-'+index">
-                                        <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                            <img :src="img" class="w-full h-full object-cover opacity-40">
-                                            <button type="button" @click="restoreImage(index)"
-                                                    class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
-                                                <span class="bg-green-500 hover:bg-green-600 text-white rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
-                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-                                                    Restaurer
-                                                </span>
-                                            </button>
-                                        </div>
-                                    </template>
-                                </div>
+                        {{-- Deleted real images (panel compact) --}}
+                        <div x-show="showDeleted && deletedImages.length > 0"
+                             class="mt-3 pt-3 border-t border-dashed border-purple-100">
+                            <div class="grid grid-cols-4 gap-2">
+                                <template x-for="(img, index) in deletedImages" :key="'del-real-'+index">
+                                    <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                        <img :src="img" class="w-full h-full object-cover opacity-40">
+                                        <button type="button" @click="restoreImage(index)"
+                                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                            <span class="bg-green-500 hover:bg-green-600 text-white rounded-full p-1.5">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
-                        </template>
+                        </div>
 
                         <p class="text-xs text-gray-400 mt-2">Ces images seront envoyees a Etsy.</p>
                     </div>
@@ -741,6 +753,7 @@
                 defaultBackground: config.defaultBackground || '',
 
                 showModal: false,
+                showDeleted: false,
                 selectedIndexes: [],
                 prompt: config.defaultPrompt || '',
                 selectedSpecificPromptIndex: '',
@@ -876,6 +889,7 @@
             return {
                 images: config.images || [],
                 deletedImages: config.deletedImages || [],
+                showDeleted: false,
                 productId: config.productId,
                 csrfToken: config.csrfToken,
 
