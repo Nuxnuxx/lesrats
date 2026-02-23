@@ -147,9 +147,9 @@ function extractFromPageData(_debug = []) {
           }
         }
 
-        // Fallback: chercher toutes les URLs alicdn.com dans le script si imagePathList vide
+        // Fallback: chercher toutes les URLs alicdn.com / aliexpress-media.com dans le script
         if (data.images.length === 0) {
-          const allAliUrls = content.match(/https?:\\?\/\\?\/ae\d*\.alicdn\.com\/kf\/[^"'\s,\\]+/g);
+          const allAliUrls = content.match(/https?:\\?\/\\?\/(ae\d*\.alicdn\.com|ae-pic[^"'\s,\\]*\.aliexpress-media\.com)\/[^"'\s,\\]+/g);
           if (allAliUrls && allAliUrls.length > 0) {
             data.images = [...new Set(allAliUrls)]
               .map(url => url.replace(/\\u002F/g, '/').replace(/\\\//g, '/'))
@@ -332,7 +332,7 @@ function extractImagesFromDOM() {
       if (src) {
         // Prendre la première URL si srcset
         src = src.split(',')[0].split(' ')[0];
-        if (src.startsWith('http') && src.includes('alicdn.com')) {
+        if (src.startsWith('http') && isAliExpressImage(src)) {
           // Convertir en haute résolution
           src = convertToHighRes(src);
           images.add(src);
@@ -365,7 +365,7 @@ function extractImagesFromDOM() {
     document.querySelectorAll('img').forEach(img => {
       const src = img.src || img.dataset.src || img.dataset.lazySrc
         || img.getAttribute('data-lazy-src') || img.getAttribute('data-original');
-      if (src && src.includes('alicdn.com')) {
+      if (src && isAliExpressImage(src)) {
         images.add(convertToHighRes(src));
       }
     });
@@ -453,12 +453,20 @@ function extractSizesFromDOM(_debug = []) {
 
 // Convertir une URL d'image en haute résolution
 function convertToHighRes(url) {
-  // Supprimer les suffixes de taille AliExpress
+  // Supprimer le suffixe de conversion format AliExpress (ex: _.avif, _.webp en fin d'URL)
+  // Format actuel: filename.jpg_220x220q75.jpg_.avif → filename.jpg
+  url = url.replace(/_\.(avif|webp|jpg|jpeg|png)$/i, '');
+  // Supprimer les suffixes de taille AliExpress (ex: _220x220q75.jpg)
   url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
   url = url.replace(/\.(jpg|jpeg|png|webp|avif)_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
   // Utiliser HTTPS
   url = url.replace(/^http:/, 'https:');
   return url;
+}
+
+// Vérifie si une URL est une image AliExpress (alicdn.com ou aliexpress-media.com)
+function isAliExpressImage(url) {
+  return url.includes('alicdn.com') || url.includes('aliexpress-media.com');
 }
 
 // Parser un prix depuis une chaîne
