@@ -751,9 +751,12 @@ class ProductController extends Controller
             ], 404);
         }
 
-        // Soft-delete: move to deleted_real_images
+        // Soft-delete: move to deleted_real_images with timestamp for auto-purge
         $deletedRealImages = $product->deleted_real_images ?? [];
-        $deletedRealImages[] = $realImages[$index];
+        $deletedRealImages[] = [
+            'path' => $realImages[$index],
+            'deleted_at' => now()->toISOString(),
+        ];
         array_splice($realImages, $index, 1);
         $product->update(['real_images' => $realImages, 'deleted_real_images' => $deletedRealImages]);
 
@@ -788,7 +791,8 @@ class ProductController extends Controller
         }
 
         $realImages = $product->real_images ?? [];
-        $realImages[] = $deletedRealImages[$index];
+        $item = $deletedRealImages[$index];
+        $realImages[] = is_array($item) ? $item['path'] : $item;
         array_splice($deletedRealImages, $index, 1);
         $product->update(['real_images' => $realImages, 'deleted_real_images' => $deletedRealImages]);
 

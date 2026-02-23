@@ -116,10 +116,15 @@ class Product extends Model
 
     /**
      * Get deleted_real_images as resolved URLs.
+     * Handles both legacy string format and new {path, deleted_at} object format.
      */
     public function getDeletedRealImageUrlsAttribute(): array
     {
-        return array_map([self::class, 'resolveImageUrl'], $this->deleted_real_images ?? []);
+        return array_map(function ($item) {
+            $path = is_array($item) ? $item['path'] : $item;
+
+            return self::resolveImageUrl($path);
+        }, $this->deleted_real_images ?? []);
     }
 
     /**
