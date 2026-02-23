@@ -142,6 +142,7 @@ class ShopController extends Controller
             'pricing_k' => 'sometimes|nullable|numeric|min:0.01|max:100',
             'pricing_t' => 'sometimes|nullable|numeric|min:0|max:0.99',
             'pricing_t0' => 'sometimes|nullable|numeric|min:0',
+            'promotion_reminder_date' => 'sometimes|nullable|date',
             'ai_description_prompt' => 'sometimes|nullable|string|max:5000',
             'ai_image_prompt' => 'sometimes|nullable|string|max:5000',
             'ai_specific_prompts' => 'sometimes|nullable|string',
