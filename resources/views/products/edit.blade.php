@@ -81,6 +81,7 @@
                          x-data="aiImageEditor({
                             images: @js($images),
                             realImages: @js($product->real_image_urls),
+                            deletedImages: @js($product->deleted_images ?? []),
                             productId: {{ $product->id }},
                             defaultPrompt: @js($product->shop->getEffectiveAiImagePrompt()),
                             specificPrompts: @js($product->shop->ai_specific_prompts ?? []),
@@ -95,36 +96,61 @@
                             @endif
                         </div>
 
-                        @if(count($images) > 0)
+                        <template x-if="images.length > 0">
                             <div class="grid grid-cols-4 gap-2 mb-3">
-                                @foreach($images as $index => $img)
+                                <template x-for="(img, index) in images" :key="index">
                                     <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                        <img src="{{ $img }}" class="w-full h-full object-cover cursor-pointer"
-                                             @click="$dispatch('lightbox-open', { images: images, index: {{ $index }} })">
+                                        <img :src="img" class="w-full h-full object-cover cursor-pointer"
+                                             @click="$dispatch('lightbox-open', { images: images, index: index })">
                                         <button type="button"
-                                                @click="removeImage({{ $index }})"
+                                                @click="removeImage(index)"
                                                 class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                             </svg>
                                         </button>
                                     </div>
-                                @endforeach
+                                </template>
                             </div>
-                        @else
+                        </template>
+                        <template x-if="images.length === 0 && deletedImages.length === 0">
                             <div class="text-center py-4 text-gray-400 text-sm">Aucune image source</div>
-                        @endif
+                        </template>
+
+                        {{-- Deleted source images (corbeille) --}}
+                        <template x-if="deletedImages.length > 0">
+                            <div class="mt-2">
+                                <p class="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    Images supprimees (<span x-text="deletedImages.length"></span>)
+                                </p>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <template x-for="(img, index) in deletedImages" :key="'del-'+index">
+                                        <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                            <img :src="img" class="w-full h-full object-cover opacity-40">
+                                            <button type="button" @click="restoreImage(index)"
+                                                    class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                                <span class="bg-green-500 hover:bg-green-600 text-white rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                                    Restaurer
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
 
                         {{-- Generate AI button --}}
-                        @if(count($images) > 0)
+                        <template x-if="images.length > 0">
                             <button type="button" @click="openModal()"
-                                    class="w-full inline-flex items-center justify-center px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors">
+                                    class="w-full inline-flex items-center justify-center px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors mt-3">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                                 </svg>
                                 Generer images IA
                             </button>
-                        @endif
+                        </template>
 
                         {{-- AI Image Generation Modal --}}
                         <div x-show="showModal"
@@ -280,6 +306,7 @@
                     <div class="bg-white rounded-lg shadow-sm border border-purple-200 p-4"
                          x-data="realImagesManager({
                             images: @js($product->real_image_urls),
+                            deletedImages: @js($product->deleted_real_image_urls),
                             productId: {{ $product->id }},
                             csrfToken: '{{ csrf_token() }}'
                          })">
@@ -311,6 +338,30 @@
                                         </button>
                                     </div>
                                 </template>
+                            </div>
+                        </template>
+
+                        {{-- Deleted real images (corbeille) --}}
+                        <template x-if="deletedImages.length > 0">
+                            <div class="mt-3 pt-3 border-t border-gray-100">
+                                <p class="text-xs text-gray-400 mb-1 flex items-center gap-1">
+                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    Images supprimees (<span x-text="deletedImages.length"></span>)
+                                </p>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <template x-for="(img, index) in deletedImages" :key="'del-real-'+index">
+                                        <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                            <img :src="img" class="w-full h-full object-cover opacity-40">
+                                            <button type="button" @click="restoreImage(index)"
+                                                    class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                                <span class="bg-green-500 hover:bg-green-600 text-white rounded-full px-2 py-1 text-xs font-medium flex items-center gap-1">
+                                                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                                    Restaurer
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </template>
 
@@ -681,6 +732,7 @@
             return {
                 images: config.images || [],
                 realImages: config.realImages || [],
+                deletedImages: config.deletedImages || [],
                 productId: config.productId,
                 defaultPrompt: config.defaultPrompt,
                 specificPrompts: config.specificPrompts || [],
@@ -795,8 +847,25 @@
                             body: JSON.stringify({ image_index: index }),
                         });
                         const data = await response.json();
-                        if (data.success) { window.location.reload(); }
-                        else { alert(data.message || 'Erreur.'); }
+                        if (data.success) {
+                            this.images = data.data.images;
+                            this.deletedImages = data.data.deleted_images;
+                        } else { alert(data.message || 'Erreur.'); }
+                    } catch (error) { alert('Erreur de connexion.'); }
+                },
+
+                async restoreImage(index) {
+                    try {
+                        const response = await fetch(`/products/${this.productId}/restore-image`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                            body: JSON.stringify({ image_index: index }),
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.images = data.data.images;
+                            this.deletedImages = data.data.deleted_images;
+                        } else { alert(data.message || 'Erreur.'); }
                     } catch (error) { alert('Erreur de connexion.'); }
                 }
             };
@@ -806,6 +875,7 @@
         function realImagesManager(config) {
             return {
                 images: config.images || [],
+                deletedImages: config.deletedImages || [],
                 productId: config.productId,
                 csrfToken: config.csrfToken,
 
@@ -824,8 +894,25 @@
                             body: JSON.stringify({ image_index: index }),
                         });
                         const data = await response.json();
-                        if (data.success) { this.images = data.data.real_images; }
-                        else { alert(data.message || 'Erreur.'); }
+                        if (data.success) {
+                            this.images = data.data.real_images;
+                            this.deletedImages = data.data.deleted_real_images;
+                        } else { alert(data.message || 'Erreur.'); }
+                    } catch (error) { alert('Erreur de connexion.'); }
+                },
+
+                async restoreImage(index) {
+                    try {
+                        const response = await fetch(`/products/${this.productId}/restore-real-image`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                            body: JSON.stringify({ image_index: index }),
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.images = data.data.real_images;
+                            this.deletedImages = data.data.deleted_real_images;
+                        } else { alert(data.message || 'Erreur.'); }
                     } catch (error) { alert('Erreur de connexion.'); }
                 }
             };
