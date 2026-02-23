@@ -434,6 +434,9 @@ class ExtensionController extends Controller
             // Use real_images if available, otherwise use original images
             $imagesToUse = ! empty($realImages) ? $realImages : $images;
 
+            // Resolve storage-relative paths to full URLs (needed by browser extension for chrome.downloads)
+            $imagesToUse = array_map([Product::class, 'resolveImageUrl'], $imagesToUse);
+
             // Get category info from shop's etsy_categories
             $categoryData = null;
             if ($product->etsy_category && $product->shop->etsy_categories) {
