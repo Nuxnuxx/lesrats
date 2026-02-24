@@ -778,6 +778,7 @@
                 specificPrompts: config.specificPrompts || [],
                 csrfToken: config.csrfToken,
                 applyLogo: config.applyLogo ?? false,
+                onlyLogo: false,
                 defaultBackground: config.defaultBackground || '',
 
                 showModal: false,
