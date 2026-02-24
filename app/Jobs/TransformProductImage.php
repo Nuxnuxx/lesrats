@@ -24,6 +24,7 @@ class TransformProductImage implements ShouldQueue
         public ?string $backgroundUrl = null,
         public bool $applyLogo = false,
         public ?string $falApiKey = null,
+        public bool $onlyLogo = false,
     ) {}
 
     public function handle(): void
@@ -42,25 +43,44 @@ class TransformProductImage implements ShouldQueue
 
         $falService = new FalImageService($this->falApiKey);
 
-        $transformedPath = $falService->transformImage(
-            $this->imageUrl,
-            $this->prompt,
-            0.65,
-            $this->backgroundUrl
-        );
+        if ($this->onlyLogo) {
+            // Only Logo mode: download image and apply logo without AI
+            $transformedPath = $falService->downloadImage($this->imageUrl);
 
-        if (! $transformedPath) {
-            Log::error('TransformProductImage: transformation failed', [
-                'product_id' => $this->productId,
-                'image_url' => $this->imageUrl,
-            ]);
+            if (! $transformedPath) {
+                Log::error('TransformProductImage: download failed (only_logo)', [
+                    'product_id' => $this->productId,
+                    'image_url' => $this->imageUrl,
+                ]);
 
-            throw new \RuntimeException('Image transformation failed for: '.$this->imageUrl);
-        }
+                throw new \RuntimeException('Image download failed for: '.$this->imageUrl);
+            }
 
-        // Apply logo overlay if requested
-        if ($this->applyLogo && $product->shop->logo_path) {
-            $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
+            if ($product->shop->logo_path) {
+                $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
+            }
+        } else {
+            // Normal AI mode
+            $transformedPath = $falService->transformImage(
+                $this->imageUrl,
+                $this->prompt,
+                0.65,
+                $this->backgroundUrl
+            );
+
+            if (! $transformedPath) {
+                Log::error('TransformProductImage: transformation failed', [
+                    'product_id' => $this->productId,
+                    'image_url' => $this->imageUrl,
+                ]);
+
+                throw new \RuntimeException('Image transformation failed for: '.$this->imageUrl);
+            }
+
+            // Apply logo overlay if requested
+            if ($this->applyLogo && $product->shop->logo_path) {
+                $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
+            }
         }
 
         // Append to real_images atomically (refresh to get latest state from other jobs)

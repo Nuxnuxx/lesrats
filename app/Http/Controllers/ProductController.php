@@ -624,12 +624,15 @@ class ProductController extends Controller
     {
         Gate::authorize('update', $product->shop);
 
+        $onlyLogo = $request->boolean('only_logo', false);
+
         $request->validate([
             'image_urls' => 'required|array|min:1',
             'image_urls.*' => 'required|string',
-            'prompt' => 'required|string|min:10',
+            'prompt' => $onlyLogo ? 'nullable|string' : 'required|string|min:10',
             'background_url' => 'nullable|string',
             'apply_logo' => 'nullable|boolean',
+            'only_logo' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
@@ -642,16 +645,18 @@ class ProductController extends Controller
             ], 400);
         }
 
-        $backgroundUrl = $request->input('background_url');
+        $backgroundUrl = $onlyLogo ? null : $request->input('background_url');
         $applyLogo = $request->boolean('apply_logo', false);
 
-        // Remember last used background on the shop
+        // Remember last used background on the shop (only when using AI)
         $shop = $product->shop;
-        if ($backgroundUrl) {
-            $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
-            $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
-        } else {
-            $shop->update(['default_ai_background' => null]);
+        if (! $onlyLogo) {
+            if ($backgroundUrl) {
+                $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
+                $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
+            } else {
+                $shop->update(['default_ai_background' => null]);
+            }
         }
 
         // Create jobs for each image
@@ -659,10 +664,11 @@ class ProductController extends Controller
             fn (string $url) => new TransformProductImage(
                 productId: $product->id,
                 imageUrl: $url,
-                prompt: $request->input('prompt'),
+                prompt: $request->input('prompt', ''),
                 backgroundUrl: $backgroundUrl,
                 applyLogo: $applyLogo,
                 falApiKey: $falApiKey,
+                onlyLogo: $onlyLogo,
             )
         )->all();
 

@@ -87,6 +87,7 @@
                             specificPrompts: @js($product->shop->ai_specific_prompts ?? []),
                             csrfToken: '{{ csrf_token() }}',
                             applyLogo: {{ $product->shop->logo_path ? 'true' : 'false' }},
+                            onlyLogo: false,
                             defaultBackground: @js($product->shop->default_ai_background ? Storage::disk('public')->url($product->shop->default_ai_background) : '')
                          })">
                         <div class="flex items-center justify-between mb-3">
@@ -211,8 +212,11 @@
                                             </p>
                                         </div>
 
+                                        {{-- Specific Prompt + Background (hidden when Only Logo) --}}
+                                        <div x-show="!onlyLogo" x-transition>
+
                                         {{-- Specific Prompt --}}
-                                        <div x-show="specificPrompts.length > 0">
+                                        <div x-show="specificPrompts.length > 0" class="mb-4">
                                             <label class="text-sm font-medium text-gray-700 mb-1 block">Prompt specifique:</label>
                                             <select x-model="selectedSpecificPromptIndex"
                                                     class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
@@ -234,6 +238,26 @@
                                                 @endforeach
                                             </select>
                                         </div>
+
+                                        </div>{{-- end x-show="!onlyLogo" --}}
+
+                                        {{-- Only Logo Toggle --}}
+                                        @if($product->shop->logo_path)
+                                        <div class="flex items-center justify-between p-3 rounded-lg border"
+                                             :class="onlyLogo ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'">
+                                            <div>
+                                                <span class="text-sm font-medium text-gray-700">Only Logo (No AI)</span>
+                                                <p class="text-xs text-gray-500 mt-0.5">Applique juste le logo sans transformation IA</p>
+                                            </div>
+                                            <button type="button"
+                                                    @click="onlyLogo = !onlyLogo"
+                                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+                                                    :class="onlyLogo ? 'bg-blue-500' : 'bg-gray-300'">
+                                                <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                                      :class="onlyLogo ? 'translate-x-6' : 'translate-x-1'"></span>
+                                            </button>
+                                        </div>
+                                        @endif
 
                                         {{-- Logo Toggle --}}
                                         @if($product->shop->logo_path)
@@ -267,16 +291,20 @@
                                             Annuler
                                         </button>
                                         <button type="button" @click="generateImages()"
-                                                :disabled="isGenerating || !prompt.trim() || selectedIndexes.length === 0"
-                                                class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                                :disabled="isGenerating || (!onlyLogo && !prompt.trim()) || selectedIndexes.length === 0"
+                                                class="inline-flex items-center px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                :class="onlyLogo ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'">
                                             <svg x-show="isGenerating" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
-                                            <svg x-show="!isGenerating" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg x-show="!isGenerating && !onlyLogo" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                                             </svg>
-                                            <span x-text="isGenerating ? 'Lancement...' : (selectedIndexes.length > 1 ? 'Generer ' + selectedIndexes.length + ' images' : 'Generer l\'image')"></span>
+                                            <svg x-show="!isGenerating && onlyLogo" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            <span x-text="isGenerating ? 'Lancement...' : (onlyLogo ? 'Appliquer logo (' + selectedIndexes.length + ' image' + (selectedIndexes.length > 1 ? 's' : '') + ')' : (selectedIndexes.length > 1 ? 'Generer ' + selectedIndexes.length + ' images' : 'Generer l\'image'))"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -792,7 +820,7 @@
                 get allSelected() { return this.selectedIndexes.length === this.images.length && this.images.length > 0; },
 
                 async generateImages() {
-                    if (!this.prompt.trim()) { this.errorMessage = 'Veuillez entrer un prompt.'; return; }
+                    if (!this.onlyLogo && !this.prompt.trim()) { this.errorMessage = 'Veuillez entrer un prompt.'; return; }
                     if (this.selectedIndexes.length === 0) { this.errorMessage = 'Selectionnez au moins une image.'; return; }
 
                     this.isGenerating = true;
@@ -815,9 +843,10 @@
                             },
                             body: JSON.stringify({
                                 image_urls: imageUrls,
-                                prompt: finalPrompt,
-                                background_url: this.selectedBackground || null,
+                                prompt: this.onlyLogo ? 'logo_only' : finalPrompt,
+                                background_url: this.onlyLogo ? null : (this.selectedBackground || null),
                                 apply_logo: this.applyLogo,
+                                only_logo: this.onlyLogo,
                             }),
                         });
 

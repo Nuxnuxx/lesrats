@@ -195,6 +195,14 @@ class FalImageService
     }
 
     /**
+     * Public wrapper to download an external image and store it locally (no AI).
+     */
+    public function downloadImage(string $imageUrl): ?string
+    {
+        return $this->downloadAndStoreImage($imageUrl);
+    }
+
+    /**
      * Download an image from URL and store it locally
      *
      * @param  string  $imageUrl  The image URL to download
