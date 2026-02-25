@@ -132,30 +132,33 @@ function extractFromPageData(_debug = []) {
     for (const script of scripts) {
       const content = script.textContent || '';
 
-      // Chercher window.runParams ou données similaires
-      if (content.includes('runParams') || content.includes('pageData') || content.includes('skuModule')) {
-
-        // Extraire imagePathList
+      // --- Extraction des images : chercher imagePathList dans TOUS les scripts ---
+      if (data.images.length === 0 && content.includes('imagePathList')) {
         const imageMatch = content.match(/imagePathList['"]*\s*:\s*\[(.*?)\]/s);
         if (imageMatch) {
           const imgUrls = imageMatch[1].match(/https?:\/\/[^"',\s]+/g);
           if (imgUrls) {
-            data.images = imgUrls
-              .map(url => url.replace(/\\u002F/g, '/'))
-              .filter(url => !url.includes('_80x80') && !url.includes('_220x220'))
-              .slice(0, 20);
+            data.images = [...new Set(
+              imgUrls
+                .map(url => url.replace(/\\u002F/g, '/'))
+                .map(url => convertToHighRes(url))
+            )].slice(0, 20);
           }
         }
+      }
 
-        // Fallback: chercher toutes les URLs alicdn.com / aliexpress-media.com dans le script
+      // Chercher window.runParams ou données similaires pour le titre/prix/variants
+      if (content.includes('runParams') || content.includes('pageData') || content.includes('skuModule')) {
+
+        // Fallback images: chercher toutes les URLs alicdn.com / aliexpress-media.com dans le script
         if (data.images.length === 0) {
           const allAliUrls = content.match(/https?:\\?\/\\?\/(ae\d*\.alicdn\.com|ae-pic[^"'\s,\\]*\.aliexpress-media\.com)\/[^"'\s,\\]+/g);
           if (allAliUrls && allAliUrls.length > 0) {
-            data.images = [...new Set(allAliUrls)]
-              .map(url => url.replace(/\\u002F/g, '/').replace(/\\\//g, '/'))
-              .filter(url => !url.includes('_80x80') && !url.includes('_220x220') && !url.includes('_50x50'))
-              .map(url => convertToHighRes(url))
-              .slice(0, 20);
+            data.images = [...new Set(
+              allAliUrls
+                .map(url => url.replace(/\\u002F/g, '/').replace(/\\\//g, '/'))
+                .map(url => convertToHighRes(url))
+            )].slice(0, 20);
           }
         }
 
@@ -211,6 +214,22 @@ function extractFromPageData(_debug = []) {
           console.log('🐀 AliExpress - SKU extraction failed:', e.message);
           _debug.push({ step: 'sizes_json', status: 'fail', source: 'json', data: e.message });
         }
+      }
+    }
+
+    // Dernier recours: scanner TOUS les scripts pour des URLs AliExpress si rien trouvé
+    if (data.images.length === 0) {
+      const allUrls = new Set();
+      document.querySelectorAll('script:not([src])').forEach(s => {
+        const c = s.textContent || '';
+        const matches = c.match(/https?:(?:\\\/\\\/|\/\/)[^"'\s,\\]*(?:alicdn\.com|aliexpress-media\.com)\/[^"'\s,\\]+/g);
+        if (matches) matches.forEach(u => allUrls.add(u.replace(/\\\//g, '/').replace(/\\u002F/g, '/')));
+      });
+      if (allUrls.size > 0) {
+        data.images = [...new Set(
+          [...allUrls].map(url => convertToHighRes(url))
+        )].slice(0, 20);
+        console.log('🐀 AliExpress - Images from global script scan:', data.images.length);
       }
     }
 
