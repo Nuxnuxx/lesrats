@@ -184,6 +184,7 @@ class ProductController extends Controller
             'tags' => 'sometimes|nullable|string',
             'etsy_category' => 'sometimes|nullable|string|max:255',
             'price' => 'sometimes|numeric|min:0',
+            'cost_price' => 'sometimes|nullable|numeric|min:0',
             'price_us' => 'sometimes|nullable|numeric|min:0',
             'price_other' => 'sometimes|nullable|numeric|min:0',
             'quantity' => 'sometimes|integer|min:0',

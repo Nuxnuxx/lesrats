@@ -103,9 +103,18 @@
                                     </svg>
                                     <span x-text="deletedImages.length"></span>
                                 </button>
-                                @if($product->cost_price > 0)
-                                    <span class="text-xs text-gray-500">Achat: <span class="text-red-600 font-bold">{{ number_format($product->cost_price, 2) }} {{ $product->shop->currency }}</span></span>
-                                @endif
+                                <span x-data="{ editing: false, cost: {{ $initCost }} }" class="text-xs text-gray-500" x-show="cost > 0 || editing">
+                                    Achat:
+                                    <span x-show="!editing" class="text-red-600 font-bold cursor-pointer hover:underline" @click="editing = true; $nextTick(() => $refs.costInp.focus())" x-text="cost.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                    <span x-show="editing" class="inline-flex items-center gap-0.5">
+                                        <input x-ref="costInp" type="number" step="0.01" min="0" x-model.number="cost"
+                                               class="w-16 text-right text-red-600 font-bold bg-transparent border-b border-red-300 focus:outline-none text-xs"
+                                               @blur="editing = false; window.dispatchEvent(new CustomEvent('cost-changed', { detail: { cost: cost } })); save({ cost_price: cost })"
+                                               @keydown.enter="$el.blur()"
+                                               @keydown.escape="editing = false">
+                                        <span class="text-red-600 font-bold">{{ $product->shop->currency }}</span>
+                                    </span>
+                                </span>
                             </div>
                         </div>
 
@@ -617,7 +626,8 @@
                                 this.urssaf = Math.round((revenue * this.u) * 100) / 100;
                                 this.profit = Math.round((revenue - this.cost - this.urssaf) * 100) / 100;
                             }
-                        }" x-init="document.getElementById('price').addEventListener('input', () => recalc())">
+                        }" x-init="document.getElementById('price').addEventListener('input', () => recalc())"
+                           @cost-changed.window="cost = $event.detail.cost; recalc()">
                             <div class="space-y-1.5">
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Livraison</span>
@@ -627,12 +637,10 @@
                                     <span class="text-gray-500">Etsy ({{ round($k * 100, 1) }}%+{{ number_format($f, 2) }})</span>
                                     <span class="text-red-600" x-text="'-' + etsyFees.toFixed(2)"></span>
                                 </div>
-                                @if($initCost > 0)
-                                <div class="flex justify-between">
+                                <div class="flex justify-between" x-show="cost > 0">
                                     <span class="text-gray-500">Cout achat</span>
-                                    <span class="text-red-600">-{{ number_format($initCost, 2) }}</span>
+                                    <span class="text-red-600" x-text="'-' + cost.toFixed(2)"></span>
                                 </div>
-                                @endif
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">URSSAF ({{ round($u * 100, 1) }}%)</span>
                                     <span class="text-red-600" x-text="'-' + urssaf.toFixed(2)"></span>
