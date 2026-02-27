@@ -617,6 +617,7 @@
                             k: {{ $k }}, f: {{ $f }}, u: {{ $u }},
                             shipping: {{ $shippingFee }}, cost: {{ $initCost }},
                             profit: {{ $initProfit }},
+                            margin: {{ $initPrice > 0 ? round($initProfit / $initPrice * 100, 1) : 0 }},
                             etsyFees: {{ round($initEtsyFees, 2) }},
                             urssaf: {{ round($initUrssaf, 2) }},
                             recalc() {
@@ -625,6 +626,7 @@
                                 let revenue = Math.round(((p + this.shipping) * (1 - this.k) - this.f) * 100) / 100;
                                 this.urssaf = Math.round((revenue * this.u) * 100) / 100;
                                 this.profit = Math.round((revenue - this.cost - this.urssaf) * 100) / 100;
+                                this.margin = p > 0 ? Math.round((this.profit / p) * 1000) / 10 : 0;
                             }
                         }" x-init="document.getElementById('price').addEventListener('input', () => recalc())"
                            @cost-changed.window="cost = $event.detail.cost; recalc()">
@@ -647,9 +649,11 @@
                                 </div>
                                 <div class="border-t border-gray-200 pt-1.5 flex justify-between">
                                     <span class="font-medium text-gray-700">Profit net</span>
-                                    <span class="font-bold text-sm"
-                                          :class="profit >= 0 ? 'text-green-600' : 'text-red-600'"
-                                          x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2)"></span>
+                                    <span class="font-bold text-sm flex items-baseline gap-1"
+                                          :class="profit >= 0 ? 'text-green-600' : 'text-red-600'">
+                                        <span x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2)"></span>
+                                        <span x-show="margin !== 0" class="font-normal text-xs opacity-70" x-text="'(' + margin.toFixed(1) + '%)'"></span>
+                                    </span>
                                 </div>
                             </div>
                         </div>
