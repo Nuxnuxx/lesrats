@@ -68,7 +68,8 @@ async function extractProductData(includeCountryPrices = false) {
     // Le DOM est la source de vérité: il contient toutes les images du slider
     // Merger avec les images JSON pour ne rien perdre
     const jsonImages = data.images || [];
-    const allImages = new Set([...domImages, ...jsonImages].map(url => convertToHighRes(url)));
+    // Les deux sources ont déjà appliqué convertToHighRes, pas besoin de re-convertir
+    const allImages = new Set([...domImages, ...jsonImages]);
     data.images = Array.from(allImages).slice(0, 20);
     _debug.push({ step: 'images', status: 'ok', source: jsonImages.length > 0 ? 'dom+json' : 'dom', data: `${data.images.length} found (${domImages.length} dom, ${jsonImages.length} json)` });
   } else if (!data.images || data.images.length === 0) {
@@ -518,15 +519,18 @@ function extractSizesFromDOM(_debug = []) {
 }
 
 // Convertir une URL d'image en haute résolution
+// Exemples de formats AliExpress:
+//   .jpg_220x220q75.jpg_.avif  → .jpg
+//   .jpg_220x220q75.jpg        → .jpg
+//   _220x220.jpg               → .jpg  (fallback)
 function convertToHighRes(url) {
-  // Supprimer le suffixe de conversion format AliExpress (ex: _.avif, _.webp en fin d'URL)
-  // Format actuel: filename.jpg_220x220q75.jpg_.avif → filename.jpg
+  // 1. Supprimer le suffixe de conversion format (_.avif, _.webp en fin d'URL)
   url = url.replace(/_\.(avif|webp|jpg|jpeg|png)$/i, '');
-  // Supprimer les suffixes de taille AliExpress (ex: _220x220q75.jpg)
-  url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
+  // 2. Supprimer le pattern complet: .ext_NNNxNNN....ext → .ext (garder l'extension originale)
   url = url.replace(/\.(jpg|jpeg|png|webp|avif)_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
+  // 3. Fallback: _NNNxNNN....ext → garder l'extension
   url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
-  // Utiliser HTTPS
+  // 4. HTTPS
   url = url.replace(/^http:/, 'https:');
   return url;
 }
