@@ -40,6 +40,24 @@ class ProfileController extends Controller
     }
 
     /**
+     * Create a token for browser extension auto-connect (AJAX).
+     */
+    public function createExtensionToken(Request $request)
+    {
+        $user = $request->user();
+
+        // Revoke any existing "Extension Auto-Connect" tokens to avoid accumulation
+        $user->tokens()->where('name', 'Extension Auto-Connect')->delete();
+
+        $token = $user->createToken('Extension Auto-Connect');
+
+        return response()->json([
+            'success' => true,
+            'token' => $token->plainTextToken,
+        ]);
+    }
+
+    /**
      * Revoke an API token.
      */
     public function revokeToken(Request $request, PersonalAccessToken $token): RedirectResponse

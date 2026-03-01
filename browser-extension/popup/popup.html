@@ -14,28 +14,41 @@
         <h1>LesRats <span id="dev-badge" class="dev-badge" style="display:none;">DEV</span></h1>
         <p class="subtitle">Import & Publish</p>
       </div>
-      <button class="btn-settings" id="btn-settings" title="Parametres">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
-        </svg>
-      </button>
     </header>
 
-    <!-- Info: how to use -->
+    <!-- Connection status -->
+    <div id="status-connected" class="status-box status-ok hidden">
+      <div class="status-icon">&#x2713;</div>
+      <div class="status-text">
+        <div class="status-title">Connecte</div>
+        <div class="status-detail" id="status-url"></div>
+      </div>
+    </div>
+
+    <div id="status-disconnected" class="status-box status-warn hidden">
+      <div class="status-icon">!</div>
+      <div class="status-text">
+        <div class="status-title">Non connecte</div>
+        <div class="status-detail">Ouvrez votre dashboard et cliquez "Connecter"</div>
+      </div>
+    </div>
+
+    <!-- Info -->
     <div class="info-section">
-      <p class="info-text">Naviguez vers une page produit pour voir le panneau d'import flottant :</p>
+      <p class="info-text">Importez depuis les pages produit :</p>
       <div class="info-links">
         <a href="https://fr.aliexpress.com" target="_blank" class="btn btn-secondary">AliExpress</a>
         <a href="https://www.printables.com" target="_blank" class="btn btn-secondary">Printables</a>
       </div>
     </div>
 
-    <!-- Raccourci clavier -->
-    <div class="shortcut-info">
-      <div class="shortcut-label">Raccourci rapide:</div>
-      <kbd id="shortcut-key">Alt+Shift+I</kbd>
-      <a href="#" id="configure-shortcut" class="configure-link">Configurer</a>
+    <!-- Actions -->
+    <div class="action-links">
+      <a href="#" id="link-dashboard" class="action-link" target="_blank">Ouvrir le dashboard</a>
+      <span class="action-sep">&middot;</span>
+      <a href="#" id="link-profile" class="action-link" target="_blank">Profil / Tokens</a>
+      <span class="action-sep">&middot;</span>
+      <a href="settings.html" class="action-link">Config manuelle</a>
     </div>
 
     <footer>

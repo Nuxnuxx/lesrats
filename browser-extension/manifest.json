@@ -83,7 +83,7 @@
         "http://127.0.0.1/*",
         "https://*.laravel.cloud/*"
       ],
-      "js": ["content/lesrats.js"],
+      "js": ["lib/secure-storage.js", "content/lesrats.js"],
       "run_at": "document_idle"
     }
   ],

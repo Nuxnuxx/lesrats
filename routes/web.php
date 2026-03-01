@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::patch('/profile/api-keys', [ProfileController::class, 'updateApiKeys'])->name('profile.update-api-keys');
     Route::post('/profile/tokens', [ProfileController::class, 'createToken'])->name('profile.create-token');
+    Route::post('/profile/extension-connect', [ProfileController::class, 'createExtensionToken'])->name('profile.extension-connect');
     Route::delete('/profile/tokens/{token}', [ProfileController::class, 'revokeToken'])->name('profile.revoke-token');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 

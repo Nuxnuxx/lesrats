@@ -1,6 +1,5 @@
-// Minimal popup — import is handled by floating panels on product pages
+// Minimal popup — shows connection status + links
 
-// Get active API config (dev or prod)
 async function getApiConfig() {
   const saved = await chrome.storage.local.get(['apiUrl', 'devMode', 'devApiUrl']);
   if (saved.devMode) {
@@ -8,23 +7,28 @@ async function getApiConfig() {
     return { apiUrl: saved.devApiUrl || 'http://localhost:8000', apiToken: devToken, isDev: true };
   }
   const apiToken = await SecureStorage.getSecure('apiToken');
-  return { apiUrl: saved.apiUrl || 'http://localhost:8000', apiToken, isDev: false };
+  return { apiUrl: saved.apiUrl || '', apiToken, isDev: false };
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // Show DEV badge if dev mode is active
-  const { isDev } = await getApiConfig();
+  const { apiUrl, apiToken, isDev } = await getApiConfig();
+
+  // DEV badge
   const devBadge = document.getElementById('dev-badge');
   if (devBadge) devBadge.style.display = isDev ? 'inline-block' : 'none';
 
-  // Settings
-  document.getElementById('btn-settings').addEventListener('click', () => {
-    window.location.href = 'settings.html';
-  });
+  // Connection status
+  if (apiUrl && apiToken) {
+    document.getElementById('status-connected').classList.remove('hidden');
+    document.getElementById('status-url').textContent = apiUrl;
+  } else {
+    document.getElementById('status-disconnected').classList.remove('hidden');
+  }
 
-  // Configure shortcut
-  document.getElementById('configure-shortcut').addEventListener('click', (e) => {
-    e.preventDefault();
-    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
-  });
+  // Dashboard links
+  const baseUrl = apiUrl || 'http://localhost:8000';
+  document.getElementById('link-dashboard').href = baseUrl + '/dashboard';
+  document.getElementById('link-profile').href = baseUrl + '/profile';
+
+
 });
