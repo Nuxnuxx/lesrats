@@ -1679,81 +1679,87 @@ async function selectUSScale(sizeType) {
   return false;
 }
 
-// Toggle size checkboxes by clicking the + button for each matching size
+// Add sizes via the typeahead input (type value, pick from dropdown)
 async function toggleSizeCheckboxes(sizes) {
-  // Wait for size options to render after scale selection
   await sleep(600);
 
-  let toggled = 0;
+  let added = 0;
 
-  // Normalize our sizes for matching
-  const normalizedSizes = sizes.map(s => normalizeSize(s));
+  for (const size of sizes) {
+    // Find the typeahead input
+    const input = document.querySelector(
+      '.wt-overlay__modal input[placeholder*="option" i], ' +
+      '.wt-overlay__modal input[placeholder*="Indiquez" i], ' +
+      '.wt-overlay__modal input.wt-input[id^="typeahead-input"]'
+    );
 
-  // Find all clickable size option elements in the modal
-  // Etsy renders them as buttons or clickable divs with + icon
-  const optionElements = document.querySelectorAll(
-    '.wt-overlay__modal button, .wt-overlay__modal [role="option"], .wt-overlay__modal [role="checkbox"], .wt-overlay__modal label'
-  );
+    if (!input) {
+      console.warn('🐀 Typeahead input not found for size:', size);
+      break;
+    }
 
-  for (const el of optionElements) {
-    const text = el.textContent?.trim() || '';
-    // Skip non-size elements (buttons like "Terminé", "Supprimer", etc.)
-    if (!text || text.length > 10) continue;
+    // Focus and type the size value
+    input.focus();
+    await sleep(100);
 
-    const normalizedText = normalizeSize(text);
+    // Clear and set value using React-compatible approach
+    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    nativeSetter.call(input, size);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await sleep(500);
 
-    if (normalizedSizes.includes(normalizedText)) {
-      // Check if this size is not already selected (look for check icon or active state)
-      const isAlreadySelected = el.classList.contains('wt-btn--filled') ||
-        el.querySelector('svg path[d*="M20"]') || // checkmark path
-        el.getAttribute('aria-checked') === 'true';
+    // Look for matching option in the typeahead dropdown
+    const dropdownOptions = document.querySelectorAll(
+      '.wt-overlay__modal [role="option"], ' +
+      '.wt-overlay__modal [role="listbox"] > *, ' +
+      '.wt-overlay__modal ul li, ' +
+      '.wt-overlay__modal [class*="typeahead"] li, ' +
+      '.wt-overlay__modal [class*="typeahead"] [role="option"]'
+    );
 
-      if (!isAlreadySelected) {
-        el.click();
-        await sleep(300);
-        toggled++;
-        console.log('🐀 Toggled size:', text);
-      } else {
-        console.log('🐀 Size already selected:', text);
-        toggled++;
+    let matched = false;
+    const normalizedSize = normalizeSize(size);
+
+    for (const option of dropdownOptions) {
+      const optionText = option.textContent?.trim() || '';
+      if (normalizeSize(optionText) === normalizedSize || optionText === size || optionText === String(size)) {
+        option.click();
+        matched = true;
+        added++;
+        console.log('🐀 Selected size from dropdown:', optionText);
+        await sleep(400);
+        break;
       }
     }
-  }
 
-  // If we didn't find enough with the button approach, try a broader search
-  if (toggled < sizes.length) {
-    console.log('🐀 Trying broader search for remaining sizes (' + toggled + '/' + sizes.length + ')');
-
-    // Look for any clickable element in the overlay containing size text
-    const allClickables = document.querySelectorAll('.wt-overlay__modal *');
-    for (const el of allClickables) {
-      // Only match direct text nodes (not children text)
-      const directText = Array.from(el.childNodes)
-        .filter(n => n.nodeType === Node.TEXT_NODE)
-        .map(n => n.textContent.trim())
-        .join('')
-        .trim();
-
-      if (!directText || directText.length > 10) continue;
-
-      const normalizedText = normalizeSize(directText);
-      const sizeIndex = normalizedSizes.indexOf(normalizedText);
-
-      if (sizeIndex !== -1) {
-        // Find the closest clickable parent or the element itself
-        const clickTarget = el.closest('button') || el.closest('[role="option"]') || el;
-        if (clickTarget && !clickTarget.classList.contains('wt-btn--filled')) {
-          clickTarget.click();
-          await sleep(300);
-          toggled++;
-          console.log('🐀 Toggled size (broad search):', directText);
+    // If no exact match, try partial match (e.g. "6" matches "6 (16.5mm)")
+    if (!matched) {
+      for (const option of dropdownOptions) {
+        const optionText = option.textContent?.trim() || '';
+        // Match if option starts with our size value followed by space or non-digit
+        if (optionText.startsWith(size + ' ') || optionText.startsWith(size + '(') || normalizeSize(optionText).startsWith(normalizedSize)) {
+          option.click();
+          matched = true;
+          added++;
+          console.log('🐀 Selected size from dropdown (partial):', optionText);
+          await sleep(400);
+          break;
         }
       }
     }
+
+    if (!matched) {
+      // Last resort: press Enter to submit whatever is in the input
+      console.warn('🐀 No dropdown match for size:', size, '- trying Enter');
+      await simulateEnter(input);
+      await sleep(400);
+      added++;
+    }
   }
 
-  console.log('🐀 Toggled', toggled, '/', sizes.length, 'sizes');
-  return toggled;
+  console.log('🐀 Added', added, '/', sizes.length, 'sizes via typeahead');
+  return added;
 }
 
 // Normalize a size string for comparison
