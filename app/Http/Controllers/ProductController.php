@@ -190,6 +190,7 @@ class ProductController extends Controller
             'low_stock_threshold' => 'sometimes|nullable|integer|min:0|max:100',
             'aliexpress_url' => ['sometimes', 'nullable', 'string', 'regex:/^https?:\/\//'],
             'sizes' => 'sometimes|nullable|string',
+            'cost_price' => 'sometimes|nullable|numeric|min:0',
         ]);
 
         // Convert sizes JSON string to array

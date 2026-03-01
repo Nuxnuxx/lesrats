@@ -90,9 +90,6 @@
                          })">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-sm font-semibold text-gray-900">Images source</h3>
-                            @if($product->cost_price > 0)
-                                <span class="text-xs text-gray-500">Achat: <span class="text-red-600 font-bold">{{ number_format($product->cost_price, 2) }} {{ $product->shop->currency }}</span></span>
-                            @endif
                         </div>
 
                         @if(count($images) > 0)
@@ -536,12 +533,18 @@
                                     <span class="text-gray-500">Etsy ({{ round($k * 100, 1) }}%+{{ number_format($f, 2) }})</span>
                                     <span class="text-red-600" x-text="'-' + etsyFees.toFixed(2)"></span>
                                 </div>
-                                @if($initCost > 0)
-                                <div class="flex justify-between">
+                                <div class="flex justify-between items-center">
                                     <span class="text-gray-500">Cout achat</span>
-                                    <span class="text-red-600">-{{ number_format($initCost, 2) }}</span>
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-red-600">-</span>
+                                        <input type="number" id="cost_price" step="0.01" min="0"
+                                               x-model.number="cost"
+                                               placeholder="0.00"
+                                               @input.debounce.800ms="save({ cost_price: cost })"
+                                               @input="recalc()"
+                                               class="w-20 text-xs text-right rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-0.5 px-1.5 text-red-600 bg-white placeholder:text-gray-300 placeholder:text-sm">
+                                    </div>
                                 </div>
-                                @endif
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">URSSAF ({{ round($u * 100, 1) }}%)</span>
                                     <span class="text-red-600" x-text="'-' + urssaf.toFixed(2)"></span>
