@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
@@ -33,8 +31,6 @@ class DemoDataSeeder extends Seeder
         // Create products for each shop
         foreach ($shops as $shop) {
             $this->createProducts($shop);
-            $this->createOrders($shop);
-            $shop->updateCachedStats();
         }
 
         $this->command->info('Demo data created successfully!');
@@ -134,112 +130,6 @@ class DemoDataSeeder extends Seeder
                     'is_active' => true,
                 ]
             );
-        }
-    }
-
-    private function createOrders(Shop $shop): void
-    {
-        $firstNames = ['Jean', 'Marie', 'Pierre', 'Sophie', 'Lucas', 'Emma', 'Thomas', 'Lea', 'Nicolas', 'Camille', 'Antoine', 'Julie', 'Maxime', 'Sarah', 'Alexandre'];
-        $lastNames = ['Martin', 'Bernard', 'Dubois', 'Thomas', 'Robert', 'Richard', 'Petit', 'Durand', 'Leroy', 'Moreau', 'Simon', 'Laurent', 'Lefebvre', 'Michel', 'Garcia'];
-
-        $products = $shop->products;
-
-        if ($products->isEmpty()) {
-            return;
-        }
-
-        // Create orders over the last 30 days
-        $numOrders = rand(15, 40);
-
-        for ($i = 0; $i < $numOrders; $i++) {
-            $daysAgo = rand(0, 30);
-            $createdAt = now()->subDays($daysAgo)->subHours(rand(0, 23))->subMinutes(rand(0, 59));
-
-            $firstName = $firstNames[array_rand($firstNames)];
-            $lastName = $lastNames[array_rand($lastNames)];
-            $customerName = $firstName.' '.$lastName;
-
-            $statuses = [
-                Order::STATUS_NEW,
-                Order::STATUS_NEW,
-                Order::STATUS_ORDERED,
-                Order::STATUS_SHIPPED,
-                Order::STATUS_DELIVERED,
-                Order::STATUS_COMPLETED,
-                Order::STATUS_COMPLETED,
-            ];
-
-            // Today's orders are more likely to be NEW
-            if ($daysAgo === 0) {
-                $status = rand(0, 10) > 3 ? Order::STATUS_NEW : Order::STATUS_ORDERED;
-            } else {
-                $status = $statuses[array_rand($statuses)];
-            }
-
-            $order = Order::create([
-                'shop_id' => $shop->id,
-                'order_number' => 'ORD-'.strtoupper(substr(md5(uniqid()), 0, 8)),
-                'customer_name' => $customerName,
-                'customer_email' => strtolower($firstName).'.'.strtolower($lastName).'@example.com',
-                'total_price' => 0,
-                'total_cost' => 0,
-                'total_profit' => 0,
-                'currency' => 'EUR',
-                'status' => $status,
-                'ordered_at' => in_array($status, [Order::STATUS_ORDERED, Order::STATUS_SHIPPED, Order::STATUS_DELIVERED, Order::STATUS_COMPLETED])
-                    ? $createdAt->copy()->addHours(rand(1, 24)) : null,
-                'shipped_at' => in_array($status, [Order::STATUS_SHIPPED, Order::STATUS_DELIVERED, Order::STATUS_COMPLETED])
-                    ? $createdAt->copy()->addDays(rand(1, 3)) : null,
-                'delivered_at' => in_array($status, [Order::STATUS_DELIVERED, Order::STATUS_COMPLETED])
-                    ? $createdAt->copy()->addDays(rand(5, 14)) : null,
-                'completed_at' => $status === Order::STATUS_COMPLETED
-                    ? $createdAt->copy()->addDays(rand(7, 20)) : null,
-                'shipping_address' => [
-                    'name' => $customerName,
-                    'first_line' => rand(1, 150).' Rue '.$lastNames[array_rand($lastNames)],
-                    'city' => ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Bordeaux', 'Nice', 'Nantes', 'Lille'][array_rand(['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Bordeaux', 'Nice', 'Nantes', 'Lille'])],
-                    'zip' => str_pad(rand(10000, 99999), 5, '0', STR_PAD_LEFT),
-                    'country_name' => 'France',
-                ],
-                'created_at' => $createdAt,
-                'updated_at' => $createdAt,
-            ]);
-
-            // Add 1-3 items per order
-            $numItems = rand(1, 3);
-            $orderProducts = $products->random(min($numItems, $products->count()));
-
-            $totalPrice = 0;
-            $totalCost = 0;
-
-            foreach ($orderProducts as $product) {
-                $quantity = rand(1, 2);
-                $price = $product->price;
-                $cost = $product->cost_price ?? 0;
-                $profit = $price - $cost;
-
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'title' => $product->title,
-                    'quantity' => $quantity,
-                    'price' => $price,
-                    'cost' => $cost,
-                    'profit' => $profit,
-                    'source_type' => $product->source_type,
-                    'source_url' => $product->source_url,
-                    'is_digital' => $product->is_digital,
-                ]);
-
-                $totalPrice += $price * $quantity;
-                $totalCost += $cost * $quantity;
-            }
-
-            $order->update([
-                'total_price' => $totalPrice,
-                'total_cost' => $totalCost,
-                'total_profit' => $totalPrice - $totalCost,
-            ]);
         }
     }
 }
