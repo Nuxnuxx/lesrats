@@ -16,15 +16,16 @@
             </div>
             <div class="flex items-center space-x-3">
                 <span id="autosave-status" class="text-xs text-gray-400 hidden">Sauvegarde...</span>
-                @if($product->aliexpress_url ?? $product->source_url)
-                    <a href="{{ $product->aliexpress_url ?? $product->source_url }}" target="_blank"
-                       class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
-                        <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                        </svg>
-                        Source
-                    </a>
-                @endif
+                <a x-data
+                   x-show="$store.productSource.url"
+                   :href="$store.productSource.url"
+                   target="_blank"
+                   class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-orange-700 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors">
+                    <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    Source
+                </a>
                 <a href="{{ route('products.download-images', $product) }}"
                    class="inline-flex items-center px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
                     <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -675,6 +676,16 @@
                         <p x-show="isDigital" class="mt-1 text-xs text-green-600">Digital = stock illimite</p>
                     </div>
 
+                    {{-- Source --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Lien source</h3>
+                        <input type="url"
+                               :value="$store.productSource.url"
+                               @input.debounce.800ms="$store.productSource.url = $el.value; save({ source_url: $el.value })"
+                               placeholder="https://..."
+                               class="w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
+                    </div>
+
                     {{-- Publish to Etsy --}}
                     <div class="bg-white rounded-lg shadow-sm border border-orange-200 p-4">
                         <h3 class="text-sm font-semibold text-orange-600 mb-3">Publier sur Etsy</h3>
@@ -730,6 +741,12 @@
 
     @push('scripts')
     <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.store('productSource', {
+                url: @js($product->source_url ?? $product->aliexpress_url ?? '')
+            });
+        });
+
         // Auto-save component
         function productAutoSave(config) {
             return {

@@ -11,6 +11,7 @@ use App\Services\FalImageService;
 use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -192,6 +193,8 @@ class ProductController extends Controller
             'aliexpress_url' => ['sometimes', 'nullable', 'string', 'regex:/^https?:\/\//'],
             'sizes' => 'sometimes|nullable|string',
             'cost_price' => 'sometimes|nullable|numeric|min:0',
+            'source_type' => ['sometimes', 'nullable', Rule::in(['aliexpress', 'printables', 'manual'])],
+            'source_url' => 'sometimes|nullable|string',
         ]);
 
         // Convert sizes JSON string to array
