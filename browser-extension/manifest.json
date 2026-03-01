@@ -57,7 +57,7 @@
         "https://*.printables.com/model/*",
         "https://www.printables.com/model/*"
       ],
-      "js": ["content/printables.js"],
+      "js": ["lib/secure-storage.js", "content/printables.js", "content/printables-panel.js"],
       "run_at": "document_idle"
     },
     {
@@ -93,7 +93,7 @@
   "web_accessible_resources": [
     {
       "resources": ["icons/icon32.png", "icons/icon48.png"],
-      "matches": ["https://*.aliexpress.com/*"]
+      "matches": ["https://*.aliexpress.com/*", "https://*.printables.com/*"]
     }
   ]
 }

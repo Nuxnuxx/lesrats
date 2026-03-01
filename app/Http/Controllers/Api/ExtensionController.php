@@ -492,6 +492,7 @@ class ExtensionController extends Controller
             'title' => 'required|string|max:500',
             'description' => 'nullable|string|max:2000',
             'price' => 'nullable|numeric|min:0',
+            'source_type' => 'nullable|string|in:aliexpress,printables',
         ]);
 
         try {
@@ -512,13 +513,50 @@ class ExtensionController extends Controller
                 ]);
             }
 
-            // Build shop list for AI prompt
-            $shopList = $shops->map(fn ($s) => "- ID:{$s->id} | {$s->name} | {$s->description}")->implode("\n");
+            $sourceType = $validated['source_type'] ?? null;
+
+            // Fast-path: match source_type to product_type without AI
+            if ($sourceType === 'printables') {
+                $digitalShops = $shops->whereIn('product_type', ['digital', 'virtual']);
+                if ($digitalShops->count() === 1) {
+                    $shop = $digitalShops->first();
+
+                    return response()->json([
+                        'success' => true,
+                        'shop_id' => $shop->id,
+                        'shop_name' => $shop->name,
+                        'method' => 'product_type_match',
+                    ]);
+                }
+            } elseif ($sourceType === 'aliexpress') {
+                $physicalShops = $shops->where('product_type', 'physical');
+                if ($physicalShops->count() === 1) {
+                    $shop = $physicalShops->first();
+
+                    return response()->json([
+                        'success' => true,
+                        'shop_id' => $shop->id,
+                        'shop_name' => $shop->name,
+                        'method' => 'product_type_match',
+                    ]);
+                }
+            }
+
+            // Build shop list for AI prompt (include product_type for context)
+            $shopList = $shops->map(fn ($s) => "- ID:{$s->id} | {$s->name} | type:{$s->product_type} | {$s->description}")->implode("\n");
 
             $productTitle = $validated['title'];
             $productDesc = mb_substr($validated['description'] ?? '', 0, 500);
 
+            $sourceInfo = '';
+            if ($sourceType === 'printables') {
+                $sourceInfo = "Source: Printables.com (3D printing model / STL file)\n";
+            } elseif ($sourceType === 'aliexpress') {
+                $sourceInfo = "Source: AliExpress (physical product from China)\n";
+            }
+
             $prompt = "Given this product:\n"
+                .$sourceInfo
                 ."Title: {$productTitle}\n"
                 .($productDesc ? "Description: {$productDesc}\n" : '')
                 ."\nWhich shop is the best fit? Pick EXACTLY ONE shop ID from this list:\n"

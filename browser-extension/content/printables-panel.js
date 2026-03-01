@@ -1,12 +1,12 @@
-// Floating import panel for AliExpress product pages
-// Dark theme, orange header, rat emoji — matches Etsy DebugPanel
-// ALL network calls go through service worker (avoids ad blocker blocking fetch)
+// Floating import panel for Printables model pages
+// Dark theme, orange header — same style as AliExpress panel
+// ALL network calls go through service worker
 
 (function() {
   'use strict';
 
-  if (!window.location.href.includes('aliexpress.com/item/')) return;
-  if (document.getElementById('lesrats-ali-panel')) return;
+  if (!window.location.href.includes('printables.com/model/')) return;
+  if (document.getElementById('lesrats-pri-panel')) return;
 
   // ============== STATE ==============
   let panelState = {
@@ -18,7 +18,7 @@
     importResult: null,
   };
 
-  // ============== API CONFIG (uses SecureStorage from lib/secure-storage.js) ==============
+  // ============== API CONFIG ==============
   async function getApiConfig() {
     const saved = await chrome.storage.local.get(['apiUrl', 'devMode', 'devApiUrl']);
     if (saved.devMode) {
@@ -34,10 +34,10 @@
     const icon32 = chrome.runtime.getURL('icons/icon32.png');
     const icon48 = chrome.runtime.getURL('icons/icon48.png');
     const container = document.createElement('div');
-    container.id = 'lesrats-ali-panel';
+    container.id = 'lesrats-pri-panel';
     container.innerHTML = `
       <style>
-        #lesrats-ali-panel {
+        #lesrats-pri-panel {
           position: fixed;
           bottom: 20px;
           right: 20px;
@@ -45,12 +45,12 @@
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           font-size: 13px;
         }
-        #lesrats-ali-panel * {
+        #lesrats-pri-panel * {
           box-sizing: border-box;
         }
 
         /* Floating icon */
-        .lesrats-ali-fab {
+        .lesrats-pri-fab {
           width: 54px;
           height: 54px;
           background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
@@ -65,14 +65,14 @@
           user-select: none;
           position: relative;
         }
-        .lesrats-ali-fab:hover {
+        .lesrats-pri-fab:hover {
           transform: scale(1.1);
           box-shadow: 0 6px 24px rgba(249, 115, 22, 0.6);
         }
-        .lesrats-ali-fab.hidden { display: none; }
+        .lesrats-pri-fab.hidden { display: none; }
 
         /* Panel content */
-        .lesrats-ali-content {
+        .lesrats-pri-content {
           background: #1a1a2e;
           border-radius: 12px;
           box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -82,12 +82,12 @@
           display: none;
           flex-direction: column;
         }
-        .lesrats-ali-content.open {
+        .lesrats-pri-content.open {
           display: flex;
         }
 
         /* Header */
-        .lesrats-ali-header {
+        .lesrats-pri-header {
           background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
           color: white;
           padding: 12px 16px;
@@ -96,18 +96,18 @@
           justify-content: space-between;
           flex-shrink: 0;
         }
-        .lesrats-ali-header-title {
+        .lesrats-pri-header-title {
           display: flex;
           align-items: center;
           gap: 8px;
           font-weight: 600;
           font-size: 14px;
         }
-        .lesrats-ali-header-actions {
+        .lesrats-pri-header-actions {
           display: flex;
           gap: 6px;
         }
-        .lesrats-ali-hbtn {
+        .lesrats-pri-hbtn {
           background: rgba(255,255,255,0.2);
           border: none;
           color: white;
@@ -121,10 +121,10 @@
           justify-content: center;
           line-height: 1;
         }
-        .lesrats-ali-hbtn:hover { background: rgba(255,255,255,0.3); }
+        .lesrats-pri-hbtn:hover { background: rgba(255,255,255,0.3); }
 
         /* Body */
-        .lesrats-ali-body {
+        .lesrats-pri-body {
           padding: 14px;
           overflow-y: auto;
           max-height: 470px;
@@ -132,7 +132,7 @@
         }
 
         /* Shop selector */
-        .lesrats-ali-label {
+        .lesrats-pri-label {
           color: #9ca3af;
           font-size: 11px;
           text-transform: uppercase;
@@ -142,7 +142,7 @@
           align-items: center;
           gap: 6px;
         }
-        .lesrats-ali-select {
+        .lesrats-pri-select {
           width: 100%;
           padding: 8px 10px;
           background: #16213e;
@@ -154,16 +154,16 @@
           margin-bottom: 12px;
           cursor: pointer;
         }
-        .lesrats-ali-select:focus {
+        .lesrats-pri-select:focus {
           border-color: #f97316;
         }
-        .lesrats-ali-select option {
+        .lesrats-pri-select option {
           background: #16213e;
           color: #e5e7eb;
         }
 
         /* Import button */
-        .lesrats-ali-import-btn {
+        .lesrats-pri-import-btn {
           width: 100%;
           padding: 14px;
           background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
@@ -181,35 +181,18 @@
           gap: 8px;
           letter-spacing: 0.3px;
         }
-        .lesrats-ali-import-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(249,115,22,0.4); }
-        .lesrats-ali-import-btn:active { transform: translateY(0); box-shadow: none; }
-        .lesrats-ali-import-btn:disabled {
+        .lesrats-pri-import-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(249,115,22,0.4); }
+        .lesrats-pri-import-btn:active { transform: translateY(0); box-shadow: none; }
+        .lesrats-pri-import-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
           transform: none;
           box-shadow: none;
         }
 
-        /* Checkbox */
-        .lesrats-ali-checkbox {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-bottom: 12px;
-          cursor: pointer;
-        }
-        .lesrats-ali-checkbox input {
-          accent-color: #f97316;
-          cursor: pointer;
-        }
-        .lesrats-ali-checkbox span {
-          color: #9ca3af;
-          font-size: 12px;
-        }
-
         /* Steps */
-        .lesrats-ali-steps { margin-top: 4px; }
-        .lesrats-ali-step {
+        .lesrats-pri-steps { margin-top: 4px; }
+        .lesrats-pri-step {
           background: rgba(255,255,255,0.05);
           border-radius: 8px;
           margin-bottom: 6px;
@@ -219,10 +202,10 @@
           gap: 10px;
           transition: background 0.2s;
         }
-        .lesrats-ali-step.active {
+        .lesrats-pri-step.active {
           background: rgba(59, 130, 246, 0.08);
         }
-        .lesrats-ali-step-icon {
+        .lesrats-pri-step-icon {
           width: 20px;
           height: 20px;
           border-radius: 50%;
@@ -233,37 +216,37 @@
           flex-shrink: 0;
           margin-top: 1px;
         }
-        .lesrats-ali-step-icon.pending {
+        .lesrats-pri-step-icon.pending {
           background: #374151;
           color: #9ca3af;
         }
-        .lesrats-ali-step-icon.running {
+        .lesrats-pri-step-icon.running {
           background: #3b82f6;
           color: white;
-          animation: lesrats-ali-pulse 1s infinite;
+          animation: lesrats-pri-pulse 1s infinite;
         }
-        .lesrats-ali-step-icon.success {
+        .lesrats-pri-step-icon.success {
           background: #22c55e;
           color: white;
         }
-        .lesrats-ali-step-icon.error {
+        .lesrats-pri-step-icon.error {
           background: #ef4444;
           color: white;
         }
-        @keyframes lesrats-ali-pulse {
+        @keyframes lesrats-pri-pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }
         }
-        .lesrats-ali-step-body {
+        .lesrats-pri-step-body {
           flex: 1;
           min-width: 0;
         }
-        .lesrats-ali-step-text {
+        .lesrats-pri-step-text {
           color: #e5e7eb;
           font-size: 12px;
           font-weight: 500;
         }
-        .lesrats-ali-step-detail {
+        .lesrats-pri-step-detail {
           color: #6b7280;
           font-size: 11px;
           margin-top: 2px;
@@ -271,18 +254,18 @@
         }
 
         /* Result link */
-        .lesrats-ali-result {
+        .lesrats-pri-result {
           margin-top: 8px;
           padding: 14px;
           border-radius: 10px;
           display: none;
         }
-        .lesrats-ali-result.visible { display: block; }
-        .lesrats-ali-result.ok {
+        .lesrats-pri-result.visible { display: block; }
+        .lesrats-pri-result.ok {
           background: rgba(34, 197, 94, 0.08);
           border: 1px solid rgba(34, 197, 94, 0.25);
         }
-        .lesrats-ali-result-link {
+        .lesrats-pri-result-link {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -296,8 +279,8 @@
           font-size: 14px;
           transition: opacity 0.15s;
         }
-        .lesrats-ali-result-link:hover { opacity: 0.88; }
-        .lesrats-ali-etsy-link {
+        .lesrats-pri-result-link:hover { opacity: 0.88; }
+        .lesrats-pri-etsy-link {
           display: flex;
           align-items: center;
           justify-content: center;
@@ -314,8 +297,8 @@
           border: none;
           transition: opacity 0.15s;
         }
-        .lesrats-ali-etsy-link:hover { opacity: 0.88; }
-        .lesrats-ali-result-sub {
+        .lesrats-pri-etsy-link:hover { opacity: 0.88; }
+        .lesrats-pri-result-sub {
           color: #6b7280;
           font-size: 11px;
           margin-top: 8px;
@@ -323,17 +306,17 @@
         }
 
         /* Error result */
-        .lesrats-ali-result.error-result {
+        .lesrats-pri-result.error-result {
           background: rgba(239, 68, 68, 0.08);
           border: 1px solid rgba(239, 68, 68, 0.25);
         }
-        .lesrats-ali-result.error-result .lesrats-ali-result-msg {
+        .lesrats-pri-result.error-result .lesrats-pri-result-msg {
           color: #fca5a5;
           font-size: 12px;
           text-align: center;
         }
 
-        .lesrats-ali-another {
+        .lesrats-pri-another {
           width: 100%;
           padding: 8px;
           margin-top: 10px;
@@ -345,67 +328,57 @@
           cursor: pointer;
           transition: background 0.2s;
         }
-        .lesrats-ali-another:hover {
+        .lesrats-pri-another:hover {
           background: rgba(255,255,255,0.14);
           color: #e5e7eb;
         }
       </style>
 
-      <!-- Floating icon (always visible) -->
-      <div class="lesrats-ali-fab" id="lesrats-ali-fab" title="LesRats Import (Alt+Shift+I)">
+      <!-- Floating icon -->
+      <div class="lesrats-pri-fab" id="lesrats-pri-fab" title="LesRats Import (Alt+Shift+I)">
         <img src="${icon48}" width="32" height="32" style="border-radius:50%;">
       </div>
 
-      <!-- Panel (toggled) -->
-      <div class="lesrats-ali-content" id="lesrats-ali-content">
-        <div class="lesrats-ali-header">
-          <div class="lesrats-ali-header-title">
+      <!-- Panel -->
+      <div class="lesrats-pri-content" id="lesrats-pri-content">
+        <div class="lesrats-pri-header">
+          <div class="lesrats-pri-header-title">
             <img src="${icon32}" width="22" height="22" style="border-radius:50%;">
             <span>LesRats Import</span>
           </div>
-          <div class="lesrats-ali-header-actions">
-            <button class="lesrats-ali-hbtn" id="lesrats-ali-minimize" title="Minimiser">\u2212</button>
-            <button class="lesrats-ali-hbtn" id="lesrats-ali-close" title="Fermer">\u00D7</button>
+          <div class="lesrats-pri-header-actions">
+            <button class="lesrats-pri-hbtn" id="lesrats-pri-minimize" title="Minimiser">\u2212</button>
+            <button class="lesrats-pri-hbtn" id="lesrats-pri-close" title="Fermer">\u00D7</button>
           </div>
         </div>
-        <div class="lesrats-ali-body">
-          <!-- Result (shown after import — at top for visibility) -->
-          <div class="lesrats-ali-result ok" id="lesrats-ali-result">
-            <a class="lesrats-ali-result-link" id="lesrats-ali-result-link" href="#" target="_blank">\u2192 Voir le produit dans LesRats</a>
-            <a class="lesrats-ali-etsy-link" id="lesrats-ali-etsy-link" href="#">\u2192 Publier sur Etsy</a>
-            <div class="lesrats-ali-result-sub" id="lesrats-ali-result-sub"></div>
-            <button class="lesrats-ali-another" id="lesrats-ali-another">Importer un autre produit</button>
+        <div class="lesrats-pri-body">
+          <!-- Result (shown after import — at top) -->
+          <div class="lesrats-pri-result ok" id="lesrats-pri-result">
+            <a class="lesrats-pri-result-link" id="lesrats-pri-result-link" href="#" target="_blank">\u2192 Voir le produit dans LesRats</a>
+            <a class="lesrats-pri-etsy-link" id="lesrats-pri-etsy-link" href="#">\u2192 Publier sur Etsy</a>
+            <div class="lesrats-pri-result-sub" id="lesrats-pri-result-sub"></div>
+            <button class="lesrats-pri-another" id="lesrats-pri-another">Importer un autre produit</button>
           </div>
 
           <!-- Error result -->
-          <div class="lesrats-ali-result error-result" id="lesrats-ali-error-result">
-            <div class="lesrats-ali-result-msg" id="lesrats-ali-error-msg"></div>
+          <div class="lesrats-pri-result error-result" id="lesrats-pri-error-result">
+            <div class="lesrats-pri-result-msg" id="lesrats-pri-error-msg"></div>
           </div>
 
-          <!-- Form (hidden after success) -->
-          <div id="lesrats-ali-form">
-            <!-- Shop selector -->
-            <div class="lesrats-ali-label">
-              Boutique
-            </div>
-            <select class="lesrats-ali-select" id="lesrats-ali-shop-select">
+          <!-- Form -->
+          <div id="lesrats-pri-form">
+            <div class="lesrats-pri-label">Boutique</div>
+            <select class="lesrats-pri-select" id="lesrats-pri-shop-select">
               <option value="">Chargement...</option>
             </select>
 
-            <!-- Country prices checkbox -->
-            <label class="lesrats-ali-checkbox">
-              <input type="checkbox" id="lesrats-ali-country-prices">
-              <span>Scraper prix par pays (+15s)</span>
-            </label>
-
-            <!-- Import button -->
-            <button class="lesrats-ali-import-btn" id="lesrats-ali-import-btn">
+            <button class="lesrats-pri-import-btn" id="lesrats-pri-import-btn">
               \u{1F680} Importer vers LesRats
             </button>
           </div>
 
-          <!-- Steps container -->
-          <div class="lesrats-ali-steps" id="lesrats-ali-steps"></div>
+          <!-- Steps -->
+          <div class="lesrats-pri-steps" id="lesrats-pri-steps"></div>
         </div>
       </div>
     `;
@@ -417,19 +390,19 @@
 
   // ============== EVENTS ==============
   function bindEvents() {
-    document.getElementById('lesrats-ali-fab').addEventListener('click', togglePanel);
-    document.getElementById('lesrats-ali-minimize').addEventListener('click', closePanel);
-    document.getElementById('lesrats-ali-close').addEventListener('click', closePanel);
-    document.getElementById('lesrats-ali-import-btn').addEventListener('click', startImport);
-    document.getElementById('lesrats-ali-shop-select').addEventListener('change', onShopChange);
-    document.getElementById('lesrats-ali-another').addEventListener('click', resetPanel);
-    document.getElementById('lesrats-ali-etsy-link').addEventListener('click', publishToEtsy);
+    document.getElementById('lesrats-pri-fab').addEventListener('click', togglePanel);
+    document.getElementById('lesrats-pri-minimize').addEventListener('click', closePanel);
+    document.getElementById('lesrats-pri-close').addEventListener('click', closePanel);
+    document.getElementById('lesrats-pri-import-btn').addEventListener('click', startImport);
+    document.getElementById('lesrats-pri-shop-select').addEventListener('change', onShopChange);
+    document.getElementById('lesrats-pri-another').addEventListener('click', resetPanel);
+    document.getElementById('lesrats-pri-etsy-link').addEventListener('click', publishToEtsy);
   }
 
   function togglePanel() {
     panelState.isOpen = !panelState.isOpen;
-    const content = document.getElementById('lesrats-ali-content');
-    const fab = document.getElementById('lesrats-ali-fab');
+    const content = document.getElementById('lesrats-pri-content');
+    const fab = document.getElementById('lesrats-pri-fab');
     if (panelState.isOpen) {
       content.classList.add('open');
       fab.classList.add('hidden');
@@ -442,21 +415,21 @@
   function openPanel() {
     if (!panelState.isOpen) {
       panelState.isOpen = true;
-      document.getElementById('lesrats-ali-content').classList.add('open');
-      document.getElementById('lesrats-ali-fab').classList.add('hidden');
+      document.getElementById('lesrats-pri-content').classList.add('open');
+      document.getElementById('lesrats-pri-fab').classList.add('hidden');
     }
   }
 
   function closePanel() {
     panelState.isOpen = false;
-    document.getElementById('lesrats-ali-content').classList.remove('open');
-    document.getElementById('lesrats-ali-fab').classList.remove('hidden');
+    document.getElementById('lesrats-pri-content').classList.remove('open');
+    document.getElementById('lesrats-pri-fab').classList.remove('hidden');
   }
 
   // ============== SHOPS ==============
   async function loadShops() {
     const { apiUrl, apiToken } = await getApiConfig();
-    const select = document.getElementById('lesrats-ali-shop-select');
+    const select = document.getElementById('lesrats-pri-shop-select');
 
     if (!apiUrl || !apiToken) {
       select.innerHTML = '<option value="">Config manquante (Settings)</option>';
@@ -498,7 +471,7 @@
   }
 
   async function onShopChange() {
-    panelState.selectedShopId = document.getElementById('lesrats-ali-shop-select').value;
+    panelState.selectedShopId = document.getElementById('lesrats-pri-shop-select').value;
     chrome.storage.local.set({ selectedShopId: panelState.selectedShopId });
   }
 
@@ -509,7 +482,7 @@
 
     try {
       if (!panelState.productData) {
-        panelState.productData = await extractProductForPanel();
+        panelState.productData = await extractProductData();
       }
 
       const { apiUrl, apiToken } = await getApiConfig();
@@ -522,12 +495,12 @@
           title: panelState.productData.title || '',
           description: panelState.productData.description || '',
           price: panelState.productData.price || null,
-          source_type: 'aliexpress',
+          source_type: 'printables',
         },
       });
 
       if (data.success && data.shop_id) {
-        const select = document.getElementById('lesrats-ali-shop-select');
+        const select = document.getElementById('lesrats-pri-shop-select');
         select.value = data.shop_id.toString();
         panelState.selectedShopId = data.shop_id.toString();
         chrome.storage.local.set({ selectedShopId: panelState.selectedShopId });
@@ -539,57 +512,48 @@
     }
   }
 
-  // ============== PRODUCT EXTRACTION ==============
-  async function extractProductForPanel() {
-    if (typeof extractProductData === 'function') {
-      return await extractProductData(false);
-    }
-    throw new Error('extractProductData non disponible');
-  }
-
   // ============== STEPS ==============
   function clearSteps() {
-    document.getElementById('lesrats-ali-steps').innerHTML = '';
-    document.getElementById('lesrats-ali-result').classList.remove('visible');
-    document.getElementById('lesrats-ali-error-result').classList.remove('visible');
-    document.getElementById('lesrats-ali-form').style.display = '';
+    document.getElementById('lesrats-pri-steps').innerHTML = '';
+    document.getElementById('lesrats-pri-result').classList.remove('visible');
+    document.getElementById('lesrats-pri-error-result').classList.remove('visible');
+    document.getElementById('lesrats-pri-form').style.display = '';
   }
 
   function resetPanel() {
     clearSteps();
     panelState.importResult = null;
     panelState.productData = null;
-    const btn = document.getElementById('lesrats-ali-import-btn');
+    const btn = document.getElementById('lesrats-pri-import-btn');
     btn.disabled = false;
     btn.textContent = '\u{1F680} Importer vers LesRats';
   }
 
   function addStep(id, text) {
-    const container = document.getElementById('lesrats-ali-steps');
+    const container = document.getElementById('lesrats-pri-steps');
     const el = document.createElement('div');
-    el.className = 'lesrats-ali-step';
-    el.id = `lesrats-ali-step-${id}`;
+    el.className = 'lesrats-pri-step';
+    el.id = `lesrats-pri-step-${id}`;
     el.innerHTML = `
-      <div class="lesrats-ali-step-icon pending">\u25CB</div>
-      <div class="lesrats-ali-step-body">
-        <div class="lesrats-ali-step-text">${text}</div>
-        <div class="lesrats-ali-step-detail"></div>
+      <div class="lesrats-pri-step-icon pending">\u25CB</div>
+      <div class="lesrats-pri-step-body">
+        <div class="lesrats-pri-step-text">${text}</div>
+        <div class="lesrats-pri-step-detail"></div>
       </div>
     `;
     container.appendChild(el);
-    // Scroll to bottom
-    const body = el.closest('.lesrats-ali-body');
+    const body = el.closest('.lesrats-pri-body');
     if (body) body.scrollTop = body.scrollHeight;
   }
 
   function updateStep(id, status, detail) {
-    const el = document.getElementById(`lesrats-ali-step-${id}`);
+    const el = document.getElementById(`lesrats-pri-step-${id}`);
     if (!el) return;
 
-    const iconEl = el.querySelector('.lesrats-ali-step-icon');
-    const detailEl = el.querySelector('.lesrats-ali-step-detail');
+    const iconEl = el.querySelector('.lesrats-pri-step-icon');
+    const detailEl = el.querySelector('.lesrats-pri-step-detail');
 
-    iconEl.className = 'lesrats-ali-step-icon ' + status;
+    iconEl.className = 'lesrats-pri-step-icon ' + status;
     el.classList.toggle('active', status === 'running');
     switch (status) {
       case 'running': iconEl.textContent = '\u25C9'; break;
@@ -599,7 +563,7 @@
     }
     if (detail !== undefined && detail !== null) detailEl.textContent = detail;
 
-    const body = el.closest('.lesrats-ali-body');
+    const body = el.closest('.lesrats-pri-body');
     if (body) body.scrollTop = body.scrollHeight;
   }
 
@@ -607,7 +571,7 @@
   async function startImport() {
     if (panelState.isImporting) return;
 
-    const shopId = document.getElementById('lesrats-ali-shop-select').value;
+    const shopId = document.getElementById('lesrats-pri-shop-select').value;
     if (!shopId) { showError('Selectionnez une boutique'); return; }
 
     const { apiUrl, apiToken } = await getApiConfig();
@@ -615,31 +579,30 @@
 
     panelState.isImporting = true;
     panelState.importResult = null;
-    const btn = document.getElementById('lesrats-ali-import-btn');
+    const btn = document.getElementById('lesrats-pri-import-btn');
     btn.disabled = true;
     btn.textContent = '\u23F3 Import en cours...';
     clearSteps();
 
-    const includeCountryPrices = document.getElementById('lesrats-ali-country-prices').checked;
-
     try {
       // === Step 1: Page ready ===
       addStep('page', 'Verification de la page');
-      updateStep('page', 'success', 'Page prete');
+      updateStep('page', 'success', 'Page Printables prete');
 
       // === Step 2: Extract title & price ===
       addStep('title', 'Extraction du titre et prix');
       updateStep('title', 'running');
       let productData;
       try {
-        productData = await extractProductForPanel();
+        // extractProductData is from printables.js (same content script entry)
+        productData = await extractProductData();
         panelState.productData = productData;
       } catch (e) {
         updateStep('title', 'error', e.message);
         throw e;
       }
       const title = productData.title || '?';
-      const price = productData.price ? `${productData.price}\u00A0\u20AC` : '?';
+      const price = productData.price ? `${productData.price}\u00A0\u20AC` : 'Gratuit';
       updateStep('title', 'success', `${title.substring(0, 45)}${title.length > 45 ? '...' : ''} \u2014 ${price}`);
 
       // === Step 3: Images ===
@@ -652,43 +615,18 @@
         updateStep('img', 'success', `${imgs.length} image${imgs.length > 1 ? 's' : ''}`);
       }
 
-      // === Step 4: Sizes / variants ===
-      addStep('sizes', 'Extraction des tailles / variantes');
-      updateStep('sizes', 'running');
-      const variants = productData.variants || [];
-      const sizeValues = variants.flatMap(v => v.values || []);
-      if (sizeValues.length === 0) {
-        updateStep('sizes', 'success', 'Aucune variante');
+      // === Step 4: Tags ===
+      addStep('tags', 'Extraction des tags');
+      updateStep('tags', 'running');
+      const tags = productData.tags || [];
+      if (tags.length === 0) {
+        updateStep('tags', 'success', 'Aucun tag');
       } else {
-        const preview = sizeValues.slice(0, 5).join(', ') + (sizeValues.length > 5 ? ` +${sizeValues.length - 5}` : '');
-        updateStep('sizes', 'success', `${sizeValues.length}: ${preview}`);
+        const preview = tags.slice(0, 4).join(', ') + (tags.length > 4 ? ` +${tags.length - 4}` : '');
+        updateStep('tags', 'success', `${tags.length}: ${preview}`);
       }
 
-      // === Step 5: Country prices (optional) ===
-      if (includeCountryPrices) {
-        addStep('prices', 'Scraping des prix par pays');
-        updateStep('prices', 'running', 'Demarrage...');
-        try {
-          if (typeof scrapeCountryPrices === 'function') {
-            const countryPrices = await scrapeCountryPrices((progress) => {
-              updateStep('prices', 'running', `${progress.country} (${progress.current}/${progress.total})`);
-            });
-            if (countryPrices && Object.keys(countryPrices).length > 0) {
-              productData.country_prices = countryPrices;
-              const countries = Object.keys(countryPrices).join(', ');
-              updateStep('prices', 'success', countries);
-            } else {
-              updateStep('prices', 'error', 'Aucun prix');
-            }
-          } else {
-            updateStep('prices', 'error', 'Fonction non disponible');
-          }
-        } catch (e) {
-          updateStep('prices', 'error', e.message);
-        }
-      }
-
-      // === Step 6: Send to API (via service worker) ===
+      // === Step 5: Send to API (via service worker) ===
       addStep('send', 'Envoi vers le serveur LesRats');
       updateStep('send', 'running', 'Connexion...');
 
@@ -715,23 +653,23 @@
         updateStep('send', 'success', `Produit #${data.product_id} cree`);
       }
 
-      // === Step 7: AI optimization ===
+      // === Step 6: AI optimization ===
       addStep('ai', 'Optimisation IA (titre, description, tags, categorie)');
       updateStep('ai', 'success', 'Traite cote serveur');
 
-      // === Show result — hide form, show big link at top ===
+      // === Show result ===
       panelState.importResult = data;
-      document.getElementById('lesrats-ali-form').style.display = 'none';
-      const resultEl = document.getElementById('lesrats-ali-result');
-      const linkEl = document.getElementById('lesrats-ali-result-link');
-      const subEl = document.getElementById('lesrats-ali-result-sub');
+      document.getElementById('lesrats-pri-form').style.display = 'none';
+      const resultEl = document.getElementById('lesrats-pri-result');
+      const linkEl = document.getElementById('lesrats-pri-result-link');
+      const subEl = document.getElementById('lesrats-pri-result-sub');
       const baseUrl = apiUrl.replace(/\/+$/, '');
       linkEl.href = data.product_url || `${baseUrl}/products/${data.product_id}/edit`;
       linkEl.textContent = '\u2192 Voir le produit dans LesRats';
       subEl.textContent = data.is_existing ? 'Ce produit existait deja' : `Produit #${data.product_id} importe avec succes`;
       resultEl.classList.add('visible');
-      // Scroll to top so result is visible
-      const body = document.querySelector('.lesrats-ali-body');
+      // Scroll to top
+      const body = document.querySelector('.lesrats-pri-body');
       if (body) body.scrollTop = 0;
 
     } catch (e) {
@@ -749,7 +687,7 @@
     e.preventDefault();
     if (!panelState.importResult || !panelState.importResult.product_id) return;
 
-    const btn = document.getElementById('lesrats-ali-etsy-link');
+    const btn = document.getElementById('lesrats-pri-etsy-link');
     btn.textContent = '\u23F3 Preparation...';
     btn.style.pointerEvents = 'none';
 
@@ -757,7 +695,6 @@
       const { apiUrl, apiToken } = await getApiConfig();
       const productId = panelState.importResult.product_id;
 
-      // Fetch Etsy data (category, isDigital, etc.)
       const etsyData = await chrome.runtime.sendMessage({
         action: 'fetchEtsyData',
         apiUrl,
@@ -770,7 +707,6 @@
         const categoryName = etsyData.data.etsy_category || '';
         const isDigital = etsyData.data.is_digital || false;
 
-        // Store for Etsy content script to pick up
         await chrome.storage.local.set({
           pendingEtsyCategoryName: categoryName,
           pendingEtsyIsDigital: isDigital,
@@ -778,7 +714,6 @@
           pendingEtsyApiUrl: apiUrl,
         });
 
-        // Open Etsy listing editor
         window.open('https://www.etsy.com/your/shops/me/listing-editor/create', '_blank');
         btn.textContent = '\u2713 Etsy ouvert';
       } else {
@@ -797,8 +732,8 @@
   }
 
   function showError(msg) {
-    const el = document.getElementById('lesrats-ali-error-result');
-    document.getElementById('lesrats-ali-error-msg').textContent = msg;
+    const el = document.getElementById('lesrats-pri-error-result');
+    document.getElementById('lesrats-pri-error-msg').textContent = msg;
     el.classList.add('visible');
   }
 
@@ -817,5 +752,5 @@
     createPanel();
   }
 
-  console.log('\u{1F400} LesRats AliExpress Panel loaded');
+  console.log('\u{1F400} LesRats Printables Panel loaded');
 })();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LesRats Importer</title>
+  <title>LesRats</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -22,174 +22,12 @@
       </button>
     </header>
 
-    <!-- Tabs for switching between modes -->
-    <div class="tabs">
-      <button id="tab-import" class="tab active">Import AliExpress</button>
-      <button id="tab-printables" class="tab">Import Printables</button>
-    </div>
-
-    <!-- ============== IMPORT SECTION ============== -->
-    <div id="section-import">
-      <!-- État: Pas sur AliExpress -->
-      <div id="state-not-aliexpress" class="state">
-        <div class="icon-large">🔍</div>
-        <p>Naviguez vers une page produit AliExpress pour commencer l'import.</p>
-        <a href="https://fr.aliexpress.com" target="_blank" class="btn btn-secondary">
-          Aller sur AliExpress
-        </a>
-      </div>
-
-    <!-- État: Extraction en cours -->
-    <div id="state-extracting" class="state hidden">
-      <div class="spinner"></div>
-      <p>Extraction des données du produit...</p>
-    </div>
-
-    <!-- État: Produit prêt -->
-    <div id="state-ready" class="state hidden">
-      <div class="product-preview">
-        <img id="product-image" src="" alt="Product">
-        <div class="product-info">
-          <h3 id="product-title"></h3>
-          <p class="price" id="product-price"></p>
-        </div>
-        <button id="btn-debug-toggle" class="btn-debug-toggle" title="Debug info">
-          <span>&#128027;</span>
-        </button>
-      </div>
-
-      <!-- Debug Panel -->
-      <div id="import-debug-panel" class="debug-panel hidden">
-        <div class="debug-section">
-          <div class="debug-section-title">Extraction</div>
-          <div id="debug-extraction-steps"></div>
-        </div>
-        <div class="debug-section">
-          <div class="debug-section-title">API</div>
-          <div id="debug-api-steps"></div>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="shop-select">Boutique:</label>
-        <select id="shop-select">
-          <option value="">Chargement...</option>
-        </select>
-      </div>
-
-      <div class="form-group checkbox-group">
-        <label class="checkbox-label">
-          <input type="checkbox" id="include-country-prices">
-          <span class="checkbox-text">Scraper les prix par pays (US, DE, AT, FR, CA, ES)</span>
-        </label>
-        <p class="help-text-small">Ajoute ~15 secondes pour recuperer les prix de livraison par pays</p>
-      </div>
-
-      <!-- Country price progress -->
-      <div id="country-price-progress" class="country-progress hidden">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progress-fill"></div>
-        </div>
-        <p class="progress-text" id="progress-text">Scraping des prix...</p>
-      </div>
-
-      <button id="btn-import" class="btn btn-primary">
-        🚀 Importer vers LesRats
-      </button>
-    </div>
-
-    <!-- État: Envoi en cours -->
-    <div id="state-sending" class="state hidden">
-      <div class="spinner"></div>
-      <p>Envoi vers LesRats...</p>
-    </div>
-
-    <!-- État: Succès -->
-    <div id="state-success" class="state hidden">
-      <div class="icon-large">✅</div>
-      <p>Produit importé avec succès!</p>
-      <button id="btn-view-product" class="btn btn-primary">
-        Voir le produit
-      </button>
-      <button id="btn-import-another" class="btn btn-secondary">
-        Importer un autre produit
-      </button>
-    </div>
-
-      <!-- État: Erreur -->
-      <div id="state-error" class="state hidden">
-        <div class="icon-large">❌</div>
-        <p id="error-message">Une erreur est survenue</p>
-        <button id="btn-retry" class="btn btn-secondary">
-          Réessayer
-        </button>
-      </div>
-    </div>
-
-    <!-- ============== PRINTABLES SECTION ============== -->
-    <div id="section-printables" class="hidden">
-      <!-- État: Pas sur Printables -->
-      <div id="state-not-printables" class="state">
-        <div class="icon-large">🖨️</div>
-        <p>Naviguez vers une page modèle Printables.com pour commencer l'import.</p>
-        <a href="https://www.printables.com" target="_blank" class="btn btn-secondary">
-          Aller sur Printables
-        </a>
-      </div>
-
-      <!-- État: Extraction en cours -->
-      <div id="state-printables-extracting" class="state hidden">
-        <div class="spinner"></div>
-        <p>Extraction des données du modèle...</p>
-      </div>
-
-      <!-- État: Produit prêt -->
-      <div id="state-printables-ready" class="state hidden">
-        <div class="product-preview">
-          <img id="printables-product-image" src="" alt="Product">
-          <div class="product-info">
-            <h3 id="printables-product-title"></h3>
-            <p class="price" id="printables-product-price"></p>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="printables-shop-select">Boutique:</label>
-          <select id="printables-shop-select">
-            <option value="">Chargement...</option>
-          </select>
-        </div>
-
-        <button id="btn-import-printables" class="btn btn-primary">
-          🚀 Importer vers LesRats
-        </button>
-      </div>
-
-      <!-- État: Envoi en cours -->
-      <div id="state-printables-sending" class="state hidden">
-        <div class="spinner"></div>
-        <p>Envoi vers LesRats...</p>
-      </div>
-
-      <!-- État: Succès -->
-      <div id="state-printables-success" class="state hidden">
-        <div class="icon-large">✅</div>
-        <p>Modèle importé avec succès!</p>
-        <button id="btn-view-printables-product" class="btn btn-primary">
-          Voir le produit
-        </button>
-        <button id="btn-import-another-printables" class="btn btn-secondary">
-          Importer un autre modèle
-        </button>
-      </div>
-
-      <!-- État: Erreur -->
-      <div id="state-printables-error" class="state hidden">
-        <div class="icon-large">❌</div>
-        <p id="printables-error-message">Une erreur est survenue</p>
-        <button id="btn-printables-retry" class="btn btn-secondary">
-          Réessayer
-        </button>
+    <!-- Info: how to use -->
+    <div class="info-section">
+      <p class="info-text">Naviguez vers une page produit pour voir le panneau d'import flottant :</p>
+      <div class="info-links">
+        <a href="https://fr.aliexpress.com" target="_blank" class="btn btn-secondary">AliExpress</a>
+        <a href="https://www.printables.com" target="_blank" class="btn btn-secondary">Printables</a>
       </div>
     </div>
 

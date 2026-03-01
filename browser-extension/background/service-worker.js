@@ -23,8 +23,11 @@ chrome.commands.onCommand.addListener(async (command) => {
     // Récupérer l'onglet actif
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    if (!tab || !tab.url || !tab.url.includes('aliexpress.com/item/')) {
-      // Afficher une notification d'erreur
+    const isAliExpress = tab && tab.url && tab.url.includes('aliexpress.com/item/');
+    const isPrintables = tab && tab.url && tab.url.includes('printables.com/model/');
+    
+    if (!isAliExpress && !isPrintables) {
+      // Not on a supported product page
       chrome.action.setBadgeText({ text: '!', tabId: tab?.id });
       chrome.action.setBadgeBackgroundColor({ color: '#ef4444', tabId: tab?.id });
       setTimeout(() => {
@@ -319,7 +322,8 @@ async function suggestShop(apiUrl, apiToken, productData) {
       body: JSON.stringify({
         title: productData.title || '',
         description: productData.description || '',
-        price: productData.price || null
+        price: productData.price || null,
+        source_type: productData.source_type || null
       })
     });
     
@@ -375,15 +379,11 @@ async function handleImport(productData, apiUrl, apiToken) {
 // Mettre à jour le badge de l'extension selon la page
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === 'complete' && tab.url) {
-    if (tab.url.includes('aliexpress.com/item/')) {
+    if (tab.url.includes('aliexpress.com/item/') || tab.url.includes('printables.com/model/')) {
       // On est sur une page produit - afficher badge vert
       chrome.action.setBadgeText({ text: '✓', tabId: tabId });
       chrome.action.setBadgeBackgroundColor({ color: '#22c55e', tabId: tabId });
-    } else if (tab.url.includes('aliexpress.com')) {
-      // Sur AliExpress mais pas sur un produit
-      chrome.action.setBadgeText({ text: '', tabId: tabId });
     } else {
-      // Pas sur AliExpress
       chrome.action.setBadgeText({ text: '', tabId: tabId });
     }
   }
