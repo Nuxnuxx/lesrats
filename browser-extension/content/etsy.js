@@ -875,7 +875,7 @@ async function fillEtsyForm(product) {
 
   // Fill size variations if available
   if (product.sizes && product.sizes.length > 0) {
-    await fillVariations(product.sizes);
+    await fillVariations(product.sizes, product.size_type || 'custom');
   }
 
   // Show STL upload reminder for digital products
@@ -1543,57 +1543,302 @@ async function selectShippingProfile(profileName) {
 }
 
 // Fill size variations in Etsy listing form
-async function fillVariations(sizes) {
+// sizeType: 'ring', 'clothing', or 'custom'
+async function fillVariations(sizes, sizeType = 'custom') {
   if (!sizes || sizes.length === 0) return;
-  console.log('🐀 Filling size variations:', sizes);
+  console.log('🐀 Filling size variations:', sizes, 'type:', sizeType);
 
-  // Find the "Add a variation" button
+  // Step 1: Click "Add a variation" button to open the type selection modal
+  const addVariationClicked = await clickAddVariation();
+  if (!addVariationClicked) {
+    console.warn('🐀 Could not open variation dialog');
+    return;
+  }
+
+  // Step 2: Select the variation type in the modal
+  if (sizeType === 'ring') {
+    await selectStructuredVariationType(['taille de bague', 'ring size', 'ringgröße']);
+  } else if (sizeType === 'clothing') {
+    await selectStructuredVariationType(['taille', 'size', 'größe'], ['taille de bague', 'ring size', 'ringgröße']);
+  } else {
+    // Custom: use "Create your own variation"
+    await selectCustomVariation();
+    await fillCustomSizes(sizes);
+    return;
+  }
+
+  // Step 3: Select scale (always US)
+  await sleep(800);
+  await selectUSScale(sizeType);
+
+  // Step 4: Wait for size options to load, then toggle each size
+  await sleep(800);
+  await toggleSizeCheckboxes(sizes);
+
+  // Step 5: Click "Terminé" / "Done" to confirm
+  await sleep(500);
+  await clickDoneButton();
+
+  console.log('🐀 Size variations filled:', sizes.length, 'sizes');
+}
+
+// Click the "Add a variation" button on the Etsy form
+async function clickAddVariation() {
+  // Try selector-based approach first
   const addBtn = findElement([
     '[data-testid="add-variation-button"]',
     'button[aria-label*="variation" i]',
     'button[aria-label*="Variation" i]',
   ]);
 
-  // Fallback: search by text content
-  if (!addBtn) {
-    const allButtons = document.querySelectorAll('button, [role="button"]');
-    for (const btn of allButtons) {
-      const text = btn.textContent?.trim().toLowerCase() || '';
-      if (text.includes('add a variation') || text.includes('ajouter une variation') || text.includes('variation')) {
-        btn.click();
-        console.log('🐀 Clicked variation button (text match):', btn.textContent.trim());
-        await sleep(1000);
-        break;
-      }
-    }
-  } else {
+  if (addBtn) {
     addBtn.click();
     console.log('🐀 Clicked variation button (selector match)');
     await sleep(1000);
+    return true;
   }
 
-  // Look for "Size" option in the modal/dialog
-  const sizeOption = Array.from(document.querySelectorAll('input[type="radio"], input[type="checkbox"], button, label, [role="option"]'))
-    .find(el => {
-      const text = (el.textContent || el.value || el.getAttribute('aria-label') || '').trim().toLowerCase();
-      return text === 'size' || text === 'taille' || text === 'sizes';
-    });
+  // Fallback: search by text content
+  const allButtons = document.querySelectorAll('button, [role="button"]');
+  for (const btn of allButtons) {
+    const text = btn.textContent?.trim().toLowerCase() || '';
+    if (text.includes('add a variation') || text.includes('ajouter une variation')) {
+      btn.click();
+      console.log('🐀 Clicked variation button (text match):', btn.textContent.trim());
+      await sleep(1000);
+      return true;
+    }
+  }
 
-  if (sizeOption) {
-    sizeOption.click();
-    console.log('🐀 Selected Size variation type');
-    await sleep(800);
-  } else {
-    console.warn('🐀 Size option not found in variation dialog');
-    return;
+  console.warn('🐀 Add variation button not found');
+  return false;
+}
+
+// Select a structured variation type (ring size, clothing size) from the modal
+// matchTexts: texts to match (e.g., ['taille de bague', 'ring size'])
+// excludeTexts: texts to exclude (e.g., for clothing, exclude 'taille de bague')
+async function selectStructuredVariationType(matchTexts, excludeTexts = []) {
+  // Wait for modal to appear
+  await sleep(500);
+
+  // Look for buttons in the variation type modal
+  const buttons = document.querySelectorAll('.wt-overlay__modal button, [role="dialog"] button');
+
+  for (const btn of buttons) {
+    const text = btn.textContent?.trim().toLowerCase() || '';
+
+    // Skip if text matches exclusion list
+    if (excludeTexts.some(ex => text === ex)) continue;
+
+    // Check if text matches any of our target texts
+    if (matchTexts.some(mt => text === mt)) {
+      btn.click();
+      console.log('🐀 Selected variation type:', btn.textContent.trim());
+      await sleep(800);
+      return true;
+    }
+  }
+
+  console.warn('🐀 Structured variation type not found, tried:', matchTexts);
+  return false;
+}
+
+// Select US scale from the scale dropdown
+async function selectUSScale(sizeType) {
+  const select = document.querySelector('#le-structured-variation-scale-select');
+  if (!select) {
+    console.warn('🐀 Scale dropdown not found');
+    return false;
+  }
+
+  // Find the US option
+  const options = Array.from(select.options);
+  let usOption = null;
+
+  if (sizeType === 'ring') {
+    // For rings: look for exact "US" option
+    usOption = options.find(o => o.text.trim() === 'US');
+  } else if (sizeType === 'clothing') {
+    // For clothing: look for option containing "US" (e.g., "Lettre femmes (US)")
+    usOption = options.find(o => o.text.includes('US'));
+  }
+
+  if (!usOption) {
+    // Generic fallback: any option containing "US"
+    usOption = options.find(o => o.text.includes('US'));
+  }
+
+  if (usOption) {
+    select.value = usOption.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    select.dispatchEvent(new Event('input', { bubbles: true }));
+    console.log('🐀 Selected scale:', usOption.text.trim());
+    return true;
+  }
+
+  console.warn('🐀 US scale option not found');
+  return false;
+}
+
+// Toggle size checkboxes by clicking the + button for each matching size
+async function toggleSizeCheckboxes(sizes) {
+  // Wait for size options to render after scale selection
+  await sleep(600);
+
+  let toggled = 0;
+
+  // Normalize our sizes for matching
+  const normalizedSizes = sizes.map(s => normalizeSize(s));
+
+  // Find all clickable size option elements in the modal
+  // Etsy renders them as buttons or clickable divs with + icon
+  const optionElements = document.querySelectorAll(
+    '.wt-overlay__modal button, .wt-overlay__modal [role="option"], .wt-overlay__modal [role="checkbox"], .wt-overlay__modal label'
+  );
+
+  for (const el of optionElements) {
+    const text = el.textContent?.trim() || '';
+    // Skip non-size elements (buttons like "Terminé", "Supprimer", etc.)
+    if (!text || text.length > 10) continue;
+
+    const normalizedText = normalizeSize(text);
+
+    if (normalizedSizes.includes(normalizedText)) {
+      // Check if this size is not already selected (look for check icon or active state)
+      const isAlreadySelected = el.classList.contains('wt-btn--filled') ||
+        el.querySelector('svg path[d*="M20"]') || // checkmark path
+        el.getAttribute('aria-checked') === 'true';
+
+      if (!isAlreadySelected) {
+        el.click();
+        await sleep(300);
+        toggled++;
+        console.log('🐀 Toggled size:', text);
+      } else {
+        console.log('🐀 Size already selected:', text);
+        toggled++;
+      }
+    }
+  }
+
+  // If we didn't find enough with the button approach, try a broader search
+  if (toggled < sizes.length) {
+    console.log('🐀 Trying broader search for remaining sizes (' + toggled + '/' + sizes.length + ')');
+
+    // Look for any clickable element in the overlay containing size text
+    const allClickables = document.querySelectorAll('.wt-overlay__modal *');
+    for (const el of allClickables) {
+      // Only match direct text nodes (not children text)
+      const directText = Array.from(el.childNodes)
+        .filter(n => n.nodeType === Node.TEXT_NODE)
+        .map(n => n.textContent.trim())
+        .join('')
+        .trim();
+
+      if (!directText || directText.length > 10) continue;
+
+      const normalizedText = normalizeSize(directText);
+      const sizeIndex = normalizedSizes.indexOf(normalizedText);
+
+      if (sizeIndex !== -1) {
+        // Find the closest clickable parent or the element itself
+        const clickTarget = el.closest('button') || el.closest('[role="option"]') || el;
+        if (clickTarget && !clickTarget.classList.contains('wt-btn--filled')) {
+          clickTarget.click();
+          await sleep(300);
+          toggled++;
+          console.log('🐀 Toggled size (broad search):', directText);
+        }
+      }
+    }
+  }
+
+  console.log('🐀 Toggled', toggled, '/', sizes.length, 'sizes');
+  return toggled;
+}
+
+// Normalize a size string for comparison
+function normalizeSize(size) {
+  return String(size).trim().toUpperCase()
+    .replace(/½/g, '.5')    // Convert ½ to .5
+    .replace(/,/g, '.')     // Normalize decimal separator
+    .replace(/\s+/g, '');   // Remove whitespace
+}
+
+// Click "Terminé" / "Done" / "Save" button in the modal footer
+async function clickDoneButton() {
+  // Look specifically in the overlay footer first
+  const footerBtns = document.querySelectorAll('.wt-overlay__footer button.wt-btn--filled');
+  for (const btn of footerBtns) {
+    const text = btn.textContent?.trim().toLowerCase() || '';
+    if (text.includes('termin') || text.includes('done') || text.includes('save') || text.includes('apply')) {
+      // Check if button is not disabled
+      if (!btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
+        btn.click();
+        console.log('🐀 Clicked done button:', btn.textContent.trim());
+        return true;
+      } else {
+        console.warn('🐀 Done button found but disabled - need at least 1 size selected');
+      }
+    }
+  }
+
+  // Broader fallback
+  const allBtns = document.querySelectorAll('.wt-overlay__modal button');
+  for (const btn of allBtns) {
+    const text = btn.textContent?.trim().toLowerCase() || '';
+    if ((text.includes('termin') || text.includes('done') || text.includes('save')) &&
+        !btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
+      btn.click();
+      console.log('🐀 Clicked done button (fallback):', btn.textContent.trim());
+      return true;
+    }
+  }
+
+  console.warn('🐀 Done button not found or disabled');
+  return false;
+}
+
+// Select "Create your own variation" for custom size types
+async function selectCustomVariation() {
+  await sleep(500);
+
+  // Look for the "Créer votre propre variation" / "Create your own variation" button
+  const buttons = document.querySelectorAll('.wt-overlay__modal button');
+  for (const btn of buttons) {
+    const text = btn.textContent?.trim().toLowerCase() || '';
+    if (text.includes('propre variation') || text.includes('your own variation') || text.includes('eigene variation')) {
+      btn.click();
+      console.log('🐀 Selected custom variation');
+      await sleep(800);
+      return true;
+    }
+  }
+
+  console.warn('🐀 Custom variation button not found');
+  return false;
+}
+
+// Fill sizes using free-form input (for custom/unrecognized size types)
+async function fillCustomSizes(sizes) {
+  await sleep(500);
+
+  // Type variation name
+  const nameInput = findElement([
+    'input[placeholder*="variation" i]',
+    'input[placeholder*="name" i]',
+    'input[placeholder*="nom" i]',
+  ]);
+  if (nameInput) {
+    await setInputValue(nameInput, 'Size');
+    await sleep(300);
   }
 
   // Fill each size value
   for (const size of sizes) {
-    // Look for the input field to type size values
     const input = findElement([
-      'input[placeholder*="size" i]',
       'input[placeholder*="option" i]',
+      'input[placeholder*="size" i]',
       'input[placeholder*="taille" i]',
       '[data-testid="variation-option-input"]',
       'input[aria-label*="variation" i]',
@@ -1601,30 +1846,19 @@ async function fillVariations(sizes) {
 
     if (input) {
       await setInputValue(input, size);
-      // Press Enter to confirm the size value
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
-      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
+      await sleep(100);
+      await simulateEnter(input);
       await sleep(400);
-      console.log('🐀 Added size:', size);
+      console.log('🐀 Added custom size:', size);
     } else {
       console.warn('🐀 Size input field not found for:', size);
       break;
     }
   }
 
-  // Try to confirm/close the dialog
+  // Click done
   await sleep(500);
-  const saveBtn = Array.from(document.querySelectorAll('button'))
-    .find(btn => {
-      const text = btn.textContent?.trim().toLowerCase() || '';
-      return text.includes('save') || text.includes('done') || text.includes('apply') || text.includes('enregistrer');
-    });
-  if (saveBtn) {
-    saveBtn.click();
-    console.log('🐀 Confirmed variations dialog');
-  }
-
-  console.log('🐀 Size variations filled:', sizes.length, 'sizes');
+  await clickDoneButton();
 }
 
 // Helper: Find element by multiple selectors

@@ -464,6 +464,7 @@ class ExtensionController extends Controller
                     'tags' => $tags,
                     'images' => $imagesToUse,
                     'sizes' => $product->sizes ?? [],
+                    'size_type' => $this->detectSizeType($product->sizes ?? []),
                     'quantity' => $product->quantity ?? 999,
                     'is_digital' => (bool) $product->is_digital,
                     'shop_name' => $product->shop->name,
@@ -482,5 +483,51 @@ class ExtensionController extends Controller
                 'message' => 'Product not found or error: '.$e->getMessage(),
             ], 404);
         }
+    }
+
+    /**
+     * Detect size type from size values.
+     *
+     * @return string 'ring', 'clothing', or 'custom'
+     */
+    private function detectSizeType(array $sizes): string
+    {
+        if (empty($sizes)) {
+            return 'custom';
+        }
+
+        $clothingLetterPattern = '/^(XXS|XS|S|M|L|XL|XXL|XXXL|2XL|3XL|4XL|5XL|6XL|ONE\s*SIZE)$/i';
+        $ringPattern = '/^\d{1,2}([.,]\d{1,2})?$/';
+
+        $allClothing = true;
+        $allRing = true;
+
+        foreach ($sizes as $size) {
+            $size = trim((string) $size);
+
+            if (! preg_match($clothingLetterPattern, $size)) {
+                $allClothing = false;
+            }
+
+            if (! preg_match($ringPattern, $size)) {
+                $allRing = false;
+            } else {
+                $num = (float) str_replace(',', '.', $size);
+                // Ring sizes are typically 1-16
+                if ($num < 1 || $num > 16) {
+                    $allRing = false;
+                }
+            }
+        }
+
+        if ($allRing) {
+            return 'ring';
+        }
+
+        if ($allClothing) {
+            return 'clothing';
+        }
+
+        return 'custom';
     }
 }

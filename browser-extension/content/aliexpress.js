@@ -230,13 +230,14 @@ function extractFromPageData(_debug = []) {
               (p.skuPropertyName || '').toLowerCase().includes('taille')
             );
             if (sizeProp && sizeProp.skuPropertyValues) {
+              const originalName = sizeProp.skuPropertyName || 'Size';
               data.variants = [{
-                name: 'Size',
+                name: originalName,
                 values: sizeProp.skuPropertyValues
                   .map(v => v.propertyValueDisplayName || v.propertyValueName)
                   .filter(Boolean)
               }];
-              console.log('🐀 AliExpress - Sizes extracted:', data.variants[0].values);
+              console.log('🐀 AliExpress - Sizes extracted (' + originalName + '):', data.variants[0].values);
               _debug.push({ step: 'sizes_json', status: 'ok', source: 'json (productSKUPropertyList)', data: data.variants[0].values });
             } else {
               _debug.push({ step: 'sizes_json', status: 'fail', source: 'json', data: 'No size property in skuPropertyList' });

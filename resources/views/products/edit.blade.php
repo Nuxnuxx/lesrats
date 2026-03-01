@@ -1043,15 +1043,36 @@
                 timestamp: Date.now()
             };
 
-            window.postMessage({ type: 'LESRATS_PUBLISH_TO_ETSY', ...productData }, '*');
             localStorage.setItem('lesrats_pending_etsy', JSON.stringify(productData));
 
-            setTimeout(() => {
+            // Wait for extension to confirm storage is written before opening Etsy
+            let opened = false;
+            const openEtsy = () => {
+                if (opened) return;
+                opened = true;
                 toast.textContent = 'Ouverture Etsy...';
                 toast.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg z-50';
                 window.open('https://www.etsy.com/your/shops/me/listing-editor/create', '_blank');
                 setTimeout(() => toast.remove(), 2000);
-            }, 200);
+            };
+
+            // Listen for confirmation from the extension content script
+            const handler = (event) => {
+                if (event.source === window && event.data?.type === 'LESRATS_READY_TO_PUBLISH') {
+                    window.removeEventListener('message', handler);
+                    openEtsy();
+                }
+            };
+            window.addEventListener('message', handler);
+
+            // Send data to extension
+            window.postMessage({ type: 'LESRATS_PUBLISH_TO_ETSY', ...productData }, '*');
+
+            // Fallback: open anyway after 1s if extension didn't confirm (not installed or slow)
+            setTimeout(() => {
+                window.removeEventListener('message', handler);
+                openEtsy();
+            }, 1000);
         }
     </script>
     @endpush
