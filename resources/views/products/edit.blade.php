@@ -81,47 +81,92 @@
                          x-data="aiImageEditor({
                             images: @js($images),
                             realImages: @js($product->real_image_urls),
+                            deletedImages: @js($product->deleted_images ?? []),
                             productId: {{ $product->id }},
                             defaultPrompt: @js($product->shop->getEffectiveAiImagePrompt()),
                             specificPrompts: @js($product->shop->ai_specific_prompts ?? []),
                             csrfToken: '{{ csrf_token() }}',
                             applyLogo: {{ $product->shop->logo_path ? 'true' : 'false' }},
+                            onlyLogo: false,
                             defaultBackground: @js($product->shop->default_ai_background ? Storage::disk('public')->url($product->shop->default_ai_background) : '')
                          })">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-sm font-semibold text-gray-900">Images source</h3>
+                            <div class="flex items-center gap-2">
+                                <button x-show="deletedImages.length > 0"
+                                        @click="showDeleted = !showDeleted"
+                                        :class="showDeleted ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'"
+                                        class="flex items-center gap-1 text-xs transition-colors"
+                                        title="Images supprimees">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                    </svg>
+                                    <span x-text="deletedImages.length"></span>
+                                </button>
+                                <span x-data="{ editing: false, cost: {{ $initCost }} }" class="text-xs text-gray-500" x-show="cost > 0 || editing">
+                                    Achat:
+                                    <span x-show="!editing" class="text-red-600 font-bold cursor-pointer hover:underline" @click="editing = true; $nextTick(() => $refs.costInp.focus())" x-text="cost.toFixed(2) + ' {{ $product->shop->currency }}'"></span>
+                                    <span x-show="editing" class="inline-flex items-center gap-0.5">
+                                        <input x-ref="costInp" type="number" step="0.01" min="0" x-model.number="cost"
+                                               class="w-16 text-right text-red-600 font-bold bg-transparent border-b border-red-300 focus:outline-none text-xs"
+                                               @blur="editing = false; window.dispatchEvent(new CustomEvent('cost-changed', { detail: { cost: cost } })); save({ cost_price: cost })"
+                                               @keydown.enter="$el.blur()"
+                                               @keydown.escape="editing = false">
+                                        <span class="text-red-600 font-bold">{{ $product->shop->currency }}</span>
+                                    </span>
+                                </span>
+                            </div>
                         </div>
 
-                        @if(count($images) > 0)
+                        <template x-if="images.length > 0">
                             <div class="grid grid-cols-4 gap-2 mb-3">
-                                @foreach($images as $index => $img)
+                                <template x-for="(img, index) in images" :key="index">
                                     <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                                        <img src="{{ $img }}" class="w-full h-full object-cover cursor-pointer"
-                                             @click="$dispatch('lightbox-open', { images: images, index: {{ $index }} })">
+                                        <img :src="img" class="w-full h-full object-cover cursor-pointer"
+                                             @click="$dispatch('lightbox-open', { images: images, index: index })">
                                         <button type="button"
-                                                @click="removeImage({{ $index }})"
+                                                @click="removeImage(index)"
                                                 class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                                             </svg>
                                         </button>
                                     </div>
-                                @endforeach
+                                </template>
                             </div>
-                        @else
+                        </template>
+                        <template x-if="images.length === 0 && deletedImages.length === 0">
                             <div class="text-center py-4 text-gray-400 text-sm">Aucune image source</div>
-                        @endif
+                        </template>
+
+                        {{-- Deleted source images (panel compact) --}}
+                        <div x-show="showDeleted && deletedImages.length > 0"
+                             class="mt-2 pt-2 border-t border-dashed border-gray-200">
+                            <div class="grid grid-cols-4 gap-2">
+                                <template x-for="(img, index) in deletedImages" :key="'del-'+index">
+                                    <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                        <img :src="img" class="w-full h-full object-cover opacity-40">
+                                        <button type="button" @click="restoreImage(index)"
+                                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                            <span class="bg-green-500 hover:bg-green-600 text-white rounded-full p-1.5">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
 
                         {{-- Generate AI button --}}
-                        @if(count($images) > 0)
+                        <template x-if="images.length > 0">
                             <button type="button" @click="openModal()"
-                                    class="w-full inline-flex items-center justify-center px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors">
+                                    class="w-full inline-flex items-center justify-center px-3 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors mt-3">
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                                 </svg>
                                 Generer images IA
                             </button>
-                        @endif
+                        </template>
 
                         {{-- AI Image Generation Modal --}}
                         <div x-show="showModal"
@@ -176,8 +221,11 @@
                                             </p>
                                         </div>
 
+                                        {{-- Specific Prompt + Background (hidden when Only Logo) --}}
+                                        <div x-show="!onlyLogo" x-transition>
+
                                         {{-- Specific Prompt --}}
-                                        <div x-show="specificPrompts.length > 0">
+                                        <div x-show="specificPrompts.length > 0" class="mb-4">
                                             <label class="text-sm font-medium text-gray-700 mb-1 block">Prompt specifique:</label>
                                             <select x-model="selectedSpecificPromptIndex"
                                                     class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
@@ -199,6 +247,26 @@
                                                 @endforeach
                                             </select>
                                         </div>
+
+                                        </div>{{-- end x-show="!onlyLogo" --}}
+
+                                        {{-- Only Logo Toggle --}}
+                                        @if($product->shop->logo_path)
+                                        <div class="flex items-center justify-between p-3 rounded-lg border"
+                                             :class="onlyLogo ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'">
+                                            <div>
+                                                <span class="text-sm font-medium text-gray-700">Only Logo (No AI)</span>
+                                                <p class="text-xs text-gray-500 mt-0.5">Applique juste le logo sans transformation IA</p>
+                                            </div>
+                                            <button type="button"
+                                                    @click="onlyLogo = !onlyLogo"
+                                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+                                                    :class="onlyLogo ? 'bg-blue-500' : 'bg-gray-300'">
+                                                <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                                      :class="onlyLogo ? 'translate-x-6' : 'translate-x-1'"></span>
+                                            </button>
+                                        </div>
+                                        @endif
 
                                         {{-- Logo Toggle --}}
                                         @if($product->shop->logo_path)
@@ -232,16 +300,20 @@
                                             Annuler
                                         </button>
                                         <button type="button" @click="generateImages()"
-                                                :disabled="isGenerating || !prompt.trim() || selectedIndexes.length === 0"
-                                                class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                                :disabled="isGenerating || (!onlyLogo && !prompt.trim()) || selectedIndexes.length === 0"
+                                                class="inline-flex items-center px-4 py-2 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                :class="onlyLogo ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'">
                                             <svg x-show="isGenerating" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
-                                            <svg x-show="!isGenerating" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg x-show="!isGenerating && !onlyLogo" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                                             </svg>
-                                            <span x-text="isGenerating ? 'Lancement...' : (selectedIndexes.length > 1 ? 'Generer ' + selectedIndexes.length + ' images' : 'Generer l\'image')"></span>
+                                            <svg x-show="!isGenerating && onlyLogo" class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                            <span x-text="isGenerating ? 'Lancement...' : (onlyLogo ? 'Appliquer logo (' + selectedIndexes.length + ' image' + (selectedIndexes.length > 1 ? 's' : '') + ')' : (selectedIndexes.length > 1 ? 'Generer ' + selectedIndexes.length + ' images' : 'Generer l\'image'))"></span>
                                         </button>
                                     </div>
                                 </div>
@@ -277,6 +349,7 @@
                     <div class="bg-white rounded-lg shadow-sm border border-purple-200 p-4"
                          x-data="realImagesManager({
                             images: @js($product->real_image_urls),
+                            deletedImages: @js($product->deleted_real_image_urls),
                             productId: {{ $product->id }},
                             csrfToken: '{{ csrf_token() }}'
                          })">
@@ -287,7 +360,19 @@
                                 </svg>
                                 Images reelles (IA)
                             </h3>
-                            <span class="text-xs text-gray-500" x-text="images.length + ' image(s)'"></span>
+                            <div class="flex items-center gap-2">
+                                <button x-show="deletedImages.length > 0"
+                                        @click="showDeleted = !showDeleted"
+                                        :class="showDeleted ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'"
+                                        class="flex items-center gap-1 text-xs transition-colors"
+                                        title="Images supprimees">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/>
+                                    </svg>
+                                    <span x-text="deletedImages.length"></span>
+                                </button>
+                                <span class="text-xs text-gray-500" x-text="images.length + ' image(s)'"></span>
+                            </div>
                         </div>
 
                         <template x-if="images.length === 0">
@@ -310,6 +395,24 @@
                                 </template>
                             </div>
                         </template>
+
+                        {{-- Deleted real images (panel compact) --}}
+                        <div x-show="showDeleted && deletedImages.length > 0"
+                             class="mt-3 pt-3 border-t border-dashed border-purple-100">
+                            <div class="grid grid-cols-4 gap-2">
+                                <template x-for="(img, index) in deletedImages" :key="'del-real-'+index">
+                                    <div class="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                        <img :src="img" class="w-full h-full object-cover opacity-40">
+                                        <button type="button" @click="restoreImage(index)"
+                                                class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/30">
+                                            <span class="bg-green-500 hover:bg-green-600 text-white rounded-full p-1.5">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                            </span>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
 
                         <p class="text-xs text-gray-400 mt-2">Ces images seront envoyees a Etsy.</p>
                     </div>
@@ -514,6 +617,7 @@
                             k: {{ $k }}, f: {{ $f }}, u: {{ $u }},
                             shipping: {{ $shippingFee }}, cost: {{ $initCost }},
                             profit: {{ $initProfit }},
+                            margin: {{ $initPrice > 0 ? round($initProfit / $initPrice * 100, 1) : 0 }},
                             etsyFees: {{ round($initEtsyFees, 2) }},
                             urssaf: {{ round($initUrssaf, 2) }},
                             recalc() {
@@ -522,8 +626,10 @@
                                 let revenue = Math.round(((p + this.shipping) * (1 - this.k) - this.f) * 100) / 100;
                                 this.urssaf = Math.round((revenue * this.u) * 100) / 100;
                                 this.profit = Math.round((revenue - this.cost - this.urssaf) * 100) / 100;
+                                this.margin = p > 0 ? Math.round((this.profit / p) * 1000) / 10 : 0;
                             }
-                        }" x-init="document.getElementById('price').addEventListener('input', () => recalc())">
+                        }" x-init="document.getElementById('price').addEventListener('input', () => recalc())"
+                           @cost-changed.window="cost = $event.detail.cost; recalc()">
                             <div class="space-y-1.5">
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Livraison</span>
@@ -533,17 +639,9 @@
                                     <span class="text-gray-500">Etsy ({{ round($k * 100, 1) }}%+{{ number_format($f, 2) }})</span>
                                     <span class="text-red-600" x-text="'-' + etsyFees.toFixed(2)"></span>
                                 </div>
-                                <div class="flex justify-between items-center">
+                                <div class="flex justify-between" x-show="cost > 0">
                                     <span class="text-gray-500">Cout achat</span>
-                                    <div class="flex items-center gap-1">
-                                        <span class="text-red-600">-</span>
-                                        <input type="number" id="cost_price" step="0.01" min="0"
-                                               x-model.number="cost"
-                                               placeholder="0.00"
-                                               @input.debounce.800ms="save({ cost_price: cost })"
-                                               @input="recalc()"
-                                               class="w-20 text-xs text-right rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-0.5 px-1.5 text-red-600 bg-white placeholder:text-gray-300 placeholder:text-sm">
-                                    </div>
+                                    <span class="text-red-600" x-text="'-' + cost.toFixed(2)"></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">URSSAF ({{ round($u * 100, 1) }}%)</span>
@@ -551,9 +649,11 @@
                                 </div>
                                 <div class="border-t border-gray-200 pt-1.5 flex justify-between">
                                     <span class="font-medium text-gray-700">Profit net</span>
-                                    <span class="font-bold text-sm"
-                                          :class="profit >= 0 ? 'text-green-600' : 'text-red-600'"
-                                          x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2)"></span>
+                                    <span class="font-bold text-sm flex items-baseline gap-1"
+                                          :class="profit >= 0 ? 'text-green-600' : 'text-red-600'">
+                                        <span x-text="(profit >= 0 ? '+' : '') + profit.toFixed(2)"></span>
+                                        <span x-show="margin !== 0" class="font-normal text-xs opacity-70" x-text="'(' + margin.toFixed(1) + '%)'"></span>
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -684,14 +784,17 @@
             return {
                 images: config.images || [],
                 realImages: config.realImages || [],
+                deletedImages: config.deletedImages || [],
                 productId: config.productId,
                 defaultPrompt: config.defaultPrompt,
                 specificPrompts: config.specificPrompts || [],
                 csrfToken: config.csrfToken,
                 applyLogo: config.applyLogo ?? false,
+                onlyLogo: false,
                 defaultBackground: config.defaultBackground || '',
 
                 showModal: false,
+                showDeleted: false,
                 selectedIndexes: [],
                 prompt: config.defaultPrompt || '',
                 selectedSpecificPromptIndex: '',
@@ -730,7 +833,7 @@
                 get allSelected() { return this.selectedIndexes.length === this.images.length && this.images.length > 0; },
 
                 async generateImages() {
-                    if (!this.prompt.trim()) { this.errorMessage = 'Veuillez entrer un prompt.'; return; }
+                    if (!this.onlyLogo && !this.prompt.trim()) { this.errorMessage = 'Veuillez entrer un prompt.'; return; }
                     if (this.selectedIndexes.length === 0) { this.errorMessage = 'Selectionnez au moins une image.'; return; }
 
                     this.isGenerating = true;
@@ -753,9 +856,10 @@
                             },
                             body: JSON.stringify({
                                 image_urls: imageUrls,
-                                prompt: finalPrompt,
-                                background_url: this.selectedBackground || null,
+                                prompt: this.onlyLogo ? 'logo_only' : finalPrompt,
+                                background_url: this.onlyLogo ? null : (this.selectedBackground || null),
                                 apply_logo: this.applyLogo,
+                                only_logo: this.onlyLogo,
                             }),
                         });
 
@@ -798,8 +902,25 @@
                             body: JSON.stringify({ image_index: index }),
                         });
                         const data = await response.json();
-                        if (data.success) { window.location.reload(); }
-                        else { alert(data.message || 'Erreur.'); }
+                        if (data.success) {
+                            this.images = data.data.images;
+                            this.deletedImages = data.data.deleted_images;
+                        } else { alert(data.message || 'Erreur.'); }
+                    } catch (error) { alert('Erreur de connexion.'); }
+                },
+
+                async restoreImage(index) {
+                    try {
+                        const response = await fetch(`/products/${this.productId}/restore-image`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                            body: JSON.stringify({ image_index: index }),
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.images = data.data.images;
+                            this.deletedImages = data.data.deleted_images;
+                        } else { alert(data.message || 'Erreur.'); }
                     } catch (error) { alert('Erreur de connexion.'); }
                 }
             };
@@ -809,6 +930,8 @@
         function realImagesManager(config) {
             return {
                 images: config.images || [],
+                deletedImages: config.deletedImages || [],
+                showDeleted: false,
                 productId: config.productId,
                 csrfToken: config.csrfToken,
 
@@ -827,8 +950,25 @@
                             body: JSON.stringify({ image_index: index }),
                         });
                         const data = await response.json();
-                        if (data.success) { this.images = data.data.real_images; }
-                        else { alert(data.message || 'Erreur.'); }
+                        if (data.success) {
+                            this.images = data.data.real_images;
+                            this.deletedImages = data.data.deleted_real_images;
+                        } else { alert(data.message || 'Erreur.'); }
+                    } catch (error) { alert('Erreur de connexion.'); }
+                },
+
+                async restoreImage(index) {
+                    try {
+                        const response = await fetch(`/products/${this.productId}/restore-real-image`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken, 'Accept': 'application/json' },
+                            body: JSON.stringify({ image_index: index }),
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.images = data.data.real_images;
+                            this.deletedImages = data.data.deleted_real_images;
+                        } else { alert(data.message || 'Erreur.'); }
                     } catch (error) { alert('Erreur de connexion.'); }
                 }
             };

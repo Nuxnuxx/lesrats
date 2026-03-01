@@ -24,6 +24,34 @@
             </div>
         </div>
 
+        {{-- Rappel promotions --}}
+        <div class="mb-4" x-data="{
+            date: '{{ $shop->promotion_reminder_date?->format('Y-m-d') ?? '' }}',
+            get status() {
+                if (!this.date) return 'none';
+                const today = new Date(); today.setHours(0,0,0,0);
+                const d = new Date(this.date + 'T00:00:00');
+                if (d < today) return 'past';
+                if (d.getTime() === today.getTime()) return 'today';
+                return 'future';
+            },
+            save() {
+                fetch('/shops/{{ $shop->id }}/autosave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+                    body: JSON.stringify({ promotion_reminder_date: this.date || null })
+                });
+            }
+        }">
+            <label class="text-xs font-medium text-gray-600">Rappel promotions</label>
+            <div class="mt-1 flex items-center gap-2">
+                <input type="date" x-model="date" @change="save()"
+                       class="block w-full text-sm rounded-lg border-gray-300 focus:border-orange-500 focus:ring-orange-500">
+                <span x-show="status === 'past'" x-cloak class="text-xs font-medium text-red-600 whitespace-nowrap">Rappel dû !</span>
+                <span x-show="status === 'today'" x-cloak class="text-xs font-medium text-orange-500 whitespace-nowrap">Aujourd'hui</span>
+            </div>
+        </div>
+
         {{-- Action buttons --}}
         <div class="flex gap-2">
             <a href="{{ route('products.index', ['shop_id' => $shop->id]) }}"

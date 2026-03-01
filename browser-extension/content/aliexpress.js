@@ -61,13 +61,15 @@ async function extractProductData(includeCountryPrices = false) {
     _debug.push({ step: 'price', status: 'ok', source: 'json', data: data.price });
   }
   // Toujours essayer le DOM pour les images (le slider contient toutes les images visibles)
+  // Déclencher le lazy-load du slider avant d'extraire depuis le DOM
+  await triggerSliderLazyLoad();
   const domImages = extractImagesFromDOM();
   if (domImages.length > 0) {
     // Le DOM est la source de vérité: il contient toutes les images du slider
     // Merger avec les images JSON pour ne rien perdre
     const jsonImages = data.images || [];
     const allImages = new Set([...domImages, ...jsonImages].map(url => convertToHighRes(url)));
-    data.images = Array.from(allImages).slice(0, 10);
+    data.images = Array.from(allImages).slice(0, 20);
     _debug.push({ step: 'images', status: 'ok', source: jsonImages.length > 0 ? 'dom+json' : 'dom', data: `${data.images.length} found (${domImages.length} dom, ${jsonImages.length} json)` });
   } else if (!data.images || data.images.length === 0) {
     _debug.push({ step: 'images', status: 'fail', source: 'dom+json', data: '0 found' });
@@ -122,6 +124,30 @@ function waitForPageLoad() {
   });
 }
 
+// Scroller le slider AliExpress item par item pour déclencher le lazy-load des images
+async function triggerSliderLazyLoad() {
+  const sliderContainer = document.querySelector('[class*="slider--slider"]');
+  if (!sliderContainer) return;
+
+  const items = sliderContainer.querySelectorAll('[class*="slider--item"]');
+  if (items.length === 0) return;
+
+  console.log(`🐀 Lazy-load trigger: scrolling ${items.length} slider items...`);
+
+  for (const item of items) {
+    // Scroll cet item dans la zone visible du slider pour déclencher l'IntersectionObserver
+    item.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
+    await new Promise(r => setTimeout(r, 80)); // 80ms entre chaque item
+  }
+
+  // Attendre que les dernières images finissent de charger
+  await new Promise(r => setTimeout(r, 400));
+
+  // Revenir au début
+  sliderContainer.scrollLeft = 0;
+  console.log('🐀 Lazy-load trigger: done');
+}
+
 // Extraire depuis les données JSON embarquées dans la page
 function extractFromPageData(_debug = []) {
   const data = {
@@ -140,30 +166,33 @@ function extractFromPageData(_debug = []) {
     for (const script of scripts) {
       const content = script.textContent || '';
 
-      // Chercher window.runParams ou données similaires
-      if (content.includes('runParams') || content.includes('pageData') || content.includes('skuModule')) {
-
-        // Extraire imagePathList
+      // --- Extraction des images : chercher imagePathList dans TOUS les scripts ---
+      if (data.images.length === 0 && content.includes('imagePathList')) {
         const imageMatch = content.match(/imagePathList['"]*\s*:\s*\[(.*?)\]/s);
         if (imageMatch) {
           const imgUrls = imageMatch[1].match(/https?:\/\/[^"',\s]+/g);
           if (imgUrls) {
-            data.images = imgUrls
-              .map(url => url.replace(/\\u002F/g, '/'))
-              .filter(url => !url.includes('_80x80') && !url.includes('_220x220'))
-              .slice(0, 10);
+            data.images = [...new Set(
+              imgUrls
+                .map(url => url.replace(/\\u002F/g, '/'))
+                .map(url => convertToHighRes(url))
+            )].slice(0, 20);
           }
         }
+      }
 
-        // Fallback: chercher toutes les URLs alicdn.com ou aliexpress-media.com dans le script si imagePathList vide
+      // Chercher window.runParams ou données similaires pour le titre/prix/variants
+      if (content.includes('runParams') || content.includes('pageData') || content.includes('skuModule')) {
+
+        // Fallback images: chercher toutes les URLs alicdn.com / aliexpress-media.com dans le script
         if (data.images.length === 0) {
-          const allAliUrls = content.match(/https?:\\?\/\\?\/(?:ae\d*\.alicdn\.com|ae-pic[^.]*\.aliexpress-media\.com)\/kf\/[^"'\s,\\]+/g);
+          const allAliUrls = content.match(/https?:\\?\/\\?\/(ae\d*\.alicdn\.com|ae-pic[^"'\s,\\]*\.aliexpress-media\.com)\/[^"'\s,\\]+/g);
           if (allAliUrls && allAliUrls.length > 0) {
-            data.images = [...new Set(allAliUrls)]
-              .map(url => url.replace(/\\u002F/g, '/').replace(/\\\//g, '/'))
-              .map(url => convertToHighRes(url))
-              .filter((url, i, arr) => arr.indexOf(url) === i)
-              .slice(0, 10);
+            data.images = [...new Set(
+              allAliUrls
+                .map(url => url.replace(/\\u002F/g, '/').replace(/\\\//g, '/'))
+                .map(url => convertToHighRes(url))
+            )].slice(0, 20);
           }
         }
 
@@ -219,6 +248,22 @@ function extractFromPageData(_debug = []) {
           console.log('🐀 AliExpress - SKU extraction failed:', e.message);
           _debug.push({ step: 'sizes_json', status: 'fail', source: 'json', data: e.message });
         }
+      }
+    }
+
+    // Dernier recours: scanner TOUS les scripts pour des URLs AliExpress si rien trouvé
+    if (data.images.length === 0) {
+      const allUrls = new Set();
+      document.querySelectorAll('script:not([src])').forEach(s => {
+        const c = s.textContent || '';
+        const matches = c.match(/https?:(?:\\\/\\\/|\/\/)[^"'\s,\\]*(?:alicdn\.com|aliexpress-media\.com)\/[^"'\s,\\]+/g);
+        if (matches) matches.forEach(u => allUrls.add(u.replace(/\\\//g, '/').replace(/\\u002F/g, '/')));
+      });
+      if (allUrls.size > 0) {
+        data.images = [...new Set(
+          [...allUrls].map(url => convertToHighRes(url))
+        )].slice(0, 20);
+        console.log('🐀 AliExpress - Images from global script scan:', data.images.length);
       }
     }
 
@@ -321,8 +366,10 @@ function extractImagesFromDOM() {
 
   // Sélecteurs pour les images principales
   const imageSelectors = [
-    '[class*="slider--img"] img',
+    '[class*="slider--item"] img',     // Layout AliExpress actuel (slider--item--RpyeewA)
+    '[class*="slider--img"] img',      // Ancien layout
     '[class*="Slider--img"] img',
+    '[class*="image-view"] img',       // image-view-v2--previewWrap
     '.pdp-main-image img',
     '[data-pl="product-image"] img',
     '.images-view-item img',
@@ -344,7 +391,7 @@ function extractImagesFromDOM() {
       if (src) {
         // Prendre la première URL si srcset
         src = src.split(',')[0].split(' ')[0];
-        if (src.startsWith('http')) {
+        if (src.startsWith('http') && isAliExpressImage(src)) {
           // Convertir en haute résolution
           src = convertToHighRes(src);
           images.add(src);
@@ -383,13 +430,13 @@ function extractImagesFromDOM() {
 
       const src = img.src || img.dataset.src || img.dataset.lazySrc
         || img.getAttribute('data-lazy-src') || img.getAttribute('data-original');
-      if (src && (src.includes('alicdn.com') || src.includes('aliexpress-media.com'))) {
+      if (src && isAliExpressImage(src)) {
         images.add(convertToHighRes(src));
       }
     });
   }
 
-  return Array.from(images).slice(0, 10);
+  return Array.from(images).slice(0, 20);
 }
 
 // Extraire la description depuis le DOM
@@ -471,14 +518,21 @@ function extractSizesFromDOM(_debug = []) {
 
 // Convertir une URL d'image en haute résolution
 function convertToHighRes(url) {
-  // Supprimer les suffixes de taille AliExpress
-  // Nouveau format: .jpg_220x220q75.jpg_.avif → .jpg
-  url = url.replace(/\.(jpg|jpeg|png|webp|avif)_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)_?\.(avif|webp)/gi, '.$1');
+  // Supprimer le suffixe de conversion format AliExpress (ex: _.avif, _.webp en fin d'URL)
+  // Format actuel: filename.jpg_220x220q75.jpg_.avif → filename.jpg
+  url = url.replace(/_\.(avif|webp|jpg|jpeg|png)$/i, '');
+  // Supprimer les suffixes de taille AliExpress (ex: _220x220q75.jpg)
+  url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
   url = url.replace(/\.(jpg|jpeg|png|webp|avif)_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
   url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
   // Utiliser HTTPS
   url = url.replace(/^http:/, 'https:');
   return url;
+}
+
+// Vérifie si une URL est une image AliExpress (alicdn.com ou aliexpress-media.com)
+function isAliExpressImage(url) {
+  return url.includes('alicdn.com') || url.includes('aliexpress-media.com');
 }
 
 // Parser un prix depuis une chaîne

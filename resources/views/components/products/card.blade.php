@@ -76,9 +76,13 @@
                     @endif
                 </p>
                 @if($product->cost_price > 0)
-                    @php $etsyProfit = $product->etsy_profit; @endphp
+                    @php
+                        $etsyProfit = $product->etsy_profit;
+                        $margin = $product->price > 0 ? round($etsyProfit / $product->price * 100, 1) : 0;
+                    @endphp
                     <p class="text-xs {{ $etsyProfit >= 0 ? 'text-green-600' : 'text-red-600' }}">
                         {{ ($etsyProfit >= 0 ? '+' : '') }}{{ number_format($etsyProfit, 2) }} profit
+                        @if($margin != 0)<span class="opacity-70">({{ $margin }}%)</span>@endif
                     </p>
                 @endif
             </div>

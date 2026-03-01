@@ -77,6 +77,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/products/{product}/toggle-logo', [ProductController::class, 'toggleLogo'])->name('products.toggle-logo');
     Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');
     Route::delete('/products/{product}/remove-image', [ProductController::class, 'removeImage'])->name('products.remove-image');
+    Route::post('/products/{product}/restore-real-image', [ProductController::class, 'restoreRealImage'])->name('products.restore-real-image');
+    Route::post('/products/{product}/restore-image', [ProductController::class, 'restoreImage'])->name('products.restore-image');
     Route::get('/products/{product}/download-images', [ProductController::class, 'downloadImages'])->name('products.download-images');
 });
 

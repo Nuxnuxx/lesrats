@@ -30,6 +30,8 @@ class Product extends Model
         'source_url',
         'images',
         'real_images',
+        'deleted_images',
+        'deleted_real_images',
         'apply_logo',
     ];
 
@@ -43,6 +45,8 @@ class Product extends Model
         'quantity' => 'integer',
         'images' => 'array',
         'real_images' => 'array',
+        'deleted_images' => 'array',
+        'deleted_real_images' => 'array',
         'tags' => 'array',
         'sizes' => 'array',
         'is_digital' => 'boolean',
@@ -108,6 +112,19 @@ class Product extends Model
     public function getRealImageUrlsAttribute(): array
     {
         return array_map([self::class, 'resolveImageUrl'], $this->real_images ?? []);
+    }
+
+    /**
+     * Get deleted_real_images as resolved URLs.
+     * Handles both legacy string format and new {path, deleted_at} object format.
+     */
+    public function getDeletedRealImageUrlsAttribute(): array
+    {
+        return array_map(function ($item) {
+            $path = is_array($item) ? $item['path'] : $item;
+
+            return self::resolveImageUrl($path);
+        }, $this->deleted_real_images ?? []);
     }
 
     /**

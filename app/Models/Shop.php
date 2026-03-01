@@ -30,6 +30,7 @@ class Shop extends Model
         'pricing_k',
         'pricing_t',
         'pricing_t0',
+        'promotion_reminder_date',
         'total_revenue',
         'total_orders',
     ];
@@ -100,6 +101,7 @@ PROMPT;
         'pricing_k' => 'decimal:4',
         'pricing_t' => 'decimal:4',
         'pricing_t0' => 'decimal:2',
+        'promotion_reminder_date' => 'date',
         'total_revenue' => 'decimal:2',
         'total_orders' => 'integer',
     ];

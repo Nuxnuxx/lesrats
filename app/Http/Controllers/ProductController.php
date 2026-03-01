@@ -184,6 +184,7 @@ class ProductController extends Controller
             'tags' => 'sometimes|nullable|string',
             'etsy_category' => 'sometimes|nullable|string|max:255',
             'price' => 'sometimes|numeric|min:0',
+            'cost_price' => 'sometimes|nullable|numeric|min:0',
             'price_us' => 'sometimes|nullable|numeric|min:0',
             'price_other' => 'sometimes|nullable|numeric|min:0',
             'quantity' => 'sometimes|integer|min:0',
@@ -625,12 +626,15 @@ class ProductController extends Controller
     {
         Gate::authorize('update', $product->shop);
 
+        $onlyLogo = $request->boolean('only_logo', false);
+
         $request->validate([
             'image_urls' => 'required|array|min:1',
             'image_urls.*' => 'required|string',
-            'prompt' => 'required|string|min:10',
+            'prompt' => $onlyLogo ? 'nullable|string' : 'required|string|min:10',
             'background_url' => 'nullable|string',
             'apply_logo' => 'nullable|boolean',
+            'only_logo' => 'nullable|boolean',
         ]);
 
         $user = $request->user();
@@ -643,16 +647,18 @@ class ProductController extends Controller
             ], 400);
         }
 
-        $backgroundUrl = $request->input('background_url');
+        $backgroundUrl = $onlyLogo ? null : $request->input('background_url');
         $applyLogo = $request->boolean('apply_logo', false);
 
-        // Remember last used background on the shop
+        // Remember last used background on the shop (only when using AI)
         $shop = $product->shop;
-        if ($backgroundUrl) {
-            $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
-            $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
-        } else {
-            $shop->update(['default_ai_background' => null]);
+        if (! $onlyLogo) {
+            if ($backgroundUrl) {
+                $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
+                $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
+            } else {
+                $shop->update(['default_ai_background' => null]);
+            }
         }
 
         // Create jobs for each image
@@ -660,10 +666,11 @@ class ProductController extends Controller
             fn (string $url) => new TransformProductImage(
                 productId: $product->id,
                 imageUrl: $url,
-                prompt: $request->input('prompt'),
+                prompt: $request->input('prompt', ''),
                 backgroundUrl: $backgroundUrl,
                 applyLogo: $applyLogo,
                 falApiKey: $falApiKey,
+                onlyLogo: $onlyLogo,
             )
         )->all();
 
@@ -752,15 +759,59 @@ class ProductController extends Controller
             ], 404);
         }
 
-        // Remove image at index
+        // Soft-delete: move to deleted_real_images with timestamp for auto-purge
+        $deletedRealImages = $product->deleted_real_images ?? [];
+        $deletedRealImages[] = [
+            'path' => $realImages[$index],
+            'deleted_at' => now()->toISOString(),
+        ];
         array_splice($realImages, $index, 1);
-        $product->update(['real_images' => $realImages]);
+        $product->update(['real_images' => $realImages, 'deleted_real_images' => $deletedRealImages]);
+
+        $fresh = $product->fresh();
 
         return response()->json([
             'success' => true,
             'message' => 'Image supprimee des images reelles.',
             'data' => [
-                'real_images' => $product->fresh()->real_image_urls,
+                'real_images' => $fresh->real_image_urls,
+                'deleted_real_images' => $fresh->deleted_real_image_urls,
+            ],
+        ]);
+    }
+
+    public function restoreRealImage(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $request->validate([
+            'image_index' => 'required|integer|min:0',
+        ]);
+
+        $deletedRealImages = $product->deleted_real_images ?? [];
+        $index = $request->input('image_index');
+
+        if (! isset($deletedRealImages[$index])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Image non trouvee.',
+            ], 404);
+        }
+
+        $realImages = $product->real_images ?? [];
+        $item = $deletedRealImages[$index];
+        $realImages[] = is_array($item) ? $item['path'] : $item;
+        array_splice($deletedRealImages, $index, 1);
+        $product->update(['real_images' => $realImages, 'deleted_real_images' => $deletedRealImages]);
+
+        $fresh = $product->fresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image restauree.',
+            'data' => [
+                'real_images' => $fresh->real_image_urls,
+                'deleted_real_images' => $fresh->deleted_real_image_urls,
             ],
         ]);
     }
@@ -786,14 +837,51 @@ class ProductController extends Controller
             ], 404);
         }
 
+        // Soft-delete: move to deleted_images
+        $deletedImages = $product->deleted_images ?? [];
+        $deletedImages[] = $images[$index];
         array_splice($images, $index, 1);
-        $product->update(['images' => $images]);
+        $product->update(['images' => $images, 'deleted_images' => $deletedImages]);
 
         return response()->json([
             'success' => true,
             'message' => 'Image supprimee.',
             'data' => [
                 'images' => $images,
+                'deleted_images' => $deletedImages,
+            ],
+        ]);
+    }
+
+    public function restoreImage(Request $request, Product $product)
+    {
+        Gate::authorize('update', $product->shop);
+
+        $request->validate([
+            'image_index' => 'required|integer|min:0',
+        ]);
+
+        $deletedImages = $product->deleted_images ?? [];
+        $index = $request->input('image_index');
+
+        if (! isset($deletedImages[$index])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Image non trouvee.',
+            ], 404);
+        }
+
+        $images = $product->images ?? [];
+        $images[] = $deletedImages[$index];
+        array_splice($deletedImages, $index, 1);
+        $product->update(['images' => $images, 'deleted_images' => $deletedImages]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image restauree.',
+            'data' => [
+                'images' => $images,
+                'deleted_images' => $deletedImages,
             ],
         ]);
     }
