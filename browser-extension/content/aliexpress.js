@@ -60,9 +60,17 @@ async function extractProductData(includeCountryPrices = false) {
   } else {
     _debug.push({ step: 'price', status: 'ok', source: 'json', data: data.price });
   }
-  if (!data.images || data.images.length === 0) {
-    data.images = extractImagesFromDOM();
-    _debug.push({ step: 'images', status: data.images.length > 0 ? 'ok' : 'fail', source: 'dom', data: `${data.images.length} found` });
+  // Toujours essayer le DOM pour les images (le slider contient toutes les images visibles)
+  const domImages = extractImagesFromDOM();
+  if (domImages.length > 0) {
+    // Le DOM est la source de vérité: il contient toutes les images du slider
+    // Merger avec les images JSON pour ne rien perdre
+    const jsonImages = data.images || [];
+    const allImages = new Set([...domImages, ...jsonImages].map(url => convertToHighRes(url)));
+    data.images = Array.from(allImages).slice(0, 10);
+    _debug.push({ step: 'images', status: 'ok', source: jsonImages.length > 0 ? 'dom+json' : 'dom', data: `${data.images.length} found (${domImages.length} dom, ${jsonImages.length} json)` });
+  } else if (!data.images || data.images.length === 0) {
+    _debug.push({ step: 'images', status: 'fail', source: 'dom+json', data: '0 found' });
   } else {
     _debug.push({ step: 'images', status: 'ok', source: 'json', data: `${data.images.length} found` });
   }
@@ -147,14 +155,14 @@ function extractFromPageData(_debug = []) {
           }
         }
 
-        // Fallback: chercher toutes les URLs alicdn.com dans le script si imagePathList vide
+        // Fallback: chercher toutes les URLs alicdn.com ou aliexpress-media.com dans le script si imagePathList vide
         if (data.images.length === 0) {
-          const allAliUrls = content.match(/https?:\\?\/\\?\/ae\d*\.alicdn\.com\/kf\/[^"'\s,\\]+/g);
+          const allAliUrls = content.match(/https?:\\?\/\\?\/(?:ae\d*\.alicdn\.com|ae-pic[^.]*\.aliexpress-media\.com)\/kf\/[^"'\s,\\]+/g);
           if (allAliUrls && allAliUrls.length > 0) {
             data.images = [...new Set(allAliUrls)]
               .map(url => url.replace(/\\u002F/g, '/').replace(/\\\//g, '/'))
-              .filter(url => !url.includes('_80x80') && !url.includes('_220x220') && !url.includes('_50x50'))
               .map(url => convertToHighRes(url))
+              .filter((url, i, arr) => arr.indexOf(url) === i)
               .slice(0, 10);
           }
         }
@@ -326,6 +334,12 @@ function extractImagesFromDOM() {
 
   for (const selector of imageSelectors) {
     document.querySelectorAll(selector).forEach(el => {
+      // Exclure les items vidéo (ceux qui contiennent un élément videoIcon)
+      const sliderItem = el.closest('[class*="slider--item"]');
+      if (sliderItem && sliderItem.querySelector('[class*="videoIcon"]')) {
+        return;
+      }
+
       let src = el.src || el.srcset || el.dataset.src || el.getAttribute('data-lazy-src');
       if (src) {
         // Prendre la première URL si srcset
@@ -358,12 +372,18 @@ function extractImagesFromDOM() {
     }
   });
 
-  // Fallback ultime: toutes les imgs alicdn.com y compris lazy-loadées
+  // Fallback ultime: toutes les imgs alicdn.com ou aliexpress-media.com y compris lazy-loadées
   if (images.size === 0) {
     document.querySelectorAll('img').forEach(img => {
+      // Exclure les items vidéo
+      const sliderItem = img.closest('[class*="slider--item"]');
+      if (sliderItem && sliderItem.querySelector('[class*="videoIcon"]')) {
+        return;
+      }
+
       const src = img.src || img.dataset.src || img.dataset.lazySrc
         || img.getAttribute('data-lazy-src') || img.getAttribute('data-original');
-      if (src && src.includes('alicdn.com')) {
+      if (src && (src.includes('alicdn.com') || src.includes('aliexpress-media.com'))) {
         images.add(convertToHighRes(src));
       }
     });
@@ -452,8 +472,10 @@ function extractSizesFromDOM(_debug = []) {
 // Convertir une URL d'image en haute résolution
 function convertToHighRes(url) {
   // Supprimer les suffixes de taille AliExpress
-  url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
+  // Nouveau format: .jpg_220x220q75.jpg_.avif → .jpg
+  url = url.replace(/\.(jpg|jpeg|png|webp|avif)_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)_?\.(avif|webp)/gi, '.$1');
   url = url.replace(/\.(jpg|jpeg|png|webp|avif)_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
+  url = url.replace(/_\d+x\d+[^.]*\.(jpg|jpeg|png|webp|avif)/gi, '.$1');
   // Utiliser HTTPS
   url = url.replace(/^http:/, 'https:');
   return url;
