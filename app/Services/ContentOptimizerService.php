@@ -428,29 +428,20 @@ class ContentOptimizerService
             return null;
         }
 
-        // Build category names list
-        $categoryNames = array_map(fn ($cat) => $cat['name'] ?? '', $categories);
-        $categoryNames = array_filter($categoryNames);
+        // Normalize: support both old format [{name, ...}] and new format ["string"]
+        $categoryNames = array_map(fn ($cat) => is_array($cat) ? ($cat['name'] ?? '') : (string) $cat, $categories);
+        $categoryNames = array_values(array_filter($categoryNames));
 
         if (empty($categoryNames)) {
             return null;
         }
 
         if (! $this->apiKey) {
-            return $this->fallbackSelectCategory($title, $description, $categories);
+            return $this->fallbackSelectCategory($title, $description, $categoryNames);
         }
 
         try {
-            // Build category info for AI
-            $categoryInfo = [];
-            foreach ($categories as $cat) {
-                $info = $cat['name'];
-                if (! empty($cat['keywords'])) {
-                    $info .= ' (keywords: '.$cat['keywords'].')';
-                }
-                $categoryInfo[] = $info;
-            }
-            $categoryListString = implode("\n- ", $categoryInfo);
+            $categoryListString = implode("\n- ", $categoryNames);
 
             $prompt = "Select the SINGLE most appropriate category for this product.\n\n"
                 ."Product title: {$title}\n"
@@ -483,36 +474,36 @@ class ContentOptimizerService
                 $selectedCategory = trim($result['choices'][0]['message']['content'] ?? '');
 
                 // Validate that the selected category exists in our list
-                foreach ($categories as $cat) {
-                    if (strcasecmp($cat['name'], $selectedCategory) === 0) {
-                        Log::info('AI selected category', ['category' => $cat['name']]);
+                foreach ($categoryNames as $name) {
+                    if (strcasecmp($name, $selectedCategory) === 0) {
+                        Log::info('AI selected category', ['category' => $name]);
 
-                        return $cat['name'];
+                        return $name;
                     }
                 }
 
                 // Fuzzy match if exact match fails
-                foreach ($categories as $cat) {
-                    if (str_contains(strtolower($selectedCategory), strtolower($cat['name'])) ||
-                        str_contains(strtolower($cat['name']), strtolower($selectedCategory))) {
-                        Log::info('AI selected category (fuzzy match)', ['category' => $cat['name']]);
+                foreach ($categoryNames as $name) {
+                    if (str_contains(strtolower($selectedCategory), strtolower($name)) ||
+                        str_contains(strtolower($name), strtolower($selectedCategory))) {
+                        Log::info('AI selected category (fuzzy match)', ['category' => $name]);
 
-                        return $cat['name'];
+                        return $name;
                     }
                 }
             }
 
-            return $this->fallbackSelectCategory($title, $description, $categories);
+            return $this->fallbackSelectCategory($title, $description, $categoryNames);
 
         } catch (\Exception $e) {
             Log::error('Groq category selection failed', ['error' => $e->getMessage()]);
 
-            return $this->fallbackSelectCategory($title, $description, $categories);
+            return $this->fallbackSelectCategory($title, $description, $categoryNames);
         }
     }
 
     /**
-     * Fallback category selection (keyword matching).
+     * Fallback category selection (name matching).
      */
     protected function fallbackSelectCategory(string $title, string $description, array $categories): ?string
     {
@@ -520,35 +511,32 @@ class ContentOptimizerService
         $bestCategory = null;
         $bestScore = 0;
 
-        foreach ($categories as $cat) {
+        foreach ($categories as $catName) {
             $score = 0;
-            $catName = strtolower($cat['name'] ?? '');
-            $keywords = strtolower($cat['keywords'] ?? '');
+            $name = strtolower($catName);
 
             // Check if category name appears in text
-            if ($catName && str_contains($text, $catName)) {
+            if ($name && str_contains($text, $name)) {
                 $score += 10;
             }
 
-            // Check keywords
-            if ($keywords) {
-                $keywordList = array_map('trim', explode(',', $keywords));
-                foreach ($keywordList as $keyword) {
-                    if ($keyword && str_contains($text, $keyword)) {
-                        $score += 5;
-                    }
+            // Also check individual words from the category name
+            $words = array_filter(explode(' ', $name), fn ($w) => strlen($w) > 2);
+            foreach ($words as $word) {
+                if (str_contains($text, $word)) {
+                    $score += 3;
                 }
             }
 
             if ($score > $bestScore) {
                 $bestScore = $score;
-                $bestCategory = $cat['name'];
+                $bestCategory = $catName;
             }
         }
 
         // If no match found, return first category as default
         if (! $bestCategory && ! empty($categories)) {
-            $bestCategory = $categories[0]['name'] ?? null;
+            $bestCategory = $categories[0] ?? null;
         }
 
         Log::info('Fallback selected category', ['category' => $bestCategory, 'score' => $bestScore]);

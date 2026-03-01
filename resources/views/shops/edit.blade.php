@@ -221,29 +221,16 @@
 
                         <div class="space-y-2">
                             <template x-for="(category, index) in categories" :key="index">
-                                <div class="p-3 border border-gray-200 rounded-lg bg-gray-50">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <span class="text-xs font-medium text-gray-600" x-text="'#' + (index + 1)"></span>
-                                        <button type="button" @click="removeCategory(index)" class="text-red-400 hover:text-red-600">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <input type="text" x-model="category.name" placeholder="Nom interne"
-                                            @input.debounce.800ms="saveCategories()"
-                                            class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
-                                        <input type="text" x-model="category.etsy_name" placeholder="Nom Etsy exact"
-                                            @input.debounce.800ms="saveCategories()"
-                                            class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
-                                        <input type="text" x-model="category.etsy_id" placeholder="ID checkbox Etsy"
-                                            @input.debounce.800ms="saveCategories()"
-                                            class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
-                                        <input type="text" x-model="category.keywords" placeholder="Mots-cles (auto-detect)"
-                                            @input.debounce.800ms="saveCategories()"
-                                            class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
-                                    </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-medium text-gray-400 w-5" x-text="(index + 1)"></span>
+                                    <input type="text" x-model="categories[index]" placeholder="Nom de la categorie"
+                                        @input.debounce.800ms="saveCategories()"
+                                        class="flex-1 text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500">
+                                    <button type="button" @click="removeCategory(index)" class="text-red-400 hover:text-red-600 shrink-0">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        </svg>
+                                    </button>
                                 </div>
                             </template>
                         </div>
@@ -669,10 +656,12 @@
         }
 
         function etsyCategoriesManager(initialCategories) {
+            // Migrate old format [{name, etsy_name, ...}] to simple strings
+            const cats = (initialCategories || []).map(c => typeof c === 'object' ? (c.name || c.etsy_name || '') : c).filter(c => c);
             return {
-                categories: initialCategories,
+                categories: cats,
                 addCategory() {
-                    this.categories.push({ name: '', etsy_name: '', etsy_id: '', keywords: '' });
+                    this.categories.push('');
                 },
                 removeCategory(index) {
                     this.categories.splice(index, 1);

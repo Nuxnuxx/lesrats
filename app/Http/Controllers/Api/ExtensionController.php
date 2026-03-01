@@ -437,14 +437,12 @@ class ExtensionController extends Controller
             // Resolve storage-relative paths to full URLs (needed by browser extension for chrome.downloads)
             $imagesToUse = array_map([Product::class, 'resolveImageUrl'], $imagesToUse);
 
-            // Get category info from shop's etsy_categories
-            $categoryData = null;
-            if ($product->etsy_category && $product->shop->etsy_categories) {
-                foreach ($product->shop->etsy_categories as $cat) {
-                    if ($cat['name'] === $product->etsy_category) {
-                        $categoryData = $cat;
-                        break;
-                    }
+            // Get category name — categories are now simple strings
+            $categoryName = $product->etsy_category;
+            if ($categoryName && $product->shop->etsy_categories) {
+                $categories = array_map(fn ($cat) => is_array($cat) ? ($cat['name'] ?? '') : (string) $cat, $product->shop->etsy_categories);
+                if (! in_array($categoryName, $categories)) {
+                    $categoryName = null;
                 }
             }
 
@@ -469,7 +467,7 @@ class ExtensionController extends Controller
                     'is_digital' => (bool) $product->is_digital,
                     'shop_name' => $product->shop->name,
                     'shop_id' => $product->shop->id,
-                    'etsy_category' => $categoryData,
+                    'etsy_category' => $categoryName,
                 ],
             ]);
         } catch (\Exception $e) {

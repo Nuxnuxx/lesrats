@@ -43,6 +43,9 @@
         $tagsArray = is_array($product->tags) ? $product->tags : (is_string($product->tags) ? json_decode($product->tags, true) : []);
         $tagsString = is_array($tagsArray) ? implode(', ', $tagsArray) : '';
         $shopCategories = $product->shop->etsy_categories ?? [];
+        // Normalize: support both old format [{name, ...}] and new format ["string"]
+        $shopCategories = array_map(fn($cat) => is_array($cat) ? ($cat['name'] ?? '') : (string) $cat, $shopCategories);
+        $shopCategories = array_values(array_filter($shopCategories));
         $k = \App\Models\Product::ETSY_FEE_RATE;
         $f = \App\Models\Product::ETSY_FIXED_FEE;
         $u = \App\Models\Product::URSSAF_RATE;
@@ -54,15 +57,7 @@
         $initUrssaf = $initRevenue * $u;
         $initProfit = round($initRevenue - $initCost - $initUrssaf, 2);
         $etsyCategory = $product->etsy_category;
-        $etsyCategoryData = null;
-        if ($etsyCategory && !empty($shopCategories)) {
-            foreach ($shopCategories as $cat) {
-                if ($cat['name'] === $etsyCategory) {
-                    $etsyCategoryData = $cat;
-                    break;
-                }
-            }
-        }
+        $hasCategory = $etsyCategory && in_array($etsyCategory, $shopCategories);
     @endphp
 
     <div class="py-4" x-data="productAutoSave({
@@ -471,8 +466,8 @@
                                         class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
                                     <option value="">-- Categorie --</option>
                                     @foreach($shopCategories as $cat)
-                                        <option value="{{ $cat['name'] }}" {{ old('etsy_category', $product->etsy_category) == $cat['name'] ? 'selected' : '' }}>
-                                            {{ $cat['name'] }} ({{ $cat['etsy_name'] }})
+                                        <option value="{{ $cat }}" {{ old('etsy_category', $product->etsy_category) == $cat ? 'selected' : '' }}>
+                                            {{ $cat }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -691,20 +686,20 @@
                         <h3 class="text-sm font-semibold text-orange-600 mb-3">Publier sur Etsy</h3>
                         <button type="button"
                                 data-product-id="{{ $product->id }}"
-                                data-category-name="{{ $etsyCategoryData['etsy_name'] ?? $etsyCategoryData['name'] ?? '' }}"
+                                data-category-name="{{ $etsyCategory ?? '' }}"
                                 data-is-digital="{{ $product->is_digital ? 'true' : 'false' }}"
                                 onclick="publishToEtsy(this.dataset)"
                                 class="w-full inline-flex items-center justify-center px-3 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
-                                {{ !$etsyCategoryData ? 'disabled' : '' }}>
+                                {{ !$hasCategory ? 'disabled' : '' }}>
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
                             Ouvrir Etsy & Remplir
                         </button>
-                        @if(!$etsyCategoryData)
+                        @if(!$hasCategory)
                             <p class="text-xs text-red-500 mt-2">Selectionnez une categorie Etsy.</p>
                         @else
-                            <p class="text-xs text-green-600 mt-2">{{ $etsyCategoryData['etsy_name'] }}</p>
+                            <p class="text-xs text-green-600 mt-2">{{ $etsyCategory }}</p>
                         @endif
                     </div>
 

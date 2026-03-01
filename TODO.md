@@ -12,7 +12,7 @@
 
 ## Produits
 - [x] Possibilité de changer le lien AliExpress
-- [ ] Automatiser les tailles
+- [x] Automatiser les tailles
 
 ## Automatisation
 - [ ] Automatiser les envois

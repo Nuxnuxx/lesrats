@@ -409,7 +409,7 @@ async function runStep(id, title, fn) {
     }
     
     // Handle all dialogs
-    await handleAllDialogs({ etsy_category: { etsy_name: categoryName } }, isDigital);
+    await handleAllDialogs({ etsy_category: categoryName }, isDigital);
     
     // Wait for main form
     await runStep('wait-form', 'Attente formulaire principal', async () => {
@@ -494,6 +494,7 @@ async function handleCategoryDialog(categoryData, isDigital = false) {
 }
 
 // Handle the first dialog - category selection ("Vos principales catégories")
+// categoryData is now a simple string (the category name)
 async function handleCategorySelectionDialog(dialog, categoryData) {
   const result = { action: 'category_selection' };
   
@@ -504,64 +505,49 @@ async function handleCategorySelectionDialog(dialog, categoryData) {
   
   let found = false;
   let matchedCategory = null;
+  const searchName = String(categoryData).toLowerCase().trim();
+  result.searchName = searchName;
   
-  // Primary: search by category name
-  if (categoryData.etsy_name) {
-    const searchName = categoryData.etsy_name.toLowerCase().trim();
-    result.searchName = searchName;
+  let checkboxes = dialog.querySelectorAll('input[type="checkbox"][id^="category-"]');
+  if (checkboxes.length === 0) {
+    checkboxes = document.querySelectorAll('input[type="checkbox"][id^="category-"]');
+  }
+  result.checkboxesFound = checkboxes.length;
+  
+  // First pass: exact match on h2 title
+  for (const checkbox of checkboxes) {
+    const label = document.querySelector(`label[for="${checkbox.id}"]`);
+    if (!label) continue;
     
-    let checkboxes = dialog.querySelectorAll('input[type="checkbox"][id^="category-"]');
-    if (checkboxes.length === 0) {
-      checkboxes = document.querySelectorAll('input[type="checkbox"][id^="category-"]');
+    const h2 = label.querySelector('h2.wt-text-title');
+    if (!h2) continue;
+    
+    const categoryName = h2.textContent.toLowerCase().trim();
+    
+    if (categoryName === searchName || 
+        categoryName.includes(searchName) || 
+        searchName.includes(categoryName)) {
+      checkbox.click();
+      found = true;
+      matchedCategory = { id: checkbox.id, name: h2.textContent.trim() };
+      await sleep(300);
+      break;
     }
-    result.checkboxesFound = checkboxes.length;
-    
-    // First pass: exact match on h2 title
+  }
+  
+  // Second pass: match on full taxonomy path
+  if (!found) {
     for (const checkbox of checkboxes) {
       const label = document.querySelector(`label[for="${checkbox.id}"]`);
       if (!label) continue;
       
-      const h2 = label.querySelector('h2.wt-text-title');
-      if (!h2) continue;
-      
-      const categoryName = h2.textContent.toLowerCase().trim();
-      
-      if (categoryName === searchName || 
-          categoryName.includes(searchName) || 
-          searchName.includes(categoryName)) {
+      if (label.textContent.toLowerCase().includes(searchName)) {
         checkbox.click();
         found = true;
-        matchedCategory = { id: checkbox.id, name: h2.textContent.trim() };
+        matchedCategory = { id: checkbox.id, name: 'taxonomy match' };
         await sleep(300);
         break;
       }
-    }
-    
-    // Second pass: match on full taxonomy path
-    if (!found) {
-      for (const checkbox of checkboxes) {
-        const label = document.querySelector(`label[for="${checkbox.id}"]`);
-        if (!label) continue;
-        
-        if (label.textContent.toLowerCase().includes(searchName)) {
-          checkbox.click();
-          found = true;
-          matchedCategory = { id: checkbox.id, name: 'taxonomy match' };
-          await sleep(300);
-          break;
-        }
-      }
-    }
-  }
-  
-  // Fallback: search by ID
-  if (!found && categoryData.etsy_id) {
-    const checkbox = document.getElementById(categoryData.etsy_id);
-    if (checkbox) {
-      checkbox.click();
-      found = true;
-      matchedCategory = { id: categoryData.etsy_id, name: 'ID fallback' };
-      await sleep(300);
     }
   }
   

@@ -166,13 +166,9 @@ class ShopController extends Controller
         if (isset($validated['etsy_categories']) && is_string($validated['etsy_categories'])) {
             $categories = json_decode($validated['etsy_categories'], true) ?? [];
             $validated['etsy_categories'] = collect($categories)
-                ->filter(fn ($cat) => ! empty($cat['name']) || ! empty($cat['etsy_name']))
-                ->map(fn ($cat) => [
-                    'name' => $cat['name'] ?? '',
-                    'etsy_name' => $cat['etsy_name'] ?? '',
-                    'etsy_id' => $cat['etsy_id'] ?? '',
-                    'keywords' => $cat['keywords'] ?? '',
-                ])
+                ->map(fn ($cat) => is_array($cat) ? ($cat['name'] ?? '') : (string) $cat)
+                ->map(fn ($cat) => trim($cat))
+                ->filter(fn ($cat) => ! empty($cat))
                 ->values()
                 ->toArray();
         }
@@ -228,18 +224,13 @@ class ShopController extends Controller
         $categoriesJson = $request->input('etsy_categories', '[]');
         $categories = json_decode($categoriesJson, true) ?? [];
 
-        // Validate and clean categories
-        $cleanedCategories = [];
-        foreach ($categories as $cat) {
-            if (! empty($cat['name']) || ! empty($cat['etsy_name'])) {
-                $cleanedCategories[] = [
-                    'name' => $cat['name'] ?? '',
-                    'etsy_name' => $cat['etsy_name'] ?? '',
-                    'etsy_id' => $cat['etsy_id'] ?? '',
-                    'keywords' => $cat['keywords'] ?? '',
-                ];
-            }
-        }
+        // Clean categories — now simple strings
+        $cleanedCategories = collect($categories)
+            ->map(fn ($cat) => is_array($cat) ? ($cat['name'] ?? '') : (string) $cat)
+            ->map(fn ($cat) => trim($cat))
+            ->filter(fn ($cat) => ! empty($cat))
+            ->values()
+            ->toArray();
 
         $shop->update(['etsy_categories' => $cleanedCategories]);
 
