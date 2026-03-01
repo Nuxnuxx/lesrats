@@ -18,7 +18,7 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 // Écouter le raccourci clavier
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === 'quick-import') {
-    console.log('🐀 Raccourci clavier déclenché: import rapide');
+    console.log('🐀 Raccourci clavier déclenché: ouverture du panel');
     
     // Récupérer l'onglet actif
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -33,56 +33,17 @@ chrome.commands.onCommand.addListener(async (command) => {
       return;
     }
 
-    // Afficher le badge "en cours"
-    chrome.action.setBadgeText({ text: '⏳', tabId: tab.id });
-    chrome.action.setBadgeBackgroundColor({ color: '#f59e0b', tabId: tab.id });
-
+    // Tell the content script to open the panel
     try {
-      // Extraire les données du produit
-      const extractResponse = await chrome.tabs.sendMessage(tab.id, { action: 'extractProduct' });
-      
-      if (!extractResponse || !extractResponse.success) {
-        throw new Error(extractResponse?.error || 'Extraction échouée');
-      }
-
-      // Récupérer les paramètres (dev mode aware)
-      const settings = await chrome.storage.local.get(['apiUrl', 'devMode', 'devApiUrl']);
-      let apiUrl, apiToken;
-      if (settings.devMode) {
-        apiUrl = settings.devApiUrl || 'http://localhost:8000';
-        apiToken = await SecureStorage.getSecure('devApiToken') || '';
-      } else {
-        apiUrl = settings.apiUrl || 'http://localhost:8000';
-        apiToken = await SecureStorage.getSecure('apiToken') || '';
-      }
-
-      // Envoyer au serveur
-      const result = await handleImport(extractResponse.data, apiUrl, apiToken);
-
-      if (result.success) {
-        // Succès - badge vert
-        chrome.action.setBadgeText({ text: '✓', tabId: tab.id });
-        chrome.action.setBadgeBackgroundColor({ color: '#22c55e', tabId: tab.id });
-        
-        // Ouvrir la page du produit dans un nouvel onglet
-        if (result.product_url) {
-          chrome.tabs.create({ url: result.product_url });
-        }
-      } else {
-        throw new Error(result.error || 'Import échoué');
-      }
+      await chrome.tabs.sendMessage(tab.id, { action: 'openLesratsPanel' });
     } catch (error) {
-      console.error('🐀 Erreur import rapide:', error);
-      // Erreur - badge rouge
-      chrome.action.setBadgeText({ text: '✗', tabId: tab.id });
+      console.error('🐀 Erreur ouverture panel:', error);
+      chrome.action.setBadgeText({ text: '!', tabId: tab.id });
       chrome.action.setBadgeBackgroundColor({ color: '#ef4444', tabId: tab.id });
+      setTimeout(() => {
+        chrome.action.setBadgeText({ text: '', tabId: tab.id });
+      }, 2000);
     }
-
-    // Réinitialiser le badge après 3 secondes
-    setTimeout(() => {
-      chrome.action.setBadgeText({ text: '✓', tabId: tab.id });
-      chrome.action.setBadgeBackgroundColor({ color: '#22c55e', tabId: tab.id });
-    }, 3000);
   }
 });
 
@@ -138,6 +99,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // Open Etsy with category (saves to storage from service worker)
   if (request.action === 'openEtsyWithCategory') {
     openEtsyWithCategory(request.categoryName, request.isDigital)
+      .then(result => sendResponse(result))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+  
+  // AI shop suggestion (routed through service worker to avoid ad blockers)
+  if (request.action === 'suggestShop') {
+    suggestShop(request.apiUrl, request.apiToken, request.productData)
       .then(result => sendResponse(result))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
@@ -331,6 +300,35 @@ async function downloadAndSaveImages(imageUrls, productTitle = '') {
   return { success: count > 0, count: count, filename: baseName };
 }
 
+// AI shop suggestion
+async function suggestShop(apiUrl, apiToken, productData) {
+  const baseUrl = apiUrl.replace(/\/+$/, '');
+  
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+    
+    const response = await fetch(`${baseUrl}/api/extension/suggest-shop`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        title: productData.title || '',
+        description: productData.description || '',
+        price: productData.price || null
+      })
+    });
+    
+    return await response.json();
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 // Fonction d'import vers le serveur
 async function handleImport(productData, apiUrl, apiToken) {
   // Remove trailing slash from URL
@@ -361,7 +359,9 @@ async function handleImport(productData, apiUrl, apiToken) {
     return {
       success: true,
       product_id: data.product_id,
-      product_url: data.product_url
+      product_url: data.product_url,
+      is_existing: data.is_existing || false,
+      message: data.message || null
     };
   } catch (error) {
     console.error('Erreur d\'import:', error);

@@ -49,7 +49,7 @@
         "https://*.aliexpress.com/item/*.html*",
         "https://fr.aliexpress.com/item/*.html*"
       ],
-      "js": ["content/aliexpress.js"],
+      "js": ["lib/secure-storage.js", "content/aliexpress.js", "content/aliexpress-panel.js"],
       "run_at": "document_idle"
     },
     {
@@ -89,5 +89,11 @@
   ],
   "background": {
     "service_worker": "background/service-worker.js"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon32.png", "icons/icon48.png"],
+      "matches": ["https://*.aliexpress.com/*"]
+    }
+  ]
 }

@@ -29,5 +29,8 @@ Route::prefix('extension')->group(function () {
 
         // Get product data for Etsy publishing
         Route::get('/product/{id}/etsy-data', [ExtensionController::class, 'getEtsyData']);
+
+        // AI shop suggestion based on product data
+        Route::post('/suggest-shop', [ExtensionController::class, 'suggestShop']);
     });
 });

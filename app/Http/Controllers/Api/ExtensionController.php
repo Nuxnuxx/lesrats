@@ -484,6 +484,137 @@ class ExtensionController extends Controller
     }
 
     /**
+     * Suggest the best shop for a product using AI.
+     */
+    public function suggestShop(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:500',
+            'description' => 'nullable|string|max:2000',
+            'price' => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            $user = $request->user();
+            $shops = $user->shops()->select('shops.id', 'shops.name', 'shops.description', 'shops.product_type')->get();
+
+            if ($shops->isEmpty()) {
+                return response()->json(['success' => false, 'message' => 'Aucune boutique trouvee.'], 400);
+            }
+
+            if ($shops->count() === 1) {
+                $shop = $shops->first();
+
+                return response()->json([
+                    'success' => true,
+                    'shop_id' => $shop->id,
+                    'shop_name' => $shop->name,
+                ]);
+            }
+
+            // Build shop list for AI prompt
+            $shopList = $shops->map(fn ($s) => "- ID:{$s->id} | {$s->name} | {$s->description}")->implode("\n");
+
+            $productTitle = $validated['title'];
+            $productDesc = mb_substr($validated['description'] ?? '', 0, 500);
+
+            $prompt = "Given this product:\n"
+                ."Title: {$productTitle}\n"
+                .($productDesc ? "Description: {$productDesc}\n" : '')
+                ."\nWhich shop is the best fit? Pick EXACTLY ONE shop ID from this list:\n"
+                .$shopList
+                ."\n\nOutput ONLY the shop ID number, nothing else.";
+
+            $systemPrompt = 'You are a shop-matching expert. Match products to the most relevant shop based on niche and description. '
+                .'Output only the numeric shop ID, no explanations.';
+
+            $apiKey = config('services.groq.api_key');
+            $model = config('services.groq.model', 'llama-3.3-70b-versatile');
+
+            if (! $apiKey) {
+                // Fallback: return first shop
+                $shop = $shops->first();
+
+                return response()->json([
+                    'success' => true,
+                    'shop_id' => $shop->id,
+                    'shop_name' => $shop->name,
+                    'method' => 'fallback',
+                ]);
+            }
+
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Bearer '.$apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(15)->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    ['role' => 'system', 'content' => $systemPrompt],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 20,
+                'temperature' => 0.2,
+            ]);
+
+            if ($response->successful()) {
+                $result = $response->json();
+                $suggestedId = trim($result['choices'][0]['message']['content'] ?? '');
+                // Extract numeric ID
+                preg_match('/(\d+)/', $suggestedId, $matches);
+                $shopId = $matches[1] ?? null;
+
+                $matchedShop = $shops->firstWhere('id', (int) $shopId);
+                if ($matchedShop) {
+                    Log::info('AI suggested shop', ['shop_id' => $matchedShop->id, 'shop_name' => $matchedShop->name, 'product' => $productTitle]);
+
+                    return response()->json([
+                        'success' => true,
+                        'shop_id' => $matchedShop->id,
+                        'shop_name' => $matchedShop->name,
+                        'method' => 'ai',
+                    ]);
+                }
+            }
+
+            // Fallback: keyword matching
+            $text = strtolower($productTitle.' '.($productDesc ?? ''));
+            $bestShop = null;
+            $bestScore = 0;
+
+            foreach ($shops as $shop) {
+                $score = 0;
+                $shopDesc = strtolower($shop->name.' '.($shop->description ?? ''));
+                $words = array_filter(explode(' ', $shopDesc), fn ($w) => strlen($w) > 2);
+                foreach ($words as $word) {
+                    if (str_contains($text, $word)) {
+                        $score += 3;
+                    }
+                }
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestShop = $shop;
+                }
+            }
+
+            $shop = $bestShop ?? $shops->first();
+
+            return response()->json([
+                'success' => true,
+                'shop_id' => $shop->id,
+                'shop_name' => $shop->name,
+                'method' => 'fallback',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Shop suggestion error', ['error' => $e->getMessage()]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Detect size type from size values.
      *
      * @return string 'ring', 'clothing', or 'custom'
