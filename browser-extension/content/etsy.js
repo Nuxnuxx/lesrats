@@ -1584,11 +1584,22 @@ async function fillVariations(sizes, sizeType = 'custom') {
 
 // Click the "Add a variation" button on the Etsy form
 async function clickAddVariation() {
-  // Try selector-based approach first
+  // Search by text content - matches "Ajouter des variations" / "Add a variation" etc.
+  const allButtons = document.querySelectorAll('button, [role="button"]');
+  for (const btn of allButtons) {
+    const text = btn.textContent?.trim().toLowerCase() || '';
+    if (text.includes('ajouter des variations') || text.includes('add a variation') || text.includes('ajouter une variation') || text.includes('add variation')) {
+      btn.click();
+      console.log('🐀 Clicked variation button:', btn.textContent.trim());
+      await sleep(1000);
+      return true;
+    }
+  }
+
+  // Fallback: selector-based
   const addBtn = findElement([
     '[data-testid="add-variation-button"]',
     'button[aria-label*="variation" i]',
-    'button[aria-label*="Variation" i]',
   ]);
 
   if (addBtn) {
@@ -1596,18 +1607,6 @@ async function clickAddVariation() {
     console.log('🐀 Clicked variation button (selector match)');
     await sleep(1000);
     return true;
-  }
-
-  // Fallback: search by text content
-  const allButtons = document.querySelectorAll('button, [role="button"]');
-  for (const btn of allButtons) {
-    const text = btn.textContent?.trim().toLowerCase() || '';
-    if (text.includes('add a variation') || text.includes('ajouter une variation')) {
-      btn.click();
-      console.log('🐀 Clicked variation button (text match):', btn.textContent.trim());
-      await sleep(1000);
-      return true;
-    }
   }
 
   console.warn('🐀 Add variation button not found');

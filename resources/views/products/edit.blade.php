@@ -680,7 +680,7 @@
                         <h3 class="text-sm font-semibold text-orange-600 mb-3">Publier sur Etsy</h3>
                         <button type="button"
                                 data-product-id="{{ $product->id }}"
-                                data-category-name="{{ $etsyCategoryData['etsy_name'] ?? '' }}"
+                                data-category-name="{{ $etsyCategoryData['etsy_name'] ?? $etsyCategoryData['name'] ?? '' }}"
                                 data-is-digital="{{ $product->is_digital ? 'true' : 'false' }}"
                                 onclick="publishToEtsy(this.dataset)"
                                 class="w-full inline-flex items-center justify-center px-3 py-2 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
