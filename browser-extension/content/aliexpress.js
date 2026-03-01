@@ -61,6 +61,8 @@ async function extractProductData(includeCountryPrices = false) {
     _debug.push({ step: 'price', status: 'ok', source: 'json', data: data.price });
   }
   if (!data.images || data.images.length === 0) {
+    // Déclencher le lazy-load du slider avant d'extraire depuis le DOM
+    await triggerSliderLazyLoad();
     data.images = extractImagesFromDOM();
     _debug.push({ step: 'images', status: data.images.length > 0 ? 'ok' : 'fail', source: 'dom', data: `${data.images.length} found` });
   } else {
@@ -112,6 +114,30 @@ function waitForPageLoad() {
       resolve();
     }, 2000);
   });
+}
+
+// Scroller le slider AliExpress item par item pour déclencher le lazy-load des images
+async function triggerSliderLazyLoad() {
+  const sliderContainer = document.querySelector('[class*="slider--slider"]');
+  if (!sliderContainer) return;
+
+  const items = sliderContainer.querySelectorAll('[class*="slider--item"]');
+  if (items.length === 0) return;
+
+  console.log(`🐀 Lazy-load trigger: scrolling ${items.length} slider items...`);
+
+  for (const item of items) {
+    // Scroll cet item dans la zone visible du slider pour déclencher l'IntersectionObserver
+    item.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
+    await new Promise(r => setTimeout(r, 80)); // 80ms entre chaque item
+  }
+
+  // Attendre que les dernières images finissent de charger
+  await new Promise(r => setTimeout(r, 400));
+
+  // Revenir au début
+  sliderContainer.scrollLeft = 0;
+  console.log('🐀 Lazy-load trigger: done');
 }
 
 // Extraire depuis les données JSON embarquées dans la page
