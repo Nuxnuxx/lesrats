@@ -883,6 +883,14 @@ async function fillEtsyForm(product) {
     showDigitalFileReminder(product.source_url);
   }
 
+  // Scroll to the image upload area so user can drag & drop images
+  await sleep(500);
+  const imageUploadArea = document.querySelector('#field-listingImages .wt-upload__area .wt-display-flex-xs.wt-justify-content-center.wt-align-items-center');
+  if (imageUploadArea) {
+    imageUploadArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    console.log('🐀 Scrolled to image upload area');
+  }
+
   console.log('🐀 Form filling complete!');
 }
 
@@ -1575,11 +1583,46 @@ async function fillVariations(sizes, sizeType = 'custom') {
   await sleep(800);
   await toggleSizeCheckboxes(sizes);
 
-  // Step 5: Click "Terminé" / "Done" to confirm
+  // Step 5: Click the overlay footer button — first click = "Terminé", second click = "Appliquer"
+  // Both are the same button at #le-variations-overlay .wt-overlay__footer__action > button
   await sleep(500);
-  await clickDoneButton();
+  await clickOverlayFooterButton();
+  await sleep(2000);
+  await clickOverlayFooterButton();
 
   console.log('🐀 Size variations filled:', sizes.length, 'sizes');
+}
+
+// Click the footer action button inside #le-variations-overlay
+// This button is "Terminé" first, then becomes "Appliquer" after first click
+async function clickOverlayFooterButton() {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const btn = document.querySelector('#le-variations-overlay .wt-overlay__footer__action button');
+
+    if (!btn) {
+      console.warn('🐀 Overlay footer button not found, attempt', attempt + 1);
+      await sleep(800);
+      continue;
+    }
+
+    if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') {
+      console.warn('🐀 Overlay footer button disabled, attempt', attempt + 1);
+      await sleep(800);
+      continue;
+    }
+
+    const btnText = btn.textContent?.trim();
+
+    // Use MAIN world to scroll overlay + click
+    document.dispatchEvent(new CustomEvent('lesrats-scroll-and-click', {
+      detail: { selector: '#le-variations-overlay .wt-overlay__footer__action button', text: btnText }
+    }));
+    console.log('🐀 Dispatched scroll-and-click for:', btnText);
+    return true;
+  }
+
+  console.warn('🐀 Overlay footer button not found after retries');
+  return false;
 }
 
 // Click the "Add a variation" button on the Etsy form
@@ -1589,7 +1632,7 @@ async function clickAddVariation() {
   for (const btn of allButtons) {
     const text = btn.textContent?.trim().toLowerCase() || '';
     if (text.includes('ajouter des variations') || text.includes('add a variation') || text.includes('ajouter une variation') || text.includes('add variation')) {
-      btn.click();
+      simulateRealClick(btn);
       console.log('🐀 Clicked variation button:', btn.textContent.trim());
       await sleep(1000);
       return true;
@@ -1603,7 +1646,7 @@ async function clickAddVariation() {
   ]);
 
   if (addBtn) {
-    addBtn.click();
+    simulateRealClick(addBtn);
     console.log('🐀 Clicked variation button (selector match)');
     await sleep(1000);
     return true;
@@ -1631,7 +1674,7 @@ async function selectStructuredVariationType(matchTexts, excludeTexts = []) {
 
     // Check if text matches any of our target texts
     if (matchTexts.some(mt => text === mt)) {
-      btn.click();
+      simulateRealClick(btn);
       console.log('🐀 Selected variation type:', btn.textContent.trim());
       await sleep(800);
       return true;
@@ -1679,86 +1722,80 @@ async function selectUSScale(sizeType) {
   return false;
 }
 
-// Add sizes via the typeahead input (type value, pick from dropdown)
+// Add sizes using the typeahead input, then close dropdown before Terminé
 async function toggleSizeCheckboxes(sizes) {
   await sleep(600);
 
   let added = 0;
+  const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
 
-  for (const size of sizes) {
-    // Find the typeahead input
-    const input = document.querySelector(
-      '.wt-overlay__modal input[placeholder*="option" i], ' +
-      '.wt-overlay__modal input[placeholder*="Indiquez" i], ' +
-      '.wt-overlay__modal input.wt-input[id^="typeahead-input"]'
-    );
+  for (let i = 0; i < sizes.length; i++) {
+    const size = sizes[i];
 
-    if (!input) {
-      console.warn('🐀 Typeahead input not found for size:', size);
-      break;
-    }
+    try {
+      const input = document.querySelector(
+        '.wt-overlay__modal input.wt-input[id^="typeahead-input"], ' +
+        '.wt-overlay__modal input[placeholder*="option" i], ' +
+        '.wt-overlay__modal input[placeholder*="Indiquez" i]'
+      );
 
-    // Focus and type the size value
-    input.focus();
-    await sleep(100);
-
-    // Clear and set value using React-compatible approach
-    const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
-    nativeSetter.call(input, size);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    await sleep(500);
-
-    // Look for matching option in the typeahead dropdown
-    const dropdownOptions = document.querySelectorAll(
-      '.wt-overlay__modal [role="option"], ' +
-      '.wt-overlay__modal [role="listbox"] > *, ' +
-      '.wt-overlay__modal ul li, ' +
-      '.wt-overlay__modal [class*="typeahead"] li, ' +
-      '.wt-overlay__modal [class*="typeahead"] [role="option"]'
-    );
-
-    let matched = false;
-    const normalizedSize = normalizeSize(size);
-
-    for (const option of dropdownOptions) {
-      const optionText = option.textContent?.trim() || '';
-      if (normalizeSize(optionText) === normalizedSize || optionText === size || optionText === String(size)) {
-        option.click();
-        matched = true;
-        added++;
-        console.log('🐀 Selected size from dropdown:', optionText);
-        await sleep(400);
+      if (!input) {
+        console.warn('🐀 Typeahead input not found for size:', size);
         break;
       }
-    }
 
-    // If no exact match, try partial match (e.g. "6" matches "6 (16.5mm)")
-    if (!matched) {
-      for (const option of dropdownOptions) {
-        const optionText = option.textContent?.trim() || '';
-        // Match if option starts with our size value followed by space or non-digit
-        if (optionText.startsWith(size + ' ') || optionText.startsWith(size + '(') || normalizeSize(optionText).startsWith(normalizedSize)) {
-          option.click();
+      // Clear and type
+      input.focus();
+      await sleep(100);
+      nativeSetter.call(input, '');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(150);
+      nativeSetter.call(input, String(size));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(600);
+
+      // Click the matching menuitemradio
+      const menuItems = document.querySelectorAll(
+        '.wt-overlay__modal button[role="menuitemradio"]:not([data-add-all-options])'
+      );
+      const normalizedSize = normalizeSize(size);
+      let matched = false;
+
+      for (const item of menuItems) {
+        const spans = item.querySelectorAll('span');
+        let itemText = '';
+        for (const span of spans) {
+          if (span.querySelector('svg')) continue;
+          const t = span.textContent?.trim();
+          if (t) { itemText = t; break; }
+        }
+        if (!itemText) continue;
+
+        if (normalizeSize(itemText) === normalizedSize) {
+          item.click();
           matched = true;
           added++;
-          console.log('🐀 Selected size from dropdown (partial):', optionText);
-          await sleep(400);
+          console.log('🐀 Added size:', itemText, '(' + (i + 1) + '/' + sizes.length + ')');
+          await sleep(300);
           break;
         }
       }
-    }
 
-    if (!matched) {
-      // Last resort: press Enter to submit whatever is in the input
-      console.warn('🐀 No dropdown match for size:', size, '- trying Enter');
-      await simulateEnter(input);
-      await sleep(400);
-      added++;
+      if (!matched) {
+        console.warn('🐀 No match for size:', size);
+      }
+    } catch (e) {
+      console.error('🐀 Error adding size', size, ':', e.message);
     }
   }
 
-  console.log('🐀 Added', added, '/', sizes.length, 'sizes via typeahead');
+  // Close the typeahead dropdown by dispatching mousedown outside it via MAIN world
+  // React dropdown menus close on mousedown outside — this is the standard dismiss pattern
+  document.dispatchEvent(new CustomEvent('lesrats-dismiss-dropdown', {}));
+  console.log('🐀 Dispatched dropdown dismiss');
+  await sleep(800);
+
+  console.log('🐀 Added', added, '/', sizes.length, 'sizes');
   return added;
 }
 
@@ -1770,39 +1807,31 @@ function normalizeSize(size) {
     .replace(/\s+/g, '');   // Remove whitespace
 }
 
-// Click "Terminé" / "Done" / "Save" button in the modal footer
-async function clickDoneButton() {
-  // Look specifically in the overlay footer first
-  const footerBtns = document.querySelectorAll('.wt-overlay__footer button.wt-btn--filled');
-  for (const btn of footerBtns) {
-    const text = btn.textContent?.trim().toLowerCase() || '';
-    if (text.includes('termin') || text.includes('done') || text.includes('save') || text.includes('apply')) {
-      // Check if button is not disabled
-      if (!btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
-        btn.click();
-        console.log('🐀 Clicked done button:', btn.textContent.trim());
-        return true;
-      } else {
-        console.warn('🐀 Done button found but disabled - need at least 1 size selected');
-      }
-    }
-  }
-
-  // Broader fallback
-  const allBtns = document.querySelectorAll('.wt-overlay__modal button');
-  for (const btn of allBtns) {
-    const text = btn.textContent?.trim().toLowerCase() || '';
-    if ((text.includes('termin') || text.includes('done') || text.includes('save')) &&
-        !btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
-      btn.click();
-      console.log('🐀 Clicked done button (fallback):', btn.textContent.trim());
-      return true;
-    }
-  }
-
-  console.warn('🐀 Done button not found or disabled');
-  return false;
+// Simulate a click using full mouse event sequence + .click()
+// Works for most React buttons from content scripts
+function simulateRealClick(el) {
+  const rect = el.getBoundingClientRect();
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  const opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 };
+  el.dispatchEvent(new PointerEvent('pointerdown', opts));
+  el.dispatchEvent(new MouseEvent('mousedown', opts));
+  el.dispatchEvent(new PointerEvent('pointerup', opts));
+  el.dispatchEvent(new MouseEvent('mouseup', opts));
+  el.dispatchEvent(new MouseEvent('click', opts));
+  el.click();
 }
+
+// Simulate pressing Enter on a focused element — useful when .click() doesn't work
+function simulateEnterKey(el) {
+  el.focus();
+  const opts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true };
+  el.dispatchEvent(new KeyboardEvent('keydown', opts));
+  el.dispatchEvent(new KeyboardEvent('keypress', opts));
+  el.dispatchEvent(new KeyboardEvent('keyup', opts));
+}
+
+// (clickDoneButton removed — replaced by clickOverlayFooterButton)
 
 // Select "Create your own variation" for custom size types
 async function selectCustomVariation() {
@@ -1863,7 +1892,7 @@ async function fillCustomSizes(sizes) {
 
   // Click done
   await sleep(500);
-  await clickDoneButton();
+  await clickOverlayFooterButton();
 }
 
 // Helper: Find element by multiple selectors

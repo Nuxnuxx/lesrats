@@ -70,6 +70,15 @@
     },
     {
       "matches": [
+        "https://*.etsy.com/*listing-editor*",
+        "https://www.etsy.com/*listing-editor*"
+      ],
+      "js": ["content/etsy-main.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
         "http://localhost/*",
         "http://127.0.0.1/*",
         "https://*.laravel.cloud/*"
