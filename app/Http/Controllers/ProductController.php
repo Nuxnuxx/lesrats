@@ -638,6 +638,7 @@ class ProductController extends Controller
             'background_url' => 'nullable|string',
             'apply_logo' => 'nullable|boolean',
             'only_logo' => 'nullable|boolean',
+            'model' => 'nullable|string|in:v1,v2',
         ]);
 
         $user = $request->user();
@@ -665,6 +666,8 @@ class ProductController extends Controller
         }
 
         // Create jobs for each image
+        $model = $request->input('model', 'v1');
+
         $jobs = collect($request->input('image_urls'))->map(
             fn (string $url) => new TransformProductImage(
                 productId: $product->id,
@@ -674,6 +677,7 @@ class ProductController extends Controller
                 applyLogo: $applyLogo,
                 falApiKey: $falApiKey,
                 onlyLogo: $onlyLogo,
+                model: $model,
             )
         )->all();
 

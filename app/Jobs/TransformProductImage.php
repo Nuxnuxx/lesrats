@@ -25,6 +25,7 @@ class TransformProductImage implements ShouldQueue
         public bool $applyLogo = false,
         public ?string $falApiKey = null,
         public bool $onlyLogo = false,
+        public string $model = 'v1',
     ) {}
 
     public function handle(): void
@@ -61,12 +62,9 @@ class TransformProductImage implements ShouldQueue
             }
         } else {
             // Normal AI mode
-            $transformedPath = $falService->transformImage(
-                $this->imageUrl,
-                $this->prompt,
-                0.65,
-                $this->backgroundUrl
-            );
+            $transformedPath = $this->model === 'v2'
+                ? $falService->transformImageV2($this->imageUrl, $this->prompt, $this->backgroundUrl)
+                : $falService->transformImage($this->imageUrl, $this->prompt, 0.65, $this->backgroundUrl);
 
             if (! $transformedPath) {
                 Log::error('TransformProductImage: transformation failed', [

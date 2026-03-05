@@ -116,6 +116,74 @@ class FalImageService
     }
 
     /**
+     * Transform an image using Nano Banana 2 (no upscaling).
+     * Cost: ~$0.08 per image
+     */
+    public function transformImageV2(string $imageUrl, string $prompt, ?string $backgroundUrl = null): ?string
+    {
+        if (app()->environment('local')) {
+            Log::info('FalImageService: DEV MODE (v2) — copying source image', ['image_url' => $imageUrl]);
+
+            return $this->downloadAndStoreImage($imageUrl);
+        }
+
+        if (! $this->apiKey) {
+            Log::warning('Fal.ai API key not configured');
+
+            return null;
+        }
+
+        try {
+            $imageUrls = [$imageUrl];
+
+            if ($backgroundUrl) {
+                if ($this->isLocalUrl($backgroundUrl)) {
+                    $uploadedUrl = $this->uploadLocalFileToFal($backgroundUrl);
+                    if ($uploadedUrl) {
+                        $imageUrls[] = $uploadedUrl;
+                    }
+                } else {
+                    $imageUrls[] = $backgroundUrl;
+                }
+            }
+
+            $payload = [
+                'image_urls' => $imageUrls,
+                'prompt' => $prompt,
+                'num_images' => 1,
+                'output_format' => 'png',
+                'aspect_ratio' => 'auto',
+            ];
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Key '.$this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(120)->post('https://fal.run/fal-ai/nano-banana-2/edit', $payload);
+
+            if (! $response->successful()) {
+                Log::error('Fal.ai v2 API error', ['status' => $response->status(), 'body' => $response->body()]);
+
+                return null;
+            }
+
+            $generatedImageUrl = $response->json()['images'][0]['url'] ?? null;
+
+            if (! $generatedImageUrl) {
+                Log::error('Fal.ai v2: No image URL in response', ['response' => $response->json()]);
+
+                return null;
+            }
+
+            return $this->downloadAndStoreImage($generatedImageUrl);
+
+        } catch (\Exception $e) {
+            Log::error('Fal.ai v2 transform error', ['error' => $e->getMessage(), 'image_url' => $imageUrl]);
+
+            return null;
+        }
+    }
+
+    /**
      * Check if a URL is a local/localhost URL
      */
     protected function isLocalUrl(string $url): bool

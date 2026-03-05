@@ -208,10 +208,22 @@
                                         {{-- Specific Prompt + Background (hidden when Only Logo) --}}
                                         <div x-show="!onlyLogo" x-transition>
 
+                                        {{-- Modèle IA --}}
+                                        <div class="mb-4">
+                                            <label class="text-sm font-medium text-gray-700 mb-1 block">Modèle IA:</label>
+                                            <select x-model="selectedModel"
+                                                    @change="localStorage.setItem('ai_model', selectedModel)"
+                                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
+                                                <option value="v1">Modèle de base + raffinement photo</option>
+                                                <option value="v2">Nano Banana 2</option>
+                                            </select>
+                                        </div>
+
                                         {{-- Specific Prompt --}}
                                         <div x-show="specificPrompts.length > 0" class="mb-4">
                                             <label class="text-sm font-medium text-gray-700 mb-1 block">Prompt specifique:</label>
                                             <select x-model="selectedSpecificPromptIndex"
+                                                    @change="localStorage.setItem('ai_specific_prompt', selectedSpecificPromptIndex)"
                                                     class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
                                                 <option value="">Aucun</option>
                                                 <template x-for="(sp, index) in specificPrompts" :key="index">
@@ -804,7 +816,8 @@
                 showDeleted: false,
                 selectedIndexes: [],
                 prompt: config.defaultPrompt || '',
-                selectedSpecificPromptIndex: '',
+                selectedModel: localStorage.getItem('ai_model') ?? 'v1',
+                selectedSpecificPromptIndex: localStorage.getItem('ai_specific_prompt') ?? '',
                 selectedBackground: config.defaultBackground || '',
                 isGenerating: false,
                 errorMessage: null,
@@ -813,7 +826,7 @@
                     this.showModal = true;
                     this.selectedIndexes = [];
                     this.prompt = this.defaultPrompt || '';
-                    this.selectedSpecificPromptIndex = '';
+                    this.selectedSpecificPromptIndex = localStorage.getItem('ai_specific_prompt') ?? '';
                     this.selectedBackground = this.defaultBackground;
                     this.errorMessage = null;
                     document.body.classList.add('overflow-hidden');
@@ -867,6 +880,7 @@
                                 background_url: this.onlyLogo ? null : (this.selectedBackground || null),
                                 apply_logo: this.applyLogo,
                                 only_logo: this.onlyLogo,
+                                model: this.selectedModel,
                             }),
                         });
 
