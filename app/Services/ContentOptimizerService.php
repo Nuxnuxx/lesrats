@@ -45,7 +45,7 @@ class ContentOptimizerService
                             ],
                             [
                                 'type' => 'text',
-                                'text' => 'Describe this product for an Etsy listing. Focus on: color(s), material/fabric (if visible), pattern or print (floral, geometric, plain...), style (casual, traditional, elegant...), and any notable details (belt, embroidery, buttons...). Be specific and concise. Output only a short description (2-3 sentences max).',
+                                'text' => 'Analyze this product image and describe ONLY what you visually see. Focus on: 1) Exact colors (be very specific: not just "pink" but "coral pink and black", not just "floral" but "cherry blossom print"), 2) Pattern or print (sakura, cherry blossom, dragon, geometric, plain...), 3) Distinctive visual details (lace trim, embroidery, obi belt, ruffles, buttons...), 4) Fabric appearance (silky, matte, shiny...). Do NOT mention use cases, occasions or who it is for. Output only 2-3 sentences describing what you see.',
                             ],
                         ],
                     ],
@@ -118,8 +118,9 @@ class ContentOptimizerService
                     ."3. AIM for 130-140 total characters — use the full limit\n"
                     ."4. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
                     ."5. Include target audience when relevant: Women, Men, Kids\n"
-                    ."6. Include use case or occasion: Gift, Halloween Costume, Beach Wear, Wedding, etc.\n"
-                    ."7. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
+                    ."6. If visual details are available, prioritize color + pattern over generic occasions\n"
+                    ."7. Include occasion ONLY if space allows: Halloween Costume, Beach Wear, Wedding, etc. NEVER use 'Gift'\n"
+                    ."8. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
                     ."8. Translate to English if needed\n"
                     ."9. NEVER use filler like 'Handmade Gift', 'Unique Item', 'Beautiful Product'\n"
                     ."10. Each phrase should be a real search query buyers would type\n"
