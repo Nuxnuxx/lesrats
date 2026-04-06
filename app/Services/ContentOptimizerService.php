@@ -270,6 +270,30 @@ class ContentOptimizerService
                     $title = $lastComma !== false ? mb_substr($title, 0, $lastComma) : $truncated;
                     $title = trim($title);
                 }
+                // If title is too short, make a second call to extend it with more keyword phrases
+                if (mb_strlen($title) < 120) {
+                    $currentLen = mb_strlen($title);
+                    $needed = 135 - $currentLen;
+                    $extendResponse = Http::withHeaders([
+                        'Authorization' => 'Bearer '.$this->apiKey,
+                        'Content-Type' => 'application/json',
+                    ])->timeout(20)->post('https://api.groq.com/openai/v1/chat/completions', [
+                        'model' => $this->model,
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'You are an Etsy SEO expert. Add keyword phrases to extend a title. Output only the extended title, no explanations, no quotes.'],
+                            ['role' => 'user', 'content' => "This Etsy title is {$currentLen} characters. Add approximately {$needed} more characters of keyword phrases (comma-separated) to reach ~135 chars total. Keep ALL existing phrases exactly as-is, only append new ones at the end. Use real buyer search terms: occasions (Halloween, Beach Wear), styles (Lolita, Boho), or audiences (Women, Girls). NEVER use 'Gift'.\nCurrent title: {$title}"],
+                        ],
+                        'max_tokens' => 80,
+                        'temperature' => 0.7,
+                    ]);
+                    if ($extendResponse->successful()) {
+                        $extended = trim($extendResponse->json()['choices'][0]['message']['content'] ?? '');
+                        $extended = trim($extended, '"\'');
+                        if (mb_strlen($extended) > mb_strlen($title) && mb_strlen($extended) <= 140) {
+                            $title = $extended;
+                        }
+                    }
+                }
 
                 return $title;
             }
@@ -342,7 +366,7 @@ class ContentOptimizerService
                     ."5. Touch the buyer emotionally: Why would they love THIS specific item? What makes it unique?\n"
                     ."6. Include a short 'Details' section if specs are available (2-3 bullet points max)\n"
                     ."7. Remove mentions of: wholesale, dropshipping, China, AliExpress\n"
-                    ."8. End with a short, warm call-to-action (1 sentence max, NO emojis at the end)\n"
+                    ."8. End with ONE direct call-to-action sentence — confident and action-oriented, not hesitant. Good: 'Add to cart and make it yours.' Bad: 'so why not make it yours today'\n"
                     ."9. NEVER write a generic description that could apply to any product\n"
                     ."10. NO emojis — write clean professional copy\n\n"
                     .'Output ONLY the description, nothing else.';
