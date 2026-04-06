@@ -30,6 +30,30 @@ class ContentOptimizerService
         $imageUrl = $imageUrls[0]; // Only analyze the first image
 
         try {
+            // Download image into memory and convert to base64
+            // This bypasses CDN restrictions (AliExpress, 1688...) without saving to disk
+            $imageContent = null;
+            $mimeType = 'image/jpeg';
+            try {
+                $imageResponse = Http::timeout(15)->get($imageUrl);
+                if ($imageResponse->successful()) {
+                    $imageContent = base64_encode($imageResponse->body());
+                    $contentType = $imageResponse->header('Content-Type');
+                    if ($contentType && str_contains($contentType, 'png')) {
+                        $mimeType = 'image/png';
+                    } elseif ($contentType && str_contains($contentType, 'webp')) {
+                        $mimeType = 'image/webp';
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to download image for vision analysis', ['url' => $imageUrl, 'error' => $e->getMessage()]);
+            }
+
+            // Use base64 data URL if download succeeded, otherwise fall back to direct URL
+            $imagePayload = $imageContent
+                ? ['url' => "data:{$mimeType};base64,{$imageContent}"]
+                : ['url' => $imageUrl];
+
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$this->apiKey,
                 'Content-Type' => 'application/json',
@@ -41,7 +65,7 @@ class ContentOptimizerService
                         'content' => [
                             [
                                 'type' => 'image_url',
-                                'image_url' => ['url' => $imageUrl],
+                                'image_url' => $imagePayload,
                             ],
                             [
                                 'type' => 'text',
