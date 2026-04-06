@@ -420,20 +420,34 @@ class ProductController extends Controller
             'title' => 'required|string|min:3',
             'description' => 'nullable|string',
             'price' => 'nullable|numeric|min:0',
+            'product_id' => 'nullable|integer|exists:products,id',
         ]);
 
         try {
             $optimizer = new ContentOptimizerService;
 
+            // Groq Vision — analyze product images if product_id provided
+            $visualContext = null;
+            if ($request->product_id) {
+                $product = Product::find($request->product_id);
+                if ($product && ! empty($product->images)) {
+                    $visualContext = $optimizer->analyzeProductImages($product->images);
+                }
+            }
+
             // Optimize content
-            $optimizedTitle = $optimizer->optimizeTitle($request->title);
+            $optimizedTitle = $optimizer->optimizeTitle($request->title, null, null, $visualContext);
             $optimizedDescription = $optimizer->optimizeDescription(
                 $request->title,
-                $request->description
+                $request->description,
+                [],
+                false,
+                null,
+                $visualContext
             );
 
             // Generate SEO tags
-            $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription);
+            $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription, false, $visualContext);
 
             // Calculate suggested price with markup if price provided
             $suggestedPrice = $request->price
