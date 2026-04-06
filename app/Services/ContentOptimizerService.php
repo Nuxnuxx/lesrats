@@ -39,7 +39,14 @@ class ContentOptimizerService
 
     private function tryAnalyzeSingleImage(string $imageUrl): ?string
     {
-        $visionPrompt = 'Analyze this product image and describe ONLY what you visually see. Focus on: 1) Exact colors (be very specific: not just "pink" but "coral pink and black", not just "floral" but "cherry blossom print"), 2) Pattern or print (sakura, cherry blossom, dragon, geometric, plain...), 3) Distinctive visual details (lace trim, embroidery, obi belt, ruffles, buttons...), 4) Fabric appearance (silky, matte, shiny...). Do NOT mention use cases, occasions or who it is for. Output only 2-3 sentences describing what you see.';
+        $visionPrompt = 'Analyze this product image and describe ONLY what you visually see. Focus on: '
+            .'1) Exact color of the BASE fabric (black, navy, white, red...). '
+            .'2) Exact colors of the PATTERNS as they appear on the fabric — CRITICAL: describe the color you actually SEE, not what color that flower or animal is in real life. '
+            .'Example: if flowers appear WHITE on black fabric, say "white floral print", NOT "pink sakura". If cranes appear light blue, say "light blue crane print". '
+            .'3) Pattern type (floral, crane, dragon, geometric, bamboo, plain...). '
+            .'4) Distinctive details (lace trim, embroidery, obi belt, ruffles, buttons...). '
+            .'5) Fabric appearance (silky, matte, shiny...). '
+            .'Do NOT mention use cases or occasions. Output only 2-3 sentences.';
 
         try {
             $referer = 'https://www.aliexpress.com/';
@@ -211,6 +218,7 @@ class ContentOptimizerService
                     ."5. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
                     ."6. Include target audience when relevant: Women, Men, Kids\n"
                     .($visualContext ? "7. MANDATORY: The first 2 phrases MUST include the specific color(s) and pattern from the visual details\n" : "7. Include specific colors and patterns if known\n")
+                    .($visualContext ? "   CRITICAL COLOR RULE: Use ONLY the exact colors from the visual context — NEVER infer colors from pattern names. If visual says 'white floral', write 'White Floral', NEVER 'Pink Sakura' even if sakura are typically pink. The visual context is the only truth.\n" : '')
                     ."8. Include occasion ONLY if space allows after colors/pattern: Halloween Costume, Beach Wear, etc.\n"
                     ."9. NEVER use the word 'Gift' — it wastes space and is too generic\n"
                     ."10. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
