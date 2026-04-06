@@ -195,11 +195,19 @@ class ExtensionController extends Controller
             try {
                 $optimizer = new ContentOptimizerService;
 
+                // Analyser les images avec Groq Vision pour extraire couleur, matière, motif
+                $visualContext = null;
+                if (! empty($validated['images'])) {
+                    $visualContext = $optimizer->analyzeProductImages($validated['images']);
+                    Log::info('Visual context from image analysis', ['context' => $visualContext]);
+                }
+
                 // Optimiser le titre (traduction en anglais + SEO) avec le prompt personnalisé
                 $optimizedTitle = $optimizer->optimizeTitle(
                     $originalTitle,
                     $is3DPrint ? '3D Print' : null,
-                    $descriptionPrompt
+                    $descriptionPrompt,
+                    $visualContext
                 );
                 Log::info('Optimized title', ['original' => $originalTitle, 'optimized' => $optimizedTitle]);
 
@@ -209,7 +217,8 @@ class ExtensionController extends Controller
                     $originalDescription,
                     $validated['specifications'] ?? [],
                     $is3DPrint,
-                    $descriptionPrompt
+                    $descriptionPrompt,
+                    $visualContext
                 );
                 Log::info('Generated description from title', ['title' => $originalTitle]);
 

@@ -18,13 +18,64 @@ class ContentOptimizerService
     }
 
     /**
+     * Analyze product images using Groq Vision to extract visual details.
+     * Returns a short description of color, material, pattern and style.
+     */
+    public function analyzeProductImages(array $imageUrls): ?string
+    {
+        if (empty($imageUrls) || ! $this->apiKey) {
+            return null;
+        }
+
+        $imageUrl = $imageUrls[0]; // Only analyze the first image
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer '.$this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(30)->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model' => 'llama-3.2-90b-vision-preview',
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => [
+                            [
+                                'type' => 'image_url',
+                                'image_url' => ['url' => $imageUrl],
+                            ],
+                            [
+                                'type' => 'text',
+                                'text' => 'Describe this product for an Etsy listing. Focus on: color(s), material/fabric (if visible), pattern or print (floral, geometric, plain...), style (casual, traditional, elegant...), and any notable details (belt, embroidery, buttons...). Be specific and concise. Output only a short description (2-3 sentences max).',
+                            ],
+                        ],
+                    ],
+                ],
+                'max_tokens' => 150,
+                'temperature' => 0.3,
+            ]);
+
+            if ($response->successful()) {
+                $result = $response->json();
+
+                return trim($result['choices'][0]['message']['content'] ?? '');
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::warning('Groq Vision image analysis failed', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    /**
      * Optimize product title for Etsy.
      *
      * @param  string  $originalTitle  The original product title
      * @param  string|null  $context  Context like '3D Print' for STL files
      * @param  string|null  $customPrompt  Custom prompt from shop settings (appended to system prompt)
      */
-    public function optimizeTitle(string $originalTitle, ?string $context = null, ?string $customPrompt = null): string
+    public function optimizeTitle(string $originalTitle, ?string $context = null, ?string $customPrompt = null, ?string $visualContext = null): string
     {
         if (! $this->apiKey) {
             return $this->fallbackOptimizeTitle($originalTitle);
@@ -34,40 +85,58 @@ class ContentOptimizerService
             $is3DPrint = $context === '3D Print';
 
             if ($is3DPrint) {
-                $prompt = "Transform this 3D model title into an SEO-optimized Etsy listing title for a DIGITAL STL FILE download.\n\n"
-                    ."Original title: {$originalTitle}\n\n"
+                $prompt = "Transform this 3D model name into a high-ranking Etsy title for a DIGITAL STL FILE.\n\n"
+                    ."Original: {$originalTitle}\n"
+                    .($visualContext ? "Visual details from product image: {$visualContext}\n\n" : "\n")
                     ."RULES:\n"
-                    ."1. KEEP the actual product keywords (e.g., dragon, planter, figurine, organizer, etc.)\n"
-                    ."2. Add 'STL File' or '3D Print File' or 'Digital Download' in the title\n"
-                    ."3. Translate to English if the title is in another language\n"
-                    ."4. Maximum 140 characters\n"
-                    ."5. Make it readable, natural, and SEO-friendly\n"
-                    ."6. Include keywords like: STL, 3D print file, digital download, printable\n"
-                    ."7. NEVER use generic terms - use the REAL product words\n\n"
+                    ."1. Create 4-5 distinct keyword phrases separated by commas\n"
+                    ."2. Put the MOST IMPORTANT keyword first (first 40 chars = mobile preview)\n"
+                    ."3. AIM for 130-140 total characters — use the full limit\n"
+                    ."4. Keep the actual model keywords (dragon, planter, organizer... never replace with generic words)\n"
+                    ."5. Include ONE of: 'STL File', '3D Print File', 'Digital Download' — ideally in the first 60 chars\n"
+                    ."6. Include use case: Gift, Home Decor, Maker Gift, Tabletop RPG, etc.\n"
+                    ."7. Translate to English if needed\n"
+                    ."8. NEVER use filler like 'Amazing 3D Model', 'Unique Print'\n"
+                    .($visualContext ? "9. Use the visual details (color, material, finish) to make the title specific and accurate\n" : '')
+                    ."\nEXAMPLE FORMAT:\n"
+                    ."\"Dragon Planter STL File, 3D Print File, Succulent Pot Digital Download, Fantasy Home Decor Gift\"\n"
+                    ."(Mobile sees: \"Dragon Planter STL File\" ✓)\n\n"
                     .'Output ONLY the optimized title, nothing else.';
 
-                $systemPrompt = 'You are an Etsy SEO expert specializing in digital 3D model files (STL). '
-                    .'Your job is to transform 3D model names into compelling Etsy titles for DIGITAL FILE downloads. '
-                    ."CRITICAL: You must preserve the actual product keywords and emphasize it's a digital STL file. "
-                    .'Always output in English. Translate if the input is in another language. '
-                    .'Output only the title, no explanations or quotes.';
+                $systemPrompt = 'You are an Etsy SEO title expert for digital STL files. Your ONLY goal is to maximize search visibility. '
+                    .'Etsy titles are stacks of keyword phrases separated by commas — they should look natural to buyers, not robotic. '
+                    .'CRITICAL: The first 40-50 characters are what mobile buyers see first. Put the most searched keyword FIRST. '
+                    .'Aim for 130-140 total characters. '
+                    .'Always write in English. Output only the title, no explanations.';
             } else {
-                $prompt = "Transform this AliExpress product title into an SEO-optimized Etsy listing title.\n\n"
-                    ."Original title: {$originalTitle}\n\n"
+                $prompt = "Transform this product title into a high-ranking Etsy title.\n\n"
+                    ."Original: {$originalTitle}\n"
+                    .($visualContext ? "Visual details from product image: {$visualContext}\n\n" : "\n")
                     ."RULES:\n"
-                    ."1. KEEP the actual product keywords (e.g., kimono, cardigan, Mount Fuji, haori, necklace, ring, etc.)\n"
-                    ."2. Translate to English if the title is in French or another language\n"
-                    ."3. Remove ONLY these terms: wholesale, dropshipping, China, AliExpress, bulk, lot, pieces\n"
-                    ."4. Maximum 140 characters\n"
-                    ."5. Make it readable, natural, and SEO-friendly\n"
-                    ."6. NEVER use generic terms like 'Handmade Gift', 'Unique Item' - use the REAL product words\n\n"
+                    ."1. Create 4-5 distinct keyword phrases separated by commas\n"
+                    ."2. Put the MOST IMPORTANT keyword first (first 40 chars = mobile preview)\n"
+                    ."3. AIM for 130-140 total characters — use the full limit\n"
+                    ."4. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
+                    ."5. Include target audience when relevant: Women, Men, Kids\n"
+                    ."6. Include use case or occasion: Gift, Halloween Costume, Beach Wear, Wedding, etc.\n"
+                    ."7. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
+                    ."8. Translate to English if needed\n"
+                    ."9. NEVER use filler like 'Handmade Gift', 'Unique Item', 'Beautiful Product'\n"
+                    ."10. Each phrase should be a real search query buyers would type\n"
+                    .($visualContext ? "11. Use the visual details (color, material, pattern) to make the title specific and accurate\n" : '')
+                    ."\nEXAMPLE FORMAT:\n"
+                    ."\"Japanese Kimono Cardigan Women, Traditional Yukata Robe, Oriental Beach Cover Up, Asian Style Gift\"\n"
+                    ."(Mobile sees: \"Japanese Kimono Cardigan Women\" ✓)\n"
+                    ."(Desktop sees: \"Japanese Kimono Cardigan Women, Traditional Yukata Robe\" ✓)\n\n"
                     .'Output ONLY the optimized title, nothing else.';
 
-                $systemPrompt = 'You are an Etsy SEO expert specializing in dropshipping product optimization. '
-                    .'Your job is to transform AliExpress titles into compelling Etsy titles. '
-                    ."CRITICAL: You must preserve the actual product keywords - never replace them with generic terms like 'Handmade Gift' or 'Unique Item'. "
-                    .'Always output in English. Translate if the input is in another language. '
-                    .'Output only the title, no explanations or quotes.';
+                $systemPrompt = 'You are an Etsy SEO title expert. Your ONLY goal is to maximize search visibility on Etsy. '
+                    .'Etsy titles are stacks of keyword phrases separated by commas — they should look natural to buyers, not robotic. '
+                    .'CRITICAL: The first 40-50 characters are what mobile buyers see first. Put the most important keyword phrase FIRST. '
+                    .'The first 60-70 characters are what desktop buyers see before truncation — make them count too. '
+                    .'Aim for 130-140 total characters to maximize keyword coverage. '
+                    .'Always write in English. Translate if input is in another language. '
+                    .'Output only the title, no explanations, no quotes.';
             }
 
             // Append custom prompt if provided
@@ -84,7 +153,7 @@ class ContentOptimizerService
                     ['role' => 'system', 'content' => $systemPrompt],
                     ['role' => 'user', 'content' => $prompt],
                 ],
-                'max_tokens' => 100,
+                'max_tokens' => 200,
                 'temperature' => 0.7,
             ]);
 
@@ -115,7 +184,7 @@ class ContentOptimizerService
      * @param  bool  $is3DPrint  Whether this is a 3D print/STL file
      * @param  string|null  $customPrompt  Custom prompt from shop settings (appended to system prompt)
      */
-    public function optimizeDescription(string $originalTitle, ?string $originalDescription = null, array $specs = [], bool $is3DPrint = false, ?string $customPrompt = null): string
+    public function optimizeDescription(string $originalTitle, ?string $originalDescription = null, array $specs = [], bool $is3DPrint = false, ?string $customPrompt = null, ?string $visualContext = null): string
     {
         if (! $this->apiKey) {
             return $this->fallbackOptimizeDescription($originalTitle, $originalDescription, $specs, $is3DPrint);
@@ -131,50 +200,50 @@ class ContentOptimizerService
             }
 
             if ($is3DPrint) {
-                $prompt = "Write an SEO-optimized Etsy product description for a DIGITAL STL FILE download.\n\n"
+                $prompt = "Write a warm, engaging Etsy description for a DIGITAL STL FILE download.\n\n"
                     ."Product: {$originalTitle}\n"
+                    .($visualContext ? "Visual details from product image: {$visualContext}\n" : '')
                     .($originalDescription ? "Original description: {$originalDescription}\n" : '')
                     .$specsText."\n"
                     ."RULES:\n"
-                    ."1. Write in English (translate if needed)\n"
-                    ."2. Warm, friendly tone with a few emojis\n"
-                    ."3. Emphasize this is a DIGITAL DOWNLOAD - customer receives STL files, NOT a physical product\n"
-                    ."4. Include these sections:\n"
-                    ."   - Introduction (what the 3D model is)\n"
-                    ."   - What's included (STL file(s), instant download after purchase)\n"
-                    ."   - Printing recommendations (suggested infill, supports, layer height)\n"
-                    ."   - Compatible with most FDM/SLA printers\n"
-                    ."   - No physical item shipped - digital product only\n"
-                    ."   - Personal/hobby use license\n"
-                    ."5. 200-400 words with bullet points\n"
-                    ."6. SEO-friendly with keywords: STL file, 3D print file, digital download, printable\n"
-                    ."7. Focus on THIS specific product\n"
-                    ."8. IMPORTANT: Clearly state NO PHYSICAL ITEM WILL BE SHIPPED\n\n"
+                    ."1. 150-250 words MAXIMUM — concise and human\n"
+                    ."2. Speak directly to the maker/buyer (\"You'll receive...\", \"Print this yourself...\")\n"
+                    ."3. Make it clear upfront: DIGITAL DOWNLOAD — NO physical item shipped\n"
+                    ."4. Include: what the model is, what's included (STL files, instant download), printing tips (infill, supports, material)\n"
+                    ."5. Touch the buyer: Why is this model cool? What can they make with it?\n"
+                    ."6. End with a warm call-to-action\n"
+                    ."7. Use 2-3 emojis max (📁, 🖨️, ✨ style)\n\n"
                     .'Output ONLY the description, nothing else.';
 
-                $systemPrompt = 'You are an Etsy SEO expert specializing in digital 3D model files (STL). Write descriptions for DIGITAL DOWNLOADS. '
+                $systemPrompt = 'You are an Etsy copywriter for digital STL files. Write warm, human, maker-friendly descriptions. '
+                    .'The buyer is a 3D printing enthusiast — speak their language (FDM, PLA, supports, infill). '
                     .'Use a few emojis. Always write in English. '
-                    .'CRITICAL: Make it VERY CLEAR this is a digital file download, NOT a physical product. The customer prints it themselves.';
+                    .'CRITICAL: Keep it 150-250 words maximum. Be clear that this is a DIGITAL FILE, not a physical product. '
+                    .'Output only the description, no explanations.';
             } else {
-                $prompt = "Write an SEO-optimized Etsy product description.\n\n"
+                $prompt = "Write a warm, emotionally engaging Etsy product description.\n\n"
                     ."Product: {$originalTitle}\n"
+                    .($visualContext ? "Visual details from product image: {$visualContext}\n" : '')
                     .($originalDescription ? "Original description: {$originalDescription}\n" : '')
                     .$specsText."\n"
                     ."RULES:\n"
-                    ."1. Write in English (translate if the product info is in French or another language)\n"
-                    ."2. Warm, friendly, sales-driven tone with a few emojis (not too many)\n"
-                    ."3. Remove mentions of: wholesale, dropshipping, China, AliExpress\n"
-                    ."4. Highlight the ACTUAL product features (e.g., for a kimono: Japanese style, Mount Fuji print, beach cardigan, etc.)\n"
-                    ."5. 200-400 words with bullet points for key features\n"
-                    ."6. SEO-friendly with natural keyword placement\n"
-                    ."7. NEVER write generic descriptions - focus on THIS specific product\n"
-                    ."8. Include care instructions if relevant\n\n"
+                    ."1. 150-250 words MAXIMUM — concise, punchy, human\n"
+                    ."2. Warm and friendly tone — speak directly to the buyer (\"You'll love...\", \"Perfect for...\")\n"
+                    ."3. Touch the buyer emotionally: Why would they love this? Who is it for? What feeling does it give?\n"
+                    ."4. Highlight the ACTUAL product features (for a kimono: Japanese style, pattern, material, etc.)\n"
+                    ."5. Include a short 'Details' section if specs are available (2-3 bullet points max)\n"
+                    ."6. Remove mentions of: wholesale, dropshipping, China, AliExpress\n"
+                    ."7. End with a short, warm call-to-action (\"Add to cart and make it yours! 🛒\")\n"
+                    ."8. SEO-friendly: use natural keywords, not keyword stuffing\n"
+                    ."9. Use 2-3 emojis max — warm, not spammy\n\n"
                     .'Output ONLY the description, nothing else.';
 
-                $systemPrompt = 'You are an Etsy SEO expert and copywriter. Write product descriptions that are warm, friendly, and convert well. '
-                    .'Use a few emojis to make it attractive. Always write in English. '
-                    .'CRITICAL: Base the description on the ACTUAL product - never write generic content. '
-                    .'Focus on the real product keywords and features.';
+                $systemPrompt = 'You are an Etsy copywriter who writes warm, human, emotionally engaging product descriptions. '
+                    .'Etsy is a marketplace for handmade and unique items — buyers want to feel something when reading. '
+                    .'Write like a friendly person talking to the buyer, not like a robot listing features. '
+                    .'Use a few emojis to bring warmth. Always write in English. '
+                    .'CRITICAL: Keep it 150-250 words maximum. Buyers don\'t read long descriptions — make every word count. '
+                    .'Output only the description, no explanations.';
             }
 
             // Append custom prompt if provided
@@ -191,7 +260,7 @@ class ContentOptimizerService
                     ['role' => 'system', 'content' => $systemPrompt],
                     ['role' => 'user', 'content' => $prompt],
                 ],
-                'max_tokens' => 800,
+                'max_tokens' => 500,
                 'temperature' => 0.8,
             ]);
 
