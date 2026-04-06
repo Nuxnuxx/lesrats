@@ -91,7 +91,7 @@ class ContentOptimizerService
                     ."RULES:\n"
                     ."1. Create 4-5 distinct keyword phrases separated by commas\n"
                     ."2. Put the MOST IMPORTANT keyword first (first 40 chars = mobile preview)\n"
-                    ."3. AIM for 130-140 total characters — use the full limit\n"
+                    ."3. MINIMUM 120 characters, AIM for 130-140 — add more keyword phrases if too short\n"
                     ."4. Keep the actual model keywords (dragon, planter, organizer... never replace with generic words)\n"
                     ."5. Include ONE of: 'STL File', '3D Print File', 'Digital Download' — ideally in the first 60 chars\n"
                     ."6. Include use case: Home Decor, Tabletop RPG, Miniature, etc. NEVER use 'Gift'\n"
@@ -115,7 +115,7 @@ class ContentOptimizerService
                     ."RULES:\n"
                     ."1. Create 4-5 distinct keyword phrases separated by commas\n"
                     ."2. Put the MOST IMPORTANT keyword first (first 40 chars = mobile preview)\n"
-                    ."3. AIM for 130-140 total characters — use the full limit\n"
+                    ."3. MINIMUM 120 characters, AIM for 130-140 — add more keyword phrases if too short\n"
                     ."4. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
                     ."5. Include target audience when relevant: Women, Men, Kids\n"
                     .($visualContext ? "6. MANDATORY: The first 2 phrases MUST include the specific color(s) and pattern from the visual details\n" : "6. Include specific colors and patterns if known\n")
@@ -229,18 +229,20 @@ class ContentOptimizerService
                     .$specsText."\n"
                     ."RULES:\n"
                     ."1. 150-250 words MAXIMUM — concise, punchy, human\n"
-                    ."2. Warm and friendly tone — speak directly to the buyer (\"You'll love...\", \"Perfect for...\")\n"
-                    ."3. Touch the buyer emotionally: Why would they love this? Who is it for? What feeling does it give?\n"
-                    ."4. Highlight the ACTUAL product features (for a kimono: Japanese style, pattern, material, etc.)\n"
-                    ."5. Include a short 'Details' section if specs are available (2-3 bullet points max)\n"
-                    ."6. Remove mentions of: wholesale, dropshipping, China, AliExpress\n"
-                    ."7. End with a short, warm call-to-action (\"Add to cart and make it yours! 🛒\")\n"
-                    ."8. SEO-friendly: use natural keywords, not keyword stuffing\n"
-                    ."9. Use 2-3 emojis max — warm, not spammy\n\n"
+                    ."2. CRITICAL: This description must be written for THIS SPECIFIC product only — mention the actual colors, pattern and details visible\n"
+                    .($visualContext ? "3. MANDATORY: Mention the specific colors and pattern from the visual details in the FIRST sentence\n" : "3. Mention specific product features in the first sentence\n")
+                    ."4. Warm and friendly tone — speak directly to the buyer (\"You'll love...\", \"Perfect for...\")\n"
+                    ."5. Touch the buyer emotionally: Why would they love THIS specific item? What makes it unique?\n"
+                    ."6. Include a short 'Details' section if specs are available (2-3 bullet points max)\n"
+                    ."7. Remove mentions of: wholesale, dropshipping, China, AliExpress\n"
+                    ."8. End with a short, warm call-to-action (\"Add to cart and make it yours! 🛒\")\n"
+                    ."9. NEVER write a generic description that could apply to any product\n"
+                    ."10. Use 2-3 emojis max — warm, not spammy\n\n"
                     .'Output ONLY the description, nothing else.';
 
                 $systemPrompt = 'You are an Etsy copywriter who writes warm, human, emotionally engaging product descriptions. '
-                    .'Etsy is a marketplace for handmade and unique items — buyers want to feel something when reading. '
+                    .'CRITICAL: Every description must be 100% unique and specific to the exact product — never write generic content that could apply to any similar item. '
+                    .'If you have visual details (colors, patterns, materials), use them in the very first sentence. '
                     .'Write like a friendly person talking to the buyer, not like a robot listing features. '
                     .'Use a few emojis to bring warmth. Always write in English. '
                     .'CRITICAL: Keep it 150-250 words maximum. Buyers don\'t read long descriptions — make every word count. '
