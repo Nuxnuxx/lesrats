@@ -289,8 +289,16 @@ class ContentOptimizerService
                     if ($extendResponse->successful()) {
                         $extended = trim($extendResponse->json()['choices'][0]['message']['content'] ?? '');
                         $extended = trim($extended, '"\'');
-                        if (mb_strlen($extended) > mb_strlen($title) && mb_strlen($extended) <= 140) {
-                            $title = $extended;
+                        if (mb_strlen($extended) > mb_strlen($title)) {
+                            // Truncate at last comma if over 140
+                            if (mb_strlen($extended) > 140) {
+                                $truncated = mb_substr($extended, 0, 140);
+                                $lastComma = mb_strrpos($truncated, ',');
+                                $extended = $lastComma !== false ? trim(mb_substr($extended, 0, $lastComma)) : trim($truncated);
+                            }
+                            if (mb_strlen($extended) > mb_strlen($title)) {
+                                $title = $extended;
+                            }
                         }
                     }
                 }
