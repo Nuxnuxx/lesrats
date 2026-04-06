@@ -281,7 +281,13 @@ class ContentOptimizerService
                         'model' => $this->model,
                         'messages' => [
                             ['role' => 'system', 'content' => 'You are an Etsy SEO expert. Add keyword phrases to extend a title. Output only the extended title, no explanations, no quotes.'],
-                            ['role' => 'user', 'content' => "This Etsy title is {$currentLen} characters. Add approximately {$needed} more characters of keyword phrases (comma-separated) to reach ~135 chars total. Keep ALL existing phrases exactly as-is, only append new ones at the end. Use real buyer search terms: occasions (Halloween, Beach Wear), styles (Lolita, Boho), or audiences (Women, Girls). NEVER use 'Gift'.\nCurrent title: {$title}"],
+                            ['role' => 'user', 'content' => "This Etsy title is {$currentLen} characters. Add approximately {$needed} more characters of keyword phrases (comma-separated) to reach ~135 chars total. Keep ALL existing phrases exactly as-is, only append new ones at the end.\n"
+                                .($visualContext ? "Product visual context: {$visualContext}\n" : '')
+                                ."Pick keyword phrases that MATCH the actual product style and vibe. Think about who really buys this product and why.\n"
+                                ."DO NOT add: seasonal keywords (Halloween, Christmas), inappropriate use cases (Beach Wear for a formal garment), or generic fillers.\n"
+                                ."Good additions for a dark elegant kimono: 'Cosplay Outfit', 'Japanese Robe', 'Gothic Style', 'Photo Shoot'.\n"
+                                ."Good additions for a casual colorful yukata: 'Summer Festival', 'Beach Cover Up', 'Boho Style'.\n"
+                                ."NEVER use 'Gift'.\nCurrent title: {$title}"],
                         ],
                         'max_tokens' => 80,
                         'temperature' => 0.7,
