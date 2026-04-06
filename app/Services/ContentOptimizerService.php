@@ -574,8 +574,11 @@ class ContentOptimizerService
                 ."1. Select EXACTLY 13 tags from the list above\n"
                 .($visualContext ? "2. PRIORITY: Select tags that match the specific colors, pattern and style visible in the image\n" : "2. Choose tags that best match the product\n")
                 ."3. Prioritize specific tags over generic ones\n"
-                ."4. Only select tags that exist in the available list\n\n"
-                .'Output ONLY 13 tags separated by commas on a single line, nothing else.';
+                ."4. Only select tags that exist in the available list\n"
+                ."5. NEVER select tags that describe a material not matching the product — if the product is cotton, do NOT select 'silk kimono' or 'linen kimono'\n"
+                ."6. NEVER select tags that contradict the product's style or vibe — if the product is dark/gothic/formal, do NOT select 'boho kimono', 'casual kimono', 'beach kimono'\n"
+                .($visualContext ? "7. Use the visual context to actively eliminate tags that don't match: wrong color, wrong material, wrong style — if you can see it's not silk, don't pick 'silk kimono'\n" : '')
+                ."\nOutput ONLY 13 tags separated by commas on a single line, nothing else.";
 
             $systemPrompt = 'You are an Etsy SEO expert. Select exactly 13 tags from the provided list that best match the product. '
                 .'If visual details are provided (colors, patterns), prioritize tags that match what is actually visible. '
