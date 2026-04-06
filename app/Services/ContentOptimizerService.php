@@ -41,13 +41,6 @@ class ContentOptimizerService
     {
         $visionPrompt = 'Analyze this product image and describe ONLY what you visually see. Focus on: 1) Exact colors (be very specific: not just "pink" but "coral pink and black", not just "floral" but "cherry blossom print"), 2) Pattern or print (sakura, cherry blossom, dragon, geometric, plain...), 3) Distinctive visual details (lace trim, embroidery, obi belt, ruffles, buttons...), 4) Fabric appearance (silky, matte, shiny...). Do NOT mention use cases, occasions or who it is for. Output only 2-3 sentences describing what you see.';
 
-        // Step 1: try direct URL (no download) — works for public CDNs like AliExpress
-        $result = $this->callGroqVision(['url' => $imageUrl], $visionPrompt);
-        if ($result !== null) {
-            return $result;
-        }
-
-        // Step 2: fallback — download as base64 (for 1688.com or blocked CDNs)
         try {
             $referer = 'https://www.aliexpress.com/';
             if (str_contains($imageUrl, '1688.com')) {
@@ -71,16 +64,12 @@ class ContentOptimizerService
                 return null;
             }
 
-            $mimeType = 'image/jpeg';
-            $contentType = $imageResponse->header('Content-Type');
-            if ($contentType && str_contains($contentType, 'png')) {
-                $mimeType = 'image/png';
-            } elseif ($contentType && str_contains($contentType, 'webp')) {
-                $mimeType = 'image/webp';
-            }
+            // Resize image to max 800px to keep payload small enough for Groq
+            $imageData = $imageResponse->body();
+            $imageData = $this->resizeImageData($imageData);
 
-            $imageContent = base64_encode($imageResponse->body());
-            $dataUrl = "data:{$mimeType};base64,{$imageContent}";
+            $imageContent = base64_encode($imageData);
+            $dataUrl = "data:image/jpeg;base64,{$imageContent}";
 
             return $this->callGroqVision(['url' => $dataUrl], $visionPrompt);
         } catch (\Exception $e) {
@@ -88,6 +77,46 @@ class ContentOptimizerService
 
             return null;
         }
+    }
+
+    /**
+     * Resize image data to max 800px on longest side, output as JPEG.
+     * Falls through to original data if GD is not available or image is already small.
+     */
+    private function resizeImageData(string $imageData): string
+    {
+        if (! function_exists('imagecreatefromstring')) {
+            return $imageData;
+        }
+
+        $img = @imagecreatefromstring($imageData);
+        if (! $img) {
+            return $imageData;
+        }
+
+        $width = imagesx($img);
+        $height = imagesy($img);
+        $maxDim = 800;
+
+        if ($width <= $maxDim && $height <= $maxDim) {
+            imagedestroy($img);
+
+            return $imageData;
+        }
+
+        $ratio = min($maxDim / $width, $maxDim / $height);
+        $newWidth = (int) ($width * $ratio);
+        $newHeight = (int) ($height * $ratio);
+
+        $resized = imagescale($img, $newWidth, $newHeight);
+        imagedestroy($img);
+
+        ob_start();
+        imagejpeg($resized, null, 85);
+        $output = ob_get_clean();
+        imagedestroy($resized);
+
+        return $output ?: $imageData;
     }
 
     private function callGroqVision(array $imagePayload, string $prompt): ?string
