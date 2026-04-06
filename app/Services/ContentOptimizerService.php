@@ -305,7 +305,7 @@ class ContentOptimizerService
     /**
      * Generate 13 SEO-optimized Etsy tags.
      */
-    public function generateTags(string $title, ?string $description = null, bool $is3DPrint = false): array
+    public function generateTags(string $title, ?string $description = null, bool $is3DPrint = false, ?string $visualContext = null): array
     {
         if (! $this->apiKey) {
             return $this->fallbackGenerateTags($title, $is3DPrint);
@@ -333,20 +333,22 @@ class ContentOptimizerService
             } else {
                 $prompt = "Generate exactly 13 Etsy SEO tags for this product:\n\n"
                     ."Product: {$title}\n"
+                    .($visualContext ? "Visual details from image: {$visualContext}\n" : '')
                     .($description ? 'Description: '.substr($description, 0, 500)."\n" : '')
                     ."\n"
                     ."RULES:\n"
                     ."1. Each tag maximum 20 characters\n"
-                    ."2. Tags must relate to the ACTUAL product (e.g., 'japanese kimono', 'mount fuji', 'haori jacket', 'beach cardigan')\n"
-                    ."3. Mix of specific keywords and broader terms\n"
-                    ."4. All tags in English\n"
-                    ."5. No duplicates\n"
-                    ."6. NEVER use generic tags like 'handmade gift' unless truly relevant to the product\n\n"
+                    .($visualContext ? "2. MANDATORY: Include tags for the specific colors and pattern visible (e.g. 'pink sakura kimono', 'black floral robe')\n" : "2. Tags must relate to the ACTUAL product\n")
+                    ."3. NEVER invent tags unrelated to what's visible (no 'Sashiko', 'Kanzashi', 'Patchwork' unless truly present)\n"
+                    ."4. Mix of specific keywords and broader terms\n"
+                    ."5. All tags in English\n"
+                    ."6. No duplicates\n"
+                    ."7. NEVER use generic tags like 'handmade', 'gift for her', 'unique item'\n\n"
                     .'Output ONLY 13 tags separated by commas on a single line, nothing else.';
 
-                $systemPrompt = 'You are an Etsy SEO expert. Generate exactly 13 tags based on the ACTUAL product. '
-                    .'Each tag max 20 characters. Focus on real product keywords, not generic terms. '
-                    .'Output only the tags separated by commas.';
+                $systemPrompt = 'You are an Etsy SEO expert. Generate exactly 13 tags based on the ACTUAL product — only what is truly visible or described. '
+                    .'NEVER invent tags that sound related but are not accurate (e.g. do not add Sashiko just because it sounds Japanese). '
+                    .'Each tag max 20 characters. Output only the tags separated by commas.';
             }
 
             $response = Http::withHeaders([
@@ -401,13 +403,13 @@ class ContentOptimizerService
      * @param  bool  $is3DPrint  Whether this is a 3D print/STL file
      * @return array Array of 13 tags
      */
-    public function selectRelevantTags(string $title, string $description, array $availableTags = [], bool $is3DPrint = false): array
+    public function selectRelevantTags(string $title, string $description, array $availableTags = [], bool $is3DPrint = false, ?string $visualContext = null): array
     {
         // If no available tags, generate freely
         if (empty($availableTags)) {
             Log::info('No available tags for shop, generating freely');
 
-            return $this->generateTags($title, $description, $is3DPrint);
+            return $this->generateTags($title, $description, $is3DPrint, $visualContext);
         }
 
         if (! $this->apiKey) {
@@ -419,16 +421,18 @@ class ContentOptimizerService
 
             $prompt = "Select the 13 most relevant tags for this product from the available list.\n\n"
                 ."Product title: {$title}\n"
+                .($visualContext ? "Visual details from image: {$visualContext}\n" : '')
                 .'Product description: '.substr($description, 0, 500)."\n\n"
                 ."Available tags: {$tagsListString}\n\n"
                 ."RULES:\n"
                 ."1. Select EXACTLY 13 tags from the list above\n"
-                ."2. Choose tags that best match the product\n"
+                .($visualContext ? "2. PRIORITY: Select tags that match the specific colors, pattern and style visible in the image\n" : "2. Choose tags that best match the product\n")
                 ."3. Prioritize specific tags over generic ones\n"
                 ."4. Only select tags that exist in the available list\n\n"
                 .'Output ONLY 13 tags separated by commas on a single line, nothing else.';
 
             $systemPrompt = 'You are an Etsy SEO expert. Select exactly 13 tags from the provided list that best match the product. '
+                .'If visual details are provided (colors, patterns), prioritize tags that match what is actually visible. '
                 .'Only output tags that exist in the available list. Output only the tags separated by commas.';
 
             $response = Http::withHeaders([

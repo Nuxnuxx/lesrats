@@ -227,7 +227,8 @@ class ExtensionController extends Controller
                     $optimizedTitle,
                     $description,
                     $shop->available_tags ?? [],
-                    $is3DPrint
+                    $is3DPrint,
+                    $visualContext
                 );
                 Log::info('Generated tags', ['count' => count($tags), 'tags' => $tags]);
 
