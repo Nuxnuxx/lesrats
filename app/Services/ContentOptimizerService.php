@@ -94,12 +94,12 @@ class ContentOptimizerService
                     ."3. AIM for 130-140 total characters — use the full limit\n"
                     ."4. Keep the actual model keywords (dragon, planter, organizer... never replace with generic words)\n"
                     ."5. Include ONE of: 'STL File', '3D Print File', 'Digital Download' — ideally in the first 60 chars\n"
-                    ."6. Include use case: Gift, Home Decor, Maker Gift, Tabletop RPG, etc.\n"
+                    ."6. Include use case: Home Decor, Tabletop RPG, Miniature, etc. NEVER use 'Gift'\n"
                     ."7. Translate to English if needed\n"
-                    ."8. NEVER use filler like 'Amazing 3D Model', 'Unique Print'\n"
+                    ."8. NEVER use filler like 'Amazing 3D Model', 'Unique Print', 'Gift'\n"
                     .($visualContext ? "9. Use the visual details (color, material, finish) to make the title specific and accurate\n" : '')
                     ."\nEXAMPLE FORMAT:\n"
-                    ."\"Dragon Planter STL File, 3D Print File, Succulent Pot Digital Download, Fantasy Home Decor Gift\"\n"
+                    ."\"Dragon Planter STL File, 3D Print File, Succulent Pot Digital Download, Fantasy Home Decor\"\n"
                     ."(Mobile sees: \"Dragon Planter STL File\" ✓)\n\n"
                     .'Output ONLY the optimized title, nothing else.';
 
@@ -118,17 +118,17 @@ class ContentOptimizerService
                     ."3. AIM for 130-140 total characters — use the full limit\n"
                     ."4. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
                     ."5. Include target audience when relevant: Women, Men, Kids\n"
-                    ."6. If visual details are available, prioritize color + pattern over generic occasions\n"
-                    ."7. Include occasion ONLY if space allows: Halloween Costume, Beach Wear, Wedding, etc. NEVER use 'Gift'\n"
-                    ."8. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
-                    ."8. Translate to English if needed\n"
-                    ."9. NEVER use filler like 'Handmade Gift', 'Unique Item', 'Beautiful Product'\n"
-                    ."10. Each phrase should be a real search query buyers would type\n"
-                    .($visualContext ? "11. Use the visual details (color, material, pattern) to make the title specific and accurate\n" : '')
-                    ."\nEXAMPLE FORMAT:\n"
-                    ."\"Japanese Kimono Cardigan Women, Traditional Yukata Robe, Oriental Beach Cover Up, Asian Style Gift\"\n"
-                    ."(Mobile sees: \"Japanese Kimono Cardigan Women\" ✓)\n"
-                    ."(Desktop sees: \"Japanese Kimono Cardigan Women, Traditional Yukata Robe\" ✓)\n\n"
+                    .($visualContext ? "6. MANDATORY: The first 2 phrases MUST include the specific color(s) and pattern from the visual details\n" : "6. Include specific colors and patterns if known\n")
+                    ."7. Include occasion ONLY if space allows after colors/pattern: Halloween Costume, Beach Wear, etc.\n"
+                    ."8. NEVER use the word 'Gift' — it wastes space and is too generic\n"
+                    ."9. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
+                    ."10. Translate to English if needed\n"
+                    ."11. NEVER use filler like 'Handmade', 'Unique Item', 'Beautiful', 'Asian Style'\n"
+                    ."12. Each phrase should be a real search query buyers would type\n"
+                    ."\nEXAMPLE WITH VISUAL DETAILS:\n"
+                    ."\"Black Pink Cherry Blossom Kimono Women, Sakura Print Lolita Costume, Cotton Haori Anime Dress, Halloween Outfit\"\n"
+                    ."(Mobile sees: \"Black Pink Cherry Blossom Kimono Women\" ✓)\n"
+                    ."(Desktop sees: \"Black Pink Cherry Blossom Kimono Women, Sakura Print Lolita Costume\" ✓)\n\n"
                     .'Output ONLY the optimized title, nothing else.';
 
                 $systemPrompt = 'You are an Etsy SEO title expert. Your ONLY goal is to maximize search visibility on Etsy. '
