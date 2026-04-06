@@ -109,6 +109,7 @@ class ContentOptimizerService
             Log::warning('Groq Vision API error', [
                 'url' => $imageUrl,
                 'status' => $response->status(),
+                'body' => $response->body(),
             ]);
 
             return null;
