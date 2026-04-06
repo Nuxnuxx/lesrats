@@ -126,7 +126,7 @@ class ContentOptimizerService
                 'Authorization' => 'Bearer '.$this->apiKey,
                 'Content-Type' => 'application/json',
             ])->timeout(30)->post('https://api.groq.com/openai/v1/chat/completions', [
-                'model' => 'llama-3.2-90b-vision-preview',
+                'model' => 'meta-llama/llama-4-scout-17b-16e-instruct',
                 'messages' => [
                     [
                         'role' => 'user',
@@ -181,14 +181,15 @@ class ContentOptimizerService
                     ."RULES:\n"
                     ."1. Create 4-5 distinct keyword phrases separated by commas\n"
                     ."2. Put the MOST IMPORTANT keyword first (first 40 chars = mobile preview)\n"
-                    ."3. MINIMUM 120 characters, AIM for 130-140 — add more keyword phrases if too short\n"
-                    ."4. Keep the actual model keywords (dragon, planter, organizer... never replace with generic words)\n"
-                    ."5. Include ONE of: 'STL File', '3D Print File', 'Digital Download' — ideally in the first 60 chars\n"
-                    ."6. Include use case: Home Decor, Tabletop RPG, Miniature, etc. NEVER use 'Gift'\n"
-                    ."7. Translate to English if needed\n"
-                    ."8. NEVER use filler like 'Amazing 3D Model', 'Unique Print', 'Gift'\n"
-                    .($visualContext ? "9. Use the visual details (color, material, finish) to make the title specific and accurate\n" : '')
-                    ."\nEXAMPLE FORMAT:\n"
+                    ."3. HARD LIMIT: MAXIMUM 140 characters total — count carefully before outputting\n"
+                    ."4. Target 120-140 chars — use 4-5 phrases, stop when you reach 140\n"
+                    ."5. Keep the actual model keywords (dragon, planter, organizer... never replace with generic words)\n"
+                    ."6. Include ONE of: 'STL File', '3D Print File', 'Digital Download' — ideally in the first 60 chars\n"
+                    ."7. Include use case: Home Decor, Tabletop RPG, Miniature, etc. NEVER use 'Gift'\n"
+                    ."8. Translate to English if needed\n"
+                    ."9. NEVER use filler like 'Amazing 3D Model', 'Unique Print', 'Gift'\n"
+                    .($visualContext ? "10. Use the visual details (color, material, finish) to make the title specific and accurate\n" : '')
+                    ."\nEXAMPLE FORMAT (133 chars):\n"
                     ."\"Dragon Planter STL File, 3D Print File, Succulent Pot Digital Download, Fantasy Home Decor\"\n"
                     ."(Mobile sees: \"Dragon Planter STL File\" ✓)\n\n"
                     .'Output ONLY the optimized title, nothing else.';
@@ -205,20 +206,20 @@ class ContentOptimizerService
                     ."RULES:\n"
                     ."1. Create 4-5 distinct keyword phrases separated by commas\n"
                     ."2. Put the MOST IMPORTANT keyword first (first 40 chars = mobile preview)\n"
-                    ."3. MINIMUM 120 characters, AIM for 130-140 — add more keyword phrases if too short\n"
-                    ."4. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
-                    ."5. Include target audience when relevant: Women, Men, Kids\n"
-                    .($visualContext ? "6. MANDATORY: The first 2 phrases MUST include the specific color(s) and pattern from the visual details\n" : "6. Include specific colors and patterns if known\n")
-                    ."7. Include occasion ONLY if space allows after colors/pattern: Halloween Costume, Beach Wear, etc.\n"
-                    ."8. NEVER use the word 'Gift' — it wastes space and is too generic\n"
-                    ."9. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
-                    ."10. Translate to English if needed\n"
-                    ."11. NEVER use filler like 'Handmade', 'Unique Item', 'Beautiful', 'Asian Style'\n"
-                    ."12. Each phrase should be a real search query buyers would type\n"
-                    ."\nEXAMPLE WITH VISUAL DETAILS:\n"
-                    ."\"Black Pink Cherry Blossom Kimono Women, Sakura Print Lolita Costume, Cotton Haori Anime Dress, Halloween Outfit\"\n"
-                    ."(Mobile sees: \"Black Pink Cherry Blossom Kimono Women\" ✓)\n"
-                    ."(Desktop sees: \"Black Pink Cherry Blossom Kimono Women, Sakura Print Lolita Costume\" ✓)\n\n"
+                    ."3. HARD LIMIT: MAXIMUM 140 characters total — count carefully before outputting\n"
+                    ."4. Target 120-140 chars — use 4-5 phrases, stop when you reach 140\n"
+                    ."5. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
+                    ."6. Include target audience when relevant: Women, Men, Kids\n"
+                    .($visualContext ? "7. MANDATORY: The first 2 phrases MUST include the specific color(s) and pattern from the visual details\n" : "7. Include specific colors and patterns if known\n")
+                    ."8. Include occasion ONLY if space allows after colors/pattern: Halloween Costume, Beach Wear, etc.\n"
+                    ."9. NEVER use the word 'Gift' — it wastes space and is too generic\n"
+                    ."10. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
+                    ."11. Translate to English if needed\n"
+                    ."12. NEVER use filler like 'Handmade', 'Unique Item', 'Beautiful', 'Asian Style'\n"
+                    ."13. Each phrase should be a real search query buyers would type\n"
+                    ."\nEXAMPLE (115 chars — good):\n"
+                    ."\"Black Crane Kimono Women, White Floral Haori Robe, Cotton Yukata Dress, Japanese Costume\"\n"
+                    ."(Mobile sees: \"Black Crane Kimono Women\" ✓)\n\n"
                     .'Output ONLY the optimized title, nothing else.';
 
                 $systemPrompt = 'You are an Etsy SEO title expert. Your ONLY goal is to maximize search visibility on Etsy. '
@@ -253,6 +254,13 @@ class ContentOptimizerService
                 $title = trim($result['choices'][0]['message']['content'] ?? $originalTitle);
                 // Remove quotes if present
                 $title = trim($title, '"\'');
+                // Hard enforce 140 char Etsy limit — cut at last comma before limit
+                if (mb_strlen($title) > 140) {
+                    $truncated = mb_substr($title, 0, 140);
+                    $lastComma = mb_strrpos($truncated, ',');
+                    $title = $lastComma !== false ? mb_substr($title, 0, $lastComma) : $truncated;
+                    $title = trim($title);
+                }
 
                 return $title;
             }
