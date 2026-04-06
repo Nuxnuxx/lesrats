@@ -11,7 +11,8 @@ class RegenerateProductContent extends Command
 {
     protected $signature = 'products:regenerate
                             {--shop= : Only regenerate products for this shop ID}
-                            {--limit= : Maximum number of products to process}';
+                            {--limit= : Maximum number of products to process}
+                            {--product= : Regenerate a specific product by ID}';
 
     protected $description = 'Regenerate AI titles, descriptions and tags for existing products using Groq Vision';
 
@@ -21,12 +22,16 @@ class RegenerateProductContent extends Command
 
         $query = Product::query()->whereNotNull('images')->with('shop');
 
-        if ($this->option('shop')) {
-            $query->where('shop_id', (int) $this->option('shop'));
-        }
+        if ($this->option('product')) {
+            $query->where('id', (int) $this->option('product'));
+        } else {
+            if ($this->option('shop')) {
+                $query->where('shop_id', (int) $this->option('shop'));
+            }
 
-        if ($this->option('limit')) {
-            $query->limit((int) $this->option('limit'));
+            if ($this->option('limit')) {
+                $query->limit((int) $this->option('limit'));
+            }
         }
 
         $products = $query->get();
