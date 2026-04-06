@@ -50,6 +50,10 @@ class RegenerateProductContent extends Command
                 $visualContext = null;
                 if (! empty($images)) {
                     $visualContext = $optimizer->analyzeProductImages($images);
+                    Log::info('Visual context from image analysis', [
+                        'product_id' => $product->id,
+                        'context' => $visualContext ?? 'NULL - vision failed',
+                    ]);
                 }
 
                 // Regenerate title (use current title as base)

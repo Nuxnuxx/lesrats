@@ -35,7 +35,11 @@ class ContentOptimizerService
             $imageContent = null;
             $mimeType = 'image/jpeg';
             try {
-                $imageResponse = Http::timeout(15)->get($imageUrl);
+                $imageResponse = Http::timeout(15)->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Referer' => 'https://www.aliexpress.com/',
+                    'Accept' => 'image/webp,image/jpeg,image/png,image/*,*/*',
+                ])->get($imageUrl);
                 if ($imageResponse->successful()) {
                     $imageContent = base64_encode($imageResponse->body());
                     $contentType = $imageResponse->header('Content-Type');
