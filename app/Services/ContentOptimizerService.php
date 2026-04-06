@@ -19,7 +19,7 @@ class ContentOptimizerService
 
     /**
      * Analyze product images using Groq Vision to extract visual details.
-     * Returns a short description of color, material, pattern and style.
+     * Tries up to 3 images — stops at first success.
      */
     public function analyzeProductImages(array $imageUrls): ?string
     {
@@ -27,33 +27,53 @@ class ContentOptimizerService
             return null;
         }
 
-        $imageUrl = $imageUrls[0]; // Only analyze the first image
+        foreach (array_slice($imageUrls, 0, 3) as $imageUrl) {
+            $result = $this->tryAnalyzeSingleImage($imageUrl);
+            if ($result !== null) {
+                return $result;
+            }
+        }
 
+        return null;
+    }
+
+    private function tryAnalyzeSingleImage(string $imageUrl): ?string
+    {
         try {
-            // Download image into memory and convert to base64
-            // This bypasses CDN restrictions (AliExpress, 1688...) without saving to disk
-            $imageContent = null;
-            $mimeType = 'image/jpeg';
-            try {
-                $imageResponse = Http::timeout(15)->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Referer' => 'https://www.aliexpress.com/',
-                    'Accept' => 'image/webp,image/jpeg,image/png,image/*,*/*',
-                ])->get($imageUrl);
-                if ($imageResponse->successful()) {
-                    $imageContent = base64_encode($imageResponse->body());
-                    $contentType = $imageResponse->header('Content-Type');
-                    if ($contentType && str_contains($contentType, 'png')) {
-                        $mimeType = 'image/png';
-                    } elseif ($contentType && str_contains($contentType, 'webp')) {
-                        $mimeType = 'image/webp';
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::warning('Failed to download image for vision analysis', ['url' => $imageUrl, 'error' => $e->getMessage()]);
+            // Domain-specific Referer to bypass CDN restrictions
+            $referer = 'https://www.aliexpress.com/';
+            if (str_contains($imageUrl, '1688.com')) {
+                $referer = 'https://www.1688.com/';
+            } elseif (str_contains($imageUrl, 'printables.com')) {
+                $referer = 'https://www.printables.com/';
             }
 
-            // Use base64 data URL if download succeeded, otherwise fall back to direct URL
+            $imageContent = null;
+            $mimeType = 'image/jpeg';
+
+            $imageResponse = Http::timeout(15)->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer' => $referer,
+                'Accept' => 'image/webp,image/jpeg,image/png,image/*,*/*',
+            ])->get($imageUrl);
+
+            if ($imageResponse->successful()) {
+                $imageContent = base64_encode($imageResponse->body());
+                $contentType = $imageResponse->header('Content-Type');
+                if ($contentType && str_contains($contentType, 'png')) {
+                    $mimeType = 'image/png';
+                } elseif ($contentType && str_contains($contentType, 'webp')) {
+                    $mimeType = 'image/webp';
+                }
+            } else {
+                Log::warning('Image download failed for vision', [
+                    'url' => $imageUrl,
+                    'status' => $imageResponse->status(),
+                ]);
+
+                return null;
+            }
+
             $imagePayload = $imageContent
                 ? ['url' => "data:{$mimeType};base64,{$imageContent}"]
                 : ['url' => $imageUrl];
@@ -83,14 +103,17 @@ class ContentOptimizerService
             ]);
 
             if ($response->successful()) {
-                $result = $response->json();
-
-                return trim($result['choices'][0]['message']['content'] ?? '');
+                return trim($response->json()['choices'][0]['message']['content'] ?? '');
             }
+
+            Log::warning('Groq Vision API error', [
+                'url' => $imageUrl,
+                'status' => $response->status(),
+            ]);
 
             return null;
         } catch (\Exception $e) {
-            Log::warning('Groq Vision image analysis failed', ['error' => $e->getMessage()]);
+            Log::warning('Vision analysis exception', ['url' => $imageUrl, 'error' => $e->getMessage()]);
 
             return null;
         }
