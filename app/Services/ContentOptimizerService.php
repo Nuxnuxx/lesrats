@@ -39,8 +39,16 @@ class ContentOptimizerService
 
     private function tryAnalyzeSingleImage(string $imageUrl): ?string
     {
+        $visionPrompt = 'Analyze this product image and describe ONLY what you visually see. Focus on: 1) Exact colors (be very specific: not just "pink" but "coral pink and black", not just "floral" but "cherry blossom print"), 2) Pattern or print (sakura, cherry blossom, dragon, geometric, plain...), 3) Distinctive visual details (lace trim, embroidery, obi belt, ruffles, buttons...), 4) Fabric appearance (silky, matte, shiny...). Do NOT mention use cases, occasions or who it is for. Output only 2-3 sentences describing what you see.';
+
+        // Step 1: try direct URL (no download) — works for public CDNs like AliExpress
+        $result = $this->callGroqVision(['url' => $imageUrl], $visionPrompt);
+        if ($result !== null) {
+            return $result;
+        }
+
+        // Step 2: fallback — download as base64 (for 1688.com or blocked CDNs)
         try {
-            // Domain-specific Referer to bypass CDN restrictions
             $referer = 'https://www.aliexpress.com/';
             if (str_contains($imageUrl, '1688.com')) {
                 $referer = 'https://www.1688.com/';
@@ -48,24 +56,13 @@ class ContentOptimizerService
                 $referer = 'https://www.printables.com/';
             }
 
-            $imageContent = null;
-            $mimeType = 'image/jpeg';
-
             $imageResponse = Http::timeout(15)->withHeaders([
                 'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Referer' => $referer,
                 'Accept' => 'image/webp,image/jpeg,image/png,image/*,*/*',
             ])->get($imageUrl);
 
-            if ($imageResponse->successful()) {
-                $imageContent = base64_encode($imageResponse->body());
-                $contentType = $imageResponse->header('Content-Type');
-                if ($contentType && str_contains($contentType, 'png')) {
-                    $mimeType = 'image/png';
-                } elseif ($contentType && str_contains($contentType, 'webp')) {
-                    $mimeType = 'image/webp';
-                }
-            } else {
+            if (! $imageResponse->successful()) {
                 Log::warning('Image download failed for vision', [
                     'url' => $imageUrl,
                     'status' => $imageResponse->status(),
@@ -74,10 +71,28 @@ class ContentOptimizerService
                 return null;
             }
 
-            $imagePayload = $imageContent
-                ? ['url' => "data:{$mimeType};base64,{$imageContent}"]
-                : ['url' => $imageUrl];
+            $mimeType = 'image/jpeg';
+            $contentType = $imageResponse->header('Content-Type');
+            if ($contentType && str_contains($contentType, 'png')) {
+                $mimeType = 'image/png';
+            } elseif ($contentType && str_contains($contentType, 'webp')) {
+                $mimeType = 'image/webp';
+            }
 
+            $imageContent = base64_encode($imageResponse->body());
+            $dataUrl = "data:{$mimeType};base64,{$imageContent}";
+
+            return $this->callGroqVision(['url' => $dataUrl], $visionPrompt);
+        } catch (\Exception $e) {
+            Log::warning('Vision analysis exception', ['url' => $imageUrl, 'error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
+    private function callGroqVision(array $imagePayload, string $prompt): ?string
+    {
+        try {
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer '.$this->apiKey,
                 'Content-Type' => 'application/json',
@@ -87,14 +102,8 @@ class ContentOptimizerService
                     [
                         'role' => 'user',
                         'content' => [
-                            [
-                                'type' => 'image_url',
-                                'image_url' => $imagePayload,
-                            ],
-                            [
-                                'type' => 'text',
-                                'text' => 'Analyze this product image and describe ONLY what you visually see. Focus on: 1) Exact colors (be very specific: not just "pink" but "coral pink and black", not just "floral" but "cherry blossom print"), 2) Pattern or print (sakura, cherry blossom, dragon, geometric, plain...), 3) Distinctive visual details (lace trim, embroidery, obi belt, ruffles, buttons...), 4) Fabric appearance (silky, matte, shiny...). Do NOT mention use cases, occasions or who it is for. Output only 2-3 sentences describing what you see.',
-                            ],
+                            ['type' => 'image_url', 'image_url' => $imagePayload],
+                            ['type' => 'text', 'text' => $prompt],
                         ],
                     ],
                 ],
@@ -103,18 +112,18 @@ class ContentOptimizerService
             ]);
 
             if ($response->successful()) {
-                return trim($response->json()['choices'][0]['message']['content'] ?? '');
+                return trim($response->json()['choices'][0]['message']['content'] ?? '') ?: null;
             }
 
             Log::warning('Groq Vision API error', [
-                'url' => $imageUrl,
+                'url' => $imagePayload['url'] !== null && strlen($imagePayload['url']) < 200 ? $imagePayload['url'] : 'base64_data',
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
 
             return null;
         } catch (\Exception $e) {
-            Log::warning('Vision analysis exception', ['url' => $imageUrl, 'error' => $e->getMessage()]);
+            Log::warning('Groq Vision call exception', ['error' => $e->getMessage()]);
 
             return null;
         }
