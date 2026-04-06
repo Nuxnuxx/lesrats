@@ -226,6 +226,7 @@ class ContentOptimizerService
                     ."12. Translate to English if needed\n"
                     ."13. NEVER use filler like 'Handmade', 'Unique Item', 'Beautiful', 'Asian Style'\n"
                     ."14. Each phrase should be a real search query buyers would type\n"
+                    ."15. NEVER repeat the same word across phrases — if 'Women' appears in phrase 1, do NOT use it again. If 'Floral' appears in phrase 2, do NOT repeat it in phrase 3. Every significant word must appear only once in the full title.\n"
                     ."\nEXAMPLE (136 chars — ideal):\n"
                     ."\"Black White Crane Kimono Women, Light Blue Floral Haori Robe, Cotton Yukata Dress, Anime Lolita Outfit\"\n"
                     ."(Mobile sees: \"Black White Crane Kimono Women\" ✓)\n\n"
