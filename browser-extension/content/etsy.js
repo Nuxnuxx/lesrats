@@ -828,6 +828,84 @@ async function fetchProductData(apiUrl, productId) {
   }
 }
 
+// Fill product attributes: primary color, secondary color, materials, pockets
+async function fillProductAttributes(product) {
+  try {
+    // Primary color
+    if (product.main_color) {
+      const primarySelect = document.querySelector('select[name="primary_color"], #primary-color-select, [data-testid="primary-color-select"] select');
+      if (primarySelect) {
+        const option = Array.from(primarySelect.options).find(o => o.text.toLowerCase() === product.main_color.toLowerCase());
+        if (option) {
+          primarySelect.value = option.value;
+          primarySelect.dispatchEvent(new Event('change', { bubbles: true }));
+          await sleep(300);
+          console.log('🐀 Primary color set:', product.main_color);
+        }
+      }
+    }
+
+    // Secondary color
+    if (product.secondary_color) {
+      const secondarySelect = document.querySelector('select[name="secondary_color"], #secondary-color-select, [data-testid="secondary-color-select"] select');
+      if (secondarySelect) {
+        const option = Array.from(secondarySelect.options).find(o => o.text.toLowerCase() === product.secondary_color.toLowerCase());
+        if (option) {
+          secondarySelect.value = option.value;
+          secondarySelect.dispatchEvent(new Event('change', { bubbles: true }));
+          await sleep(300);
+          console.log('🐀 Secondary color set:', product.secondary_color);
+        }
+      }
+    }
+
+    // Materials (multi-select or tag input)
+    if (product.materials && product.materials.length > 0) {
+      // Try multi-select
+      const materialsSelect = document.querySelector('select[name="materials"], select[name="material"], #materials-select');
+      if (materialsSelect && materialsSelect.multiple) {
+        Array.from(materialsSelect.options).forEach(o => {
+          o.selected = product.materials.some(m => m.toLowerCase() === o.text.toLowerCase());
+        });
+        materialsSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(300);
+        console.log('🐀 Materials set (multi-select):', product.materials);
+      } else {
+        // Try tag-style input (type material name + press Enter)
+        const materialInput = document.querySelector('input[placeholder*="aterial"], input[name*="aterial"]');
+        if (materialInput) {
+          for (const mat of product.materials.slice(0, 5)) {
+            materialInput.value = mat;
+            materialInput.dispatchEvent(new Event('input', { bubbles: true }));
+            await sleep(500);
+            materialInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+            await sleep(300);
+          }
+          console.log('🐀 Materials set (input):', product.materials);
+        }
+      }
+    }
+
+    // Pockets (radio or checkbox)
+    if (product.has_pockets !== null && product.has_pockets !== undefined) {
+      const pocketValue = product.has_pockets ? 'yes' : 'no';
+      const pocketAlts = product.has_pockets ? ['oui', 'yes', 'true', '1'] : ['non', 'no', 'false', '0'];
+      const pocketRadios = document.querySelectorAll('input[type="radio"][name*="ocket"], input[type="radio"][name*="pocket"]');
+      if (pocketRadios.length > 0) {
+        pocketRadios.forEach(radio => {
+          if (pocketAlts.includes(radio.value.toLowerCase())) {
+            radio.click();
+          }
+        });
+        await sleep(300);
+        console.log('🐀 Pockets set:', pocketValue);
+      }
+    }
+  } catch (e) {
+    console.log('🐀 fillProductAttributes error (non-blocking):', e.message);
+  }
+}
+
 // Main function to fill Etsy's listing form
 async function fillEtsyForm(product) {
   console.log('🐀 Filling Etsy form with:', product);
@@ -863,6 +941,9 @@ async function fillEtsyForm(product) {
   if (product.sizes && product.sizes.length > 0) {
     await fillVariations(product.sizes, product.size_type || 'custom');
   }
+
+  // Fill product attributes (color, materials, pockets)
+  await fillProductAttributes(product);
 
   // Show STL upload reminder for digital products
   if (product.is_digital) {

@@ -195,6 +195,10 @@ class ProductController extends Controller
             'cost_price' => 'sometimes|nullable|numeric|min:0',
             'source_type' => ['sometimes', 'nullable', Rule::in(['aliexpress', 'printables', 'manual'])],
             'source_url' => 'sometimes|nullable|string',
+            'main_color' => 'sometimes|nullable|string|max:50',
+            'secondary_color' => 'sometimes|nullable|string|max:50',
+            'materials' => 'sometimes|nullable|string',
+            'has_pockets' => 'sometimes|nullable|boolean',
         ]);
 
         // Convert sizes JSON string to array
@@ -208,6 +212,11 @@ class ProductController extends Controller
             $tagsArray = array_filter($tagsArray);
             $tagsArray = array_slice($tagsArray, 0, 13);
             $validated['tags'] = $tagsArray;
+        }
+
+        // Convert materials JSON string to array
+        if (isset($validated['materials']) && is_string($validated['materials'])) {
+            $validated['materials'] = json_decode($validated['materials'], true) ?? [];
         }
 
         $product->update($validated);

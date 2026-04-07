@@ -33,6 +33,10 @@ class Product extends Model
         'deleted_images',
         'deleted_real_images',
         'apply_logo',
+        'main_color',
+        'secondary_color',
+        'materials',
+        'has_pockets',
     ];
 
     protected $casts = [
@@ -51,6 +55,8 @@ class Product extends Model
         'sizes' => 'array',
         'is_digital' => 'boolean',
         'apply_logo' => 'boolean',
+        'has_pockets' => 'boolean',
+        'materials' => 'array',
     ];
 
     // ============================================
@@ -78,6 +84,20 @@ class Product extends Model
     // ============================================
     // CONSTANTS
     // ============================================
+
+    public const ETSY_COLORS = [
+        'Beige', 'Black', 'Blue', 'Bronze', 'Brown', 'Clear', 'Copper', 'Gold',
+        'Gray', 'Green', 'Orange', 'Pink', 'Purple', 'Rainbow', 'Red', 'Rose gold',
+        'Silver', 'White', 'Yellow',
+    ];
+
+    public const ETSY_MATERIALS = [
+        'Acrylic', 'Bamboo', 'Canvas', 'Cashmere', 'Ceramic', 'Chiffon', 'Cotton',
+        'Denim', 'Faux leather', 'Felt', 'Fleece', 'Fur', 'Glass', 'Gold', 'Jute',
+        'Lace', 'Leather', 'Linen', 'Metal', 'Modal', 'Nylon', 'Polyester', 'Rayon',
+        'Satin', 'Silk', 'Silver', 'Spandex', 'Suede', 'Velvet', 'Viscose',
+        'Wicker', 'Wood', 'Wool',
+    ];
 
     public const ETSY_FEE_RATE = 0.105;    // 10.5% Etsy commission
 

@@ -239,12 +239,21 @@ class ExtensionController extends Controller
                     $shop->etsy_categories ?? []
                 );
                 Log::info('Selected category', ['category' => $etsyCategory]);
+
+                // Analyser les attributs produit (couleur, matériaux, poches)
+                $productAttributes = $optimizer->analyzeProductAttributes(
+                    $optimizedTitle,
+                    $visualContext,
+                    $is3DPrint
+                );
+                Log::info('Product attributes analyzed', $productAttributes);
             } catch (\Exception $e) {
                 Log::error('Failed to optimize content', ['error' => $e->getMessage()]);
                 $optimizedTitle = $originalTitle;
                 $description = $originalDescription;
                 $tags = [];
                 $etsyCategory = null;
+                $productAttributes = ['main_color' => null, 'secondary_color' => null, 'materials' => [], 'has_pockets' => null];
             }
 
             // Images are kept as-is during import
@@ -313,6 +322,10 @@ class ExtensionController extends Controller
                 'quantity' => $quantity,
                 'is_digital' => $isDigital,
                 'low_stock_threshold' => $lowStockThreshold,
+                'main_color' => $productAttributes['main_color'] ?? null,
+                'secondary_color' => $productAttributes['secondary_color'] ?? null,
+                'materials' => $productAttributes['materials'] ?? [],
+                'has_pockets' => $productAttributes['has_pockets'] ?? null,
             ]);
 
             // Extract sizes from variants (AliExpress sends variants with name/values)
@@ -478,6 +491,10 @@ class ExtensionController extends Controller
                     'shop_name' => $product->shop->name,
                     'shop_id' => $product->shop->id,
                     'etsy_category' => $categoryName,
+                    'main_color' => $product->main_color,
+                    'secondary_color' => $product->secondary_color,
+                    'materials' => $product->materials ?? [],
+                    'has_pockets' => $product->has_pockets,
                 ],
             ]);
         } catch (\Exception $e) {

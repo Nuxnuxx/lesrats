@@ -649,6 +649,120 @@ class ContentOptimizerService
     }
 
     /**
+     * Analyze product attributes (color, materials, pockets) using AI.
+     * Returns values matching Etsy's accepted lists.
+     *
+     * @param  string  $title  Product title
+     * @param  string|null  $visualContext  Visual context from Gemini image analysis
+     * @param  bool  $is3DPrint  Whether this is a digital STL file
+     * @return array { main_color, secondary_color, materials[], has_pockets }
+     */
+    public function analyzeProductAttributes(string $title, ?string $visualContext = null, bool $is3DPrint = false): array
+    {
+        $empty = ['main_color' => null, 'secondary_color' => null, 'materials' => [], 'has_pockets' => null];
+
+        if (! $this->apiKey || $is3DPrint) {
+            return $empty;
+        }
+
+        try {
+            $colorsList = implode(', ', \App\Models\Product::ETSY_COLORS);
+            $materialsList = implode(', ', \App\Models\Product::ETSY_MATERIALS);
+
+            $prompt = "Analyze this product and return its attributes in JSON format.\n\n"
+                ."Product title: {$title}\n"
+                .($visualContext ? "Visual details from image: {$visualContext}\n" : '')
+                ."\nAvailable colors (pick ONLY from this list): {$colorsList}\n"
+                ."Available materials (pick ONLY from this list, max 5): {$materialsList}\n\n"
+                ."Return a JSON object with exactly these fields:\n"
+                ."- main_color: string (the dominant color, from the list above, or null)\n"
+                ."- secondary_color: string (a secondary color if visible, from the list above, or null)\n"
+                ."- materials: array of strings (max 5, from the list above, most likely materials for this product)\n"
+                ."- has_pockets: boolean or null (true if product clearly has pockets, false if it does not, null if unknown)\n\n"
+                ."RULES:\n"
+                ."- Use ONLY values from the provided lists for colors and materials\n"
+                ."- If visual context mentions a color, map it to the closest color in the list\n"
+                ."- For clothing: Polyester, Cotton, Silk, Satin, Chiffon, Lace are common materials\n"
+                ."- Output ONLY valid JSON, no explanation, no markdown\n\n"
+                .'Example: {"main_color":"Black","secondary_color":"Gold","materials":["Polyester","Satin"],"has_pockets":false}';
+
+            $systemPrompt = 'You are a product attribute analyzer for Etsy listings. '
+                .'Given a product title and optional visual context, extract the main color, secondary color, materials and pocket information. '
+                .'You MUST only use values from the provided lists. Output ONLY valid JSON.';
+
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer '.$this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->timeout(30)->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model' => $this->model,
+                'messages' => [
+                    ['role' => 'system', 'content' => $systemPrompt],
+                    ['role' => 'user', 'content' => $prompt],
+                ],
+                'max_tokens' => 150,
+                'temperature' => 0.1,
+            ]);
+
+            if ($response->successful()) {
+                $raw = trim($response->json()['choices'][0]['message']['content'] ?? '');
+                // Strip markdown code blocks if present
+                $raw = preg_replace('/^```(?:json)?\s*/i', '', $raw);
+                $raw = preg_replace('/\s*```$/', '', $raw);
+
+                $data = json_decode($raw, true);
+                if (! is_array($data)) {
+                    Log::warning('Product attributes: invalid JSON', ['raw' => $raw]);
+                    return $empty;
+                }
+
+                // Validate against Etsy lists
+                $validColors = array_map('strtolower', \App\Models\Product::ETSY_COLORS);
+                $validMaterials = array_map('strtolower', \App\Models\Product::ETSY_MATERIALS);
+
+                $mainColor = null;
+                if (! empty($data['main_color'])) {
+                    $idx = array_search(strtolower($data['main_color']), $validColors);
+                    $mainColor = $idx !== false ? \App\Models\Product::ETSY_COLORS[$idx] : null;
+                }
+
+                $secondaryColor = null;
+                if (! empty($data['secondary_color'])) {
+                    $idx = array_search(strtolower($data['secondary_color']), $validColors);
+                    $secondaryColor = $idx !== false ? \App\Models\Product::ETSY_COLORS[$idx] : null;
+                }
+
+                $materials = [];
+                if (! empty($data['materials']) && is_array($data['materials'])) {
+                    foreach (array_slice($data['materials'], 0, 5) as $mat) {
+                        $idx = array_search(strtolower($mat), $validMaterials);
+                        if ($idx !== false) {
+                            $materials[] = \App\Models\Product::ETSY_MATERIALS[$idx];
+                        }
+                    }
+                }
+
+                $hasPockets = isset($data['has_pockets']) && is_bool($data['has_pockets']) ? $data['has_pockets'] : null;
+
+                Log::info('Product attributes analyzed', ['main_color' => $mainColor, 'materials' => $materials]);
+
+                return [
+                    'main_color' => $mainColor,
+                    'secondary_color' => $secondaryColor,
+                    'materials' => $materials,
+                    'has_pockets' => $hasPockets,
+                ];
+            }
+
+            Log::warning('Product attributes API error', ['status' => $response->status()]);
+            return $empty;
+
+        } catch (\Exception $e) {
+            Log::error('Product attributes exception', ['error' => $e->getMessage()]);
+            return $empty;
+        }
+    }
+
+    /**
      * Select the best Etsy category for a product from shop's available categories.
      *
      * @param  string  $title  Product title

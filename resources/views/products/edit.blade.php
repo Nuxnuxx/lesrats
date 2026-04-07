@@ -58,6 +58,10 @@
         $initProfit = round($initRevenue - $initCost - $initUrssaf, 2);
         $etsyCategory = $product->etsy_category;
         $hasCategory = $etsyCategory && in_array($etsyCategory, $shopCategories);
+        $etsyColors = \App\Models\Product::ETSY_COLORS;
+        $etsyMaterials = \App\Models\Product::ETSY_MATERIALS;
+        $productMaterials = is_array($product->materials) ? $product->materials : (is_string($product->materials) ? json_decode($product->materials, true) : []);
+        $productMaterials = $productMaterials ?? [];
     @endphp
 
     <div class="py-4" x-data="productAutoSave({
@@ -485,6 +489,91 @@
                                 </select>
                             </div>
                             @endif
+
+                            {{-- Couleur principale --}}
+                            <div>
+                                <label for="main_color" class="text-sm font-medium text-gray-700 mb-1 block">Couleur principale</label>
+                                <select name="main_color" id="main_color"
+                                        @change="save({ main_color: $el.value })"
+                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
+                                    <option value="">-- Couleur --</option>
+                                    @foreach($etsyColors as $color)
+                                        <option value="{{ $color }}" {{ $product->main_color === $color ? 'selected' : '' }}>{{ $color }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Couleur secondaire --}}
+                            <div>
+                                <label for="secondary_color" class="text-sm font-medium text-gray-700 mb-1 block">Couleur secondaire</label>
+                                <select name="secondary_color" id="secondary_color"
+                                        @change="save({ secondary_color: $el.value })"
+                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
+                                    <option value="">-- Couleur --</option>
+                                    @foreach($etsyColors as $color)
+                                        <option value="{{ $color }}" {{ $product->secondary_color === $color ? 'selected' : '' }}>{{ $color }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Matériaux --}}
+                            <div x-data="{
+                                selected: {{ json_encode($productMaterials) }},
+                                max: 5,
+                                toggle(mat) {
+                                    const idx = this.selected.indexOf(mat);
+                                    if (idx > -1) {
+                                        this.selected.splice(idx, 1);
+                                    } else if (this.selected.length < this.max) {
+                                        this.selected.push(mat);
+                                    }
+                                    $dispatch('save-materials', { materials: JSON.stringify(this.selected) });
+                                },
+                                isSelected(mat) { return this.selected.includes(mat); }
+                            }" @save-materials.window="save({ materials: $event.detail.materials })">
+                                <label class="text-sm font-medium text-gray-700 mb-1 block">
+                                    Matériaux <span class="text-gray-400 font-normal">(max 5)</span>
+                                </label>
+                                <div class="flex flex-wrap gap-1.5 mt-1">
+                                    @foreach($etsyMaterials as $mat)
+                                    <button type="button"
+                                            @click="toggle('{{ $mat }}')"
+                                            :class="isSelected('{{ $mat }}') ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'"
+                                            class="px-2 py-1 text-xs rounded-md border transition-colors">
+                                        {{ $mat }}
+                                    </button>
+                                    @endforeach
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1" x-text="selected.length + '/5 sélectionnés'"></p>
+                            </div>
+
+                            {{-- Poches --}}
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 mb-2 block">Poches</label>
+                                <div class="flex items-center gap-4">
+                                    <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                                        <input type="radio" name="has_pockets" value="1"
+                                               @change="save({ has_pockets: true })"
+                                               {{ $product->has_pockets === true ? 'checked' : '' }}
+                                               class="text-orange-500 focus:ring-orange-500">
+                                        Oui
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                                        <input type="radio" name="has_pockets" value="0"
+                                               @change="save({ has_pockets: false })"
+                                               {{ $product->has_pockets === false ? 'checked' : '' }}
+                                               class="text-orange-500 focus:ring-orange-500">
+                                        Non
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+                                        <input type="radio" name="has_pockets" value=""
+                                               @change="save({ has_pockets: null })"
+                                               {{ $product->has_pockets === null ? 'checked' : '' }}
+                                               class="text-orange-500 focus:ring-orange-500">
+                                        —
+                                    </label>
+                                </div>
+                            </div>
 
                             {{-- Sizes --}}
                             <div x-data="{
