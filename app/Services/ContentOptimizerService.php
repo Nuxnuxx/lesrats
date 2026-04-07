@@ -649,17 +649,17 @@ class ContentOptimizerService
     }
 
     /**
-     * Analyze product attributes (color, materials, pockets) using AI.
+     * Analyze product attributes (color, materials) using AI.
      * Returns values matching Etsy's accepted lists.
      *
      * @param  string  $title  Product title
      * @param  string|null  $visualContext  Visual context from Gemini image analysis
      * @param  bool  $is3DPrint  Whether this is a digital STL file
-     * @return array { main_color, secondary_color, materials[], has_pockets }
+     * @return array { main_color, secondary_color, materials[] }
      */
     public function analyzeProductAttributes(string $title, ?string $visualContext = null, bool $is3DPrint = false): array
     {
-        $empty = ['main_color' => null, 'secondary_color' => null, 'materials' => [], 'has_pockets' => null];
+        $empty = ['main_color' => null, 'secondary_color' => null, 'materials' => []];
 
         if (! $this->apiKey || $is3DPrint) {
             return $empty;
@@ -678,13 +678,13 @@ class ContentOptimizerService
                 ."- main_color: string (the dominant color, from the list above, or null)\n"
                 ."- secondary_color: string (a secondary color if visible, from the list above, or null)\n"
                 ."- materials: array of strings (max 5, from the list above, most likely materials for this product)\n"
-                ."- has_pockets: boolean or null (true if product clearly has pockets, false if it does not, null if unknown)\n\n"
+"\n"
                 ."RULES:\n"
                 ."- Use ONLY values from the provided lists for colors and materials\n"
                 ."- If visual context mentions a color, map it to the closest color in the list\n"
                 ."- For clothing: Polyester, Cotton, Silk, Satin, Chiffon, Lace are common materials\n"
                 ."- Output ONLY valid JSON, no explanation, no markdown\n\n"
-                .'Example: {"main_color":"Black","secondary_color":"Gold","materials":["Polyester","Satin"],"has_pockets":false}';
+                .'Example: {"main_color":"Black","secondary_color":"Gold","materials":["Polyester","Satin"]}';
 
             $systemPrompt = 'You are a product attribute analyzer for Etsy listings. '
                 .'Given a product title and optional visual context, extract the main color, secondary color, materials and pocket information. '
@@ -741,15 +741,12 @@ class ContentOptimizerService
                     }
                 }
 
-                $hasPockets = isset($data['has_pockets']) && is_bool($data['has_pockets']) ? $data['has_pockets'] : null;
-
                 Log::info('Product attributes analyzed', ['main_color' => $mainColor, 'materials' => $materials]);
 
                 return [
                     'main_color' => $mainColor,
                     'secondary_color' => $secondaryColor,
                     'materials' => $materials,
-                    'has_pockets' => $hasPockets,
                 ];
             }
 

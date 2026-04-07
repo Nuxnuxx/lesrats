@@ -325,7 +325,6 @@ class ExtensionController extends Controller
                 'main_color' => $productAttributes['main_color'] ?? null,
                 'secondary_color' => $productAttributes['secondary_color'] ?? null,
                 'materials' => $productAttributes['materials'] ?? [],
-                'has_pockets' => $productAttributes['has_pockets'] ?? null,
             ]);
 
             // Extract sizes from variants (AliExpress sends variants with name/values)
@@ -494,7 +493,6 @@ class ExtensionController extends Controller
                     'main_color' => $product->main_color,
                     'secondary_color' => $product->secondary_color,
                     'materials' => $product->materials ?? [],
-                    'has_pockets' => $product->has_pockets,
                 ],
             ]);
         } catch (\Exception $e) {

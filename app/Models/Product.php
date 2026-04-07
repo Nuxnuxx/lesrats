@@ -36,7 +36,6 @@ class Product extends Model
         'main_color',
         'secondary_color',
         'materials',
-        'has_pockets',
     ];
 
     protected $casts = [
@@ -55,7 +54,6 @@ class Product extends Model
         'sizes' => 'array',
         'is_digital' => 'boolean',
         'apply_logo' => 'boolean',
-        'has_pockets' => 'boolean',
         'materials' => 'array',
     ];
 

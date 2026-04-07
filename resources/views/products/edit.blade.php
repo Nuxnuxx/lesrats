@@ -547,34 +547,6 @@
                                 <p class="text-xs text-gray-400 mt-1" x-text="selected.length + '/5 sélectionnés'"></p>
                             </div>
 
-                            {{-- Poches --}}
-                            <div>
-                                <label class="text-sm font-medium text-gray-700 mb-2 block">Poches</label>
-                                <div class="flex items-center gap-4">
-                                    <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
-                                        <input type="radio" name="has_pockets" value="1"
-                                               @change="save({ has_pockets: true })"
-                                               {{ $product->has_pockets === true ? 'checked' : '' }}
-                                               class="text-orange-500 focus:ring-orange-500">
-                                        Oui
-                                    </label>
-                                    <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
-                                        <input type="radio" name="has_pockets" value="0"
-                                               @change="save({ has_pockets: false })"
-                                               {{ $product->has_pockets === false ? 'checked' : '' }}
-                                               class="text-orange-500 focus:ring-orange-500">
-                                        Non
-                                    </label>
-                                    <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
-                                        <input type="radio" name="has_pockets" value=""
-                                               @change="save({ has_pockets: null })"
-                                               {{ $product->has_pockets === null ? 'checked' : '' }}
-                                               class="text-orange-500 focus:ring-orange-500">
-                                        —
-                                    </label>
-                                </div>
-                            </div>
-
                             {{-- Sizes --}}
                             <div x-data="{
                                 sizes: {{ Js::from($product->sizes ?? []) }},

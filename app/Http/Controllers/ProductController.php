@@ -198,7 +198,6 @@ class ProductController extends Controller
             'main_color' => 'sometimes|nullable|string|max:50',
             'secondary_color' => 'sometimes|nullable|string|max:50',
             'materials' => 'sometimes|nullable|string',
-            'has_pockets' => 'sometimes|nullable|boolean',
         ]);
 
         // Convert sizes JSON string to array

@@ -828,7 +828,7 @@ async function fetchProductData(apiUrl, productId) {
   }
 }
 
-// Fill product attributes: primary color, secondary color, materials, pockets
+// Fill product attributes: primary color, secondary color, materials
 async function fillProductAttributes(product) {
   try {
     // Primary color
@@ -886,21 +886,6 @@ async function fillProductAttributes(product) {
       }
     }
 
-    // Pockets (radio or checkbox)
-    if (product.has_pockets !== null && product.has_pockets !== undefined) {
-      const pocketValue = product.has_pockets ? 'yes' : 'no';
-      const pocketAlts = product.has_pockets ? ['oui', 'yes', 'true', '1'] : ['non', 'no', 'false', '0'];
-      const pocketRadios = document.querySelectorAll('input[type="radio"][name*="ocket"], input[type="radio"][name*="pocket"]');
-      if (pocketRadios.length > 0) {
-        pocketRadios.forEach(radio => {
-          if (pocketAlts.includes(radio.value.toLowerCase())) {
-            radio.click();
-          }
-        });
-        await sleep(300);
-        console.log('🐀 Pockets set:', pocketValue);
-      }
-    }
   } catch (e) {
     console.log('🐀 fillProductAttributes error (non-blocking):', e.message);
   }
@@ -942,7 +927,7 @@ async function fillEtsyForm(product) {
     await fillVariations(product.sizes, product.size_type || 'custom');
   }
 
-  // Fill product attributes (color, materials, pockets)
+  // Fill product attributes (color, materials)
   await fillProductAttributes(product);
 
   // Show STL upload reminder for digital products
