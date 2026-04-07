@@ -40,6 +40,10 @@ return [
         'model' => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
     ],
 
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+    ],
+
     'firecrawl' => [
         'api_key' => env('FIRECRAWL_API_KEY'),
         'base_url' => 'https://api.firecrawl.dev/v2',

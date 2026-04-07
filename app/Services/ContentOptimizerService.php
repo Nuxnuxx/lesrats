@@ -11,10 +11,13 @@ class ContentOptimizerService
 
     protected string $model;
 
+    protected ?string $geminiApiKey;
+
     public function __construct()
     {
         $this->apiKey = config('services.groq.api_key');
         $this->model = config('services.groq.model', 'llama-3.3-70b-versatile');
+        $this->geminiApiKey = config('services.gemini.api_key');
     }
 
     /**
@@ -23,7 +26,7 @@ class ContentOptimizerService
      */
     public function analyzeProductImages(array $imageUrls): ?string
     {
-        if (empty($imageUrls) || ! $this->apiKey) {
+        if (empty($imageUrls) || ! $this->geminiApiKey) {
             return null;
         }
 
@@ -78,7 +81,7 @@ class ContentOptimizerService
             $imageContent = base64_encode($imageData);
             $dataUrl = "data:image/jpeg;base64,{$imageContent}";
 
-            return $this->callGroqVision(['url' => $dataUrl], $visionPrompt);
+            return $this->callGeminiVision($imageContent, $visionPrompt);
         } catch (\Exception $e) {
             Log::warning('Vision analysis exception', ['url' => $imageUrl, 'error' => $e->getMessage()]);
 
@@ -126,40 +129,45 @@ class ContentOptimizerService
         return $output ?: $imageData;
     }
 
-    private function callGroqVision(array $imagePayload, string $prompt): ?string
+    private function callGeminiVision(string $base64ImageData, string $prompt): ?string
     {
         try {
+            $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='.$this->geminiApiKey;
+
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer '.$this->apiKey,
                 'Content-Type' => 'application/json',
-            ])->timeout(30)->post('https://api.groq.com/openai/v1/chat/completions', [
-                'model' => 'meta-llama/llama-4-scout-17b-16e-instruct',
-                'messages' => [
+            ])->timeout(30)->post($url, [
+                'contents' => [
                     [
-                        'role' => 'user',
-                        'content' => [
-                            ['type' => 'image_url', 'image_url' => $imagePayload],
-                            ['type' => 'text', 'text' => $prompt],
+                        'parts' => [
+                            [
+                                'inlineData' => [
+                                    'mimeType' => 'image/jpeg',
+                                    'data' => $base64ImageData,
+                                ],
+                            ],
+                            ['text' => $prompt],
                         ],
                     ],
                 ],
-                'max_tokens' => 150,
-                'temperature' => 0.3,
+                'generationConfig' => [
+                    'maxOutputTokens' => 150,
+                    'temperature' => 0.3,
+                ],
             ]);
 
             if ($response->successful()) {
-                return trim($response->json()['choices'][0]['message']['content'] ?? '') ?: null;
+                return trim($response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '') ?: null;
             }
 
-            Log::warning('Groq Vision API error', [
-                'url' => $imagePayload['url'] !== null && strlen($imagePayload['url']) < 200 ? $imagePayload['url'] : 'base64_data',
+            Log::warning('Gemini Vision API error', [
                 'status' => $response->status(),
                 'body' => $response->body(),
             ]);
 
             return null;
         } catch (\Exception $e) {
-            Log::warning('Groq Vision call exception', ['error' => $e->getMessage()]);
+            Log::warning('Gemini Vision call exception', ['error' => $e->getMessage()]);
 
             return null;
         }
@@ -377,19 +385,20 @@ class ContentOptimizerService
                     ."1. 150-250 words MAXIMUM — concise, punchy, human\n"
                     ."2. CRITICAL: This description must be written for THIS SPECIFIC product only — mention the actual colors, pattern and details visible\n"
                     .($visualContext ? "3. MANDATORY: Mention the specific colors and pattern from the visual details in the FIRST sentence — use the EXACT colors from visual context, NEVER invent or assume colors not mentioned (e.g. if visual says 'white floral on black', do NOT write 'cherry blossom' or 'pink sakura')\n" : "3. Mention specific product features in the first sentence\n")
-                    ."4. Warm and friendly tone — speak directly to the buyer (\"You'll love...\", \"Perfect for...\")\n"
-                    ."5. Touch the buyer emotionally: Why would they love THIS specific item? What makes it unique?\n"
+                    ."4. Warm and human tone — speak directly to the buyer (\"You'll love...\", \"Perfect for...\"). Write like a real person who genuinely loves this item, not a salesperson\n"
+                    ."5. Make the buyer picture themselves wearing or using it — give them ONE specific reason why THIS item will make them happy, tied to its actual colors or details\n"
                     ."6. Include a short 'Details' section if specs are available (2-3 bullet points max)\n"
                     ."7. Remove mentions of: wholesale, dropshipping, China, AliExpress\n"
-                    ."8. End with ONE direct call-to-action sentence — confident and action-oriented, not hesitant. Good: 'Add to cart and make it yours.' Bad: 'so why not make it yours today'\n"
+                    ."8. End with ONE call-to-action that feels warm but creates real desire or gentle urgency. Good: 'Treat yourself — you deserve something this beautiful.' / 'Order yours today, these go fast.' Bad: 'Add to cart and make it yours.' / 'so why not make it yours today'\n"
                     ."9. NEVER write a generic description that could apply to any product\n"
-                    ."10. NO emojis — write clean professional copy\n\n"
+                    ."10. NO emojis — write clean professional copy\n"
+                    ."11. BANNED words and phrases — never use these: 'unique', 'eye-catching', 'stunning', 'exquisite', 'turn heads', 'make a statement', 'piece of history', 'timeless', 'one of a kind', 'Add to cart and make it yours', 'make it yours today', 'why not make it yours'\n\n"
                     .'Output ONLY the description, nothing else.';
 
-                $systemPrompt = 'You are an Etsy copywriter who writes warm, human, emotionally engaging product descriptions. '
+                $systemPrompt = 'You are an Etsy copywriter who writes warm, human, emotionally engaging product descriptions that make buyers genuinely want the item. '
                     .'CRITICAL: Every description must be 100% unique and specific to the exact product — never write generic content that could apply to any similar item. '
                     .'If you have visual details (colors, patterns, materials), use them in the very first sentence and stick strictly to what the visual context says — never invent colors or pattern names. '
-                    .'Write like a friendly person talking to the buyer, not like a robot listing features. '
+                    .'Write like a real person who loves this product — warm, genuine, emotional, and convincing. Make the buyer picture owning and using it. End with a CTA that feels personal and creates desire or gentle urgency, never a flat generic line like "Add to cart and make it yours." '
                     .'NO emojis — write clean, professional copy. Always write in English. '
                     .'CRITICAL: Keep it 150-250 words maximum. Buyers don\'t read long descriptions — make every word count. '
                     .'Output only the description, no explanations.';
