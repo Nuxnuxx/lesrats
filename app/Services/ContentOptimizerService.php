@@ -780,6 +780,25 @@ class ContentOptimizerService
             return null;
         }
 
+        // Keyword-based pre-selection: force category for known product types
+        $titleLower = strtolower($title.' '.$description);
+        $keywordCategoryMap = [
+            ['keywords' => ['kimono', 'hanfu', 'qipao', 'cheongsam', 'yukata', 'haori'], 'category' => 'Tuniques'],
+        ];
+        foreach ($keywordCategoryMap as $rule) {
+            foreach ($rule['keywords'] as $keyword) {
+                if (str_contains($titleLower, $keyword)) {
+                    // Find matching category (case-insensitive)
+                    $match = collect($categoryNames)->first(fn ($c) => strtolower($c) === strtolower($rule['category']));
+                    if ($match) {
+                        Log::info('Category forced by keyword', ['keyword' => $keyword, 'category' => $match]);
+                        return $match;
+                    }
+                    break;
+                }
+            }
+        }
+
         if (! $this->apiKey) {
             return $this->fallbackSelectCategory($title, $description, $categoryNames);
         }
