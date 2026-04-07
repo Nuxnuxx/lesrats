@@ -84,11 +84,21 @@ class RegenerateProductContent extends Command
                     $visualContext
                 );
 
+                // Analyze product attributes (color, materials)
+                $attributes = $optimizer->analyzeProductAttributes(
+                    $newTitle,
+                    $visualContext,
+                    $is3DPrint
+                );
+
                 // Update product
                 $product->update([
                     'title' => $newTitle,
                     'description' => $newDescription,
                     'tags' => $newTags,
+                    'main_color' => $attributes['main_color'],
+                    'secondary_color' => $attributes['secondary_color'],
+                    'materials' => $attributes['materials'],
                 ]);
 
                 Log::info('Product content regenerated', [
