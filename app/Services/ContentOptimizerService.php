@@ -268,53 +268,25 @@ class ContentOptimizerService
                 $title = trim($result['choices'][0]['message']['content'] ?? $originalTitle);
                 // Remove quotes if present
                 $title = trim($title, '"\'');
-                // Hard enforce 140 char Etsy limit — cut at last comma before limit
-                if (mb_strlen($title) > 140) {
-                    $truncated = mb_substr($title, 0, 140);
-                    $lastComma = mb_strrpos($truncated, ',');
-                    $title = $lastComma !== false ? mb_substr($title, 0, $lastComma) : $truncated;
-                    $title = trim($title);
-                }
-                // If title is too short, make a second call to extend it with more keyword phrases
-                if (mb_strlen($title) < 120) {
-                    $currentLen = mb_strlen($title);
-                    $needed = 135 - $currentLen;
-                    $extendResponse = Http::withHeaders([
-                        'Authorization' => 'Bearer '.$this->apiKey,
-                        'Content-Type' => 'application/json',
-                    ])->timeout(20)->post('https://api.groq.com/openai/v1/chat/completions', [
-                        'model' => $this->model,
-                        'messages' => [
-                            ['role' => 'system', 'content' => 'You are an Etsy SEO expert. Add keyword phrases to extend a title. Output only the extended title, no explanations, no quotes.'],
-                            ['role' => 'user', 'content' => "This Etsy title is {$currentLen} characters. Add approximately {$needed} more characters of keyword phrases (comma-separated) to reach ~135 chars total. Keep ALL existing phrases exactly as-is, only append new ones at the end.\n"
-                                .($visualContext ? "Product visual context: {$visualContext}\n" : '')
-                                ."Pick keyword phrases that MATCH the actual product style and vibe. Think about who really buys this product and why.\n"
-                                ."DO NOT add: seasonal keywords (Halloween, Christmas), inappropriate use cases (Beach Wear for a formal garment), or generic fillers.\n"
-                                ."Good additions for a dark elegant kimono: 'Cosplay Outfit', 'Japanese Robe', 'Gothic Style', 'Photo Shoot'.\n"
-                                ."Good additions for a casual colorful yukata: 'Summer Festival', 'Beach Cover Up', 'Boho Style'.\n"
-                                ."NEVER use 'Gift'.\nCurrent title: {$title}"],
-                        ],
-                        'max_tokens' => 80,
-                        'temperature' => 0.7,
-                    ]);
-                    if ($extendResponse->successful()) {
-                        $extended = trim($extendResponse->json()['choices'][0]['message']['content'] ?? '');
-                        $extended = trim($extended, '"\'');
-                        if (mb_strlen($extended) > mb_strlen($title)) {
-                            // Truncate at last comma if over 140
-                            if (mb_strlen($extended) > 140) {
-                                $truncated = mb_substr($extended, 0, 140);
-                                $lastComma = mb_strrpos($truncated, ',');
-                                $extended = $lastComma !== false ? trim(mb_substr($extended, 0, $lastComma)) : trim($truncated);
-                            }
-                            if (mb_strlen($extended) > mb_strlen($title)) {
-                                $title = $extended;
-                            }
+                // Hard enforce 14-word Etsy limit — cut complete phrases at last comma
+                $words = preg_split('/\s+/', $title);
+                if (count($words) > 14) {
+                    $phrases = array_map('trim', explode(',', $title));
+                    $kept = [];
+                    $wordCount = 0;
+                    foreach ($phrases as $phrase) {
+                        $phraseWords = count(preg_split('/\s+/', trim($phrase)));
+                        if ($wordCount + $phraseWords <= 14) {
+                            $kept[] = $phrase;
+                            $wordCount += $phraseWords;
+                        } else {
+                            break;
                         }
                     }
+                    $title = implode(', ', $kept);
                 }
 
-                return $title;
+                return trim($title);
             }
 
             return $this->fallbackOptimizeTitle($originalTitle);
