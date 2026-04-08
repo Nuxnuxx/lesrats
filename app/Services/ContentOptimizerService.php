@@ -219,32 +219,28 @@ class ContentOptimizerService
                     ."Original: {$originalTitle}\n"
                     .($visualContext ? "Visual details from product image: {$visualContext}\n\n" : "\n")
                     ."RULES:\n"
-                    ."1. Create 4-5 distinct keyword phrases separated by commas\n"
-                    ."2. Put the MOST IMPORTANT keyword first (first 40 chars = mobile preview)\n"
-                    ."3. HARD LIMIT: MAXIMUM 140 characters total — count carefully before outputting\n"
-                    ."4. Target 130-140 chars — if under 120, add 1-2 more keyword phrases (occasion, style, audience)\n"
-                    ."5. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
-                    ."6. Include target audience when relevant: Women, Men, Kids\n"
-                    .($visualContext ? "7. MANDATORY: The first 2 phrases MUST include the specific color(s) and pattern from the visual details\n" : "7. Include specific colors and patterns if known\n")
+                    ."1. HARD LIMIT: MAXIMUM 14 WORDS total — count every word before outputting\n"
+                    ."2. Create 3-4 distinct keyword phrases separated by commas\n"
+                    ."3. Put the MOST IMPORTANT keyword first (first 40 chars = mobile preview)\n"
+                    ."4. Keep the REAL product keywords (kimono, haori, yukata... never replace with generic words)\n"
+                    ."5. Include target audience when relevant: Women, Men, Kids\n"
+                    .($visualContext ? "6. MANDATORY: The first phrase MUST include the specific color(s) and pattern from the visual details\n" : "6. Include specific colors and patterns if known\n")
                     .($visualContext ? "   CRITICAL COLOR RULE: Use ONLY the exact colors from the visual context — NEVER infer colors from pattern names. If visual says 'white floral', write 'White Floral', NEVER 'Pink Sakura' even if sakura are typically pink. The visual context is the only truth.\n" : '')
-                    ."8. Fill remaining space with occasion/style phrases: Anime Costume, Halloween Outfit, Beach Wear, Lolita Style...\n"
-                    ."9. NEVER end with a vague phrase like 'Japanese Kimono' alone — always add a qualifier (Women, Style, Outfit)\n"
-                    ."10. NEVER use the word 'Gift' — it wastes space and is too generic\n"
-                    ."11. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
-                    ."12. Translate to English if needed\n"
-                    ."13. NEVER use filler like 'Handmade', 'Unique Item', 'Beautiful', 'Asian Style'\n"
-                    ."14. Each phrase should be a real search query buyers would type\n"
-                    ."15. NEVER repeat the same word across phrases — if 'Women' appears in phrase 1, do NOT use it again. If 'Floral' appears in phrase 2, do NOT repeat it in phrase 3. Every significant word must appear only once in the full title.\n"
-                    ."\nEXAMPLE (136 chars — ideal):\n"
-                    ."\"Black White Crane Kimono Women, Light Blue Floral Haori Robe, Cotton Yukata Dress, Anime Lolita Outfit\"\n"
-                    ."(Mobile sees: \"Black White Crane Kimono Women\" ✓)\n\n"
+                    ."7. ZERO REPETITIONS — every word must appear only once in the full title. Never repeat: outfit, style, women, kimono, or any other word.\n"
+                    ."8. NEVER use the word 'Gift', 'Handmade', 'Unique Item', 'Beautiful', 'Asian Style'\n"
+                    ."9. Remove ONLY: wholesale, dropshipping, China, AliExpress, bulk\n"
+                    ."10. Translate to English if needed\n"
+                    ."11. Each phrase should be a real search query buyers would type\n"
+                    ."\nEXAMPLE (14 words max):\n"
+                    ."\"White Crane Kimono Women, Floral Haori Robe, Yukata Dress, Anime Costume\"\n"
+                    ."(14 words ✓ — Mobile sees: \"White Crane Kimono Women\" ✓)\n\n"
                     .'Output ONLY the optimized title, nothing else.';
 
                 $systemPrompt = 'You are an Etsy SEO title expert. Your ONLY goal is to maximize search visibility on Etsy. '
                     .'Etsy titles are stacks of keyword phrases separated by commas — they should look natural to buyers, not robotic. '
+                    .'CRITICAL: Maximum 14 words total — Etsy recommends this limit for better buyer experience and ranking. Count every word. '
                     .'CRITICAL: The first 40-50 characters are what mobile buyers see first. Put the most important keyword phrase FIRST. '
-                    .'The first 60-70 characters are what desktop buyers see before truncation — make them count too. '
-                    .'Aim for 130-140 total characters to maximize keyword coverage. '
+                    .'CRITICAL: Zero word repetitions — never use the same word twice in the title. '
                     .'Always write in English. Translate if input is in another language. '
                     .'Output only the title, no explanations, no quotes.';
             }
