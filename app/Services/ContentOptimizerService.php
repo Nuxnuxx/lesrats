@@ -669,21 +669,21 @@ class ContentOptimizerService
             $colorsList = implode(', ', \App\Models\Product::ETSY_COLORS);
             $materialsList = implode(', ', \App\Models\Product::ETSY_MATERIALS);
 
-            $prompt = "Analyze this product and return its attributes in JSON format.\n\n"
-                ."Product title: {$title}\n"
-                .($visualContext ? "Visual details from image: {$visualContext}\n" : '')
-                ."\nAvailable colors (pick ONLY from this list): {$colorsList}\n"
-                ."Available materials (pick ONLY from this list, max 5): {$materialsList}\n\n"
-                ."Return a JSON object with exactly these fields:\n"
-                ."- main_color: string (the dominant color, from the list above, or null)\n"
-                ."- secondary_color: string (a secondary color if visible, from the list above, or null)\n"
-                ."- materials: array of strings (max 5, from the list above, most likely materials for this product)\n\n"
-                ."RULES:\n"
-                ."- Use ONLY values from the provided lists for colors and materials\n"
-                ."- If visual context mentions a color, map it to the closest color in the list\n"
-                ."- For clothing: Polyester, Cotton, Silk, Satin, Chiffon, Lace are common materials\n"
-                ."- Output ONLY valid JSON, no explanation, no markdown\n\n"
-                .'Example: {"main_color":"Black","secondary_color":"Gold","materials":["Polyester","Satin"]}';
+            $prompt = "Analyse ce produit et retourne ses attributs en JSON.\n\n"
+                ."Titre du produit : {$title}\n"
+                .($visualContext ? "Détails visuels issus de l'image : {$visualContext}\n" : '')
+                ."\nCouleurs disponibles (utilise UNIQUEMENT ces valeurs) : {$colorsList}\n"
+                ."Matériaux disponibles (utilise UNIQUEMENT ces valeurs, max 5) : {$materialsList}\n\n"
+                ."Retourne un objet JSON avec exactement ces champs :\n"
+                ."- main_color : string (couleur dominante, parmi la liste ci-dessus, ou null)\n"
+                ."- secondary_color : string (couleur secondaire si visible, parmi la liste ci-dessus, ou null)\n"
+                ."- materials : tableau de strings (max 5, parmi la liste ci-dessus, matériaux les plus probables)\n\n"
+                ."RÈGLES :\n"
+                ."- Utilise UNIQUEMENT les valeurs des listes fournies\n"
+                ."- Si le contexte visuel mentionne une couleur, mappe-la sur la couleur la plus proche de la liste\n"
+                ."- Pour les vêtements : Polyester, Coton, Soie, Satin, Mousseline de soie, Dentelle sont courants\n"
+                ."- Retourne UNIQUEMENT du JSON valide, sans explication ni markdown\n\n"
+                .'Exemple : {"main_color":"Noir","secondary_color":"Or","materials":["Polyester","Satin"]}';
 
             $systemPrompt = 'You are a product attribute analyzer for Etsy listings. '
                 .'Given a product title and optional visual context, extract the main color, secondary color, materials and pocket information. '

@@ -84,17 +84,17 @@ class Product extends Model
     // ============================================
 
     public const ETSY_COLORS = [
-        'Beige', 'Black', 'Blue', 'Bronze', 'Brown', 'Clear', 'Copper', 'Gold',
-        'Gray', 'Green', 'Orange', 'Pink', 'Purple', 'Rainbow', 'Red', 'Rose gold',
-        'Silver', 'White', 'Yellow',
+        'Beige', 'Noir', 'Bleu', 'Bronze', 'Marron', 'Transparent', 'Cuivre', 'Or',
+        'Gris', 'Vert', 'Orange', 'Rose', 'Violet', 'Arc-en-ciel', 'Rouge', 'Or rose',
+        'Argent', 'Blanc', 'Jaune',
     ];
 
     public const ETSY_MATERIALS = [
-        'Acrylic', 'Bamboo', 'Canvas', 'Cashmere', 'Ceramic', 'Chiffon', 'Cotton',
-        'Denim', 'Faux leather', 'Felt', 'Fleece', 'Fur', 'Glass', 'Gold', 'Jute',
-        'Lace', 'Leather', 'Linen', 'Metal', 'Modal', 'Nylon', 'Polyester', 'Rayon',
-        'Satin', 'Silk', 'Silver', 'Spandex', 'Suede', 'Velvet', 'Viscose',
-        'Wicker', 'Wood', 'Wool',
+        'Acrylique', 'Bambou', 'Toile', 'Cachemire', 'Céramique', 'Mousseline de soie', 'Coton',
+        'Jean', 'Simili-cuir', 'Feutre', 'Polaire', 'Fourrure', 'Verre', 'Or', 'Jute',
+        'Dentelle', 'Cuir', 'Lin', 'Métal', 'Modal', 'Nylon', 'Polyester', 'Rayonne',
+        'Satin', 'Soie', 'Argent', 'Spandex', 'Daim', 'Velours', 'Viscose',
+        'Osier', 'Bois', 'Laine',
     ];
 
     public const ETSY_FEE_RATE = 0.105;    // 10.5% Etsy commission
