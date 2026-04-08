@@ -408,13 +408,16 @@ async function runStep(id, title, fn) {
       });
     }
     
-    // Handle all dialogs
-    await handleAllDialogs({ etsy_category: categoryName }, isDigital);
-    
-    // Wait for main form
-    await runStep('wait-form', 'Attente formulaire principal', async () => {
-      await waitForFormAfterCategory();
-      return 'Formulaire pret';
+    // Fill category inline (new Etsy UI — no more dialog)
+    await runStep('fill-category', 'Selection categorie', async () => {
+      const result = await fillCategoryInline(categoryName);
+      return result;
+    });
+
+    // Fill article details inline (listing type, who made, when made)
+    await runStep('fill-article-details', 'Details article', async () => {
+      const result = await fillArticleDetailsInline(isDigital);
+      return result;
     });
     
     // Fill form
@@ -433,157 +436,102 @@ async function runStep(id, title, fn) {
   }
 })();
 
-// Handle all dialogs in sequence until main form appears
-async function handleAllDialogs(productData, isDigital = false) {
-  const categoryData = productData.etsy_category || null;
-  let maxAttempts = 10;
-  let handledDialogTitles = new Set();
-  let dialogCount = 0;
-  
-  while (maxAttempts > 0) {
-    const dialog = document.querySelector('[data-wt-dialog-root="true"]');
-    if (!dialog) break;
-    
-    const dialogTitle = dialog.querySelector('.wt-dialog__header__heading')?.textContent?.trim() || '';
-    
-    if (handledDialogTitles.has(dialogTitle)) {
-      await sleep(500);
-      maxAttempts--;
-      continue;
-    }
-    
-    dialogCount++;
-    const stepId = `dialog-${dialogCount}`;
-    const isCategory = dialog.textContent.includes('Vos principales catégories') || 
-                       dialogTitle.includes('quelle sorte d\'article');
-    
-    DebugPanel.addStep(stepId, isCategory ? 'Selection categorie' : 'Details article');
-    DebugPanel.updateStep(stepId, 'running', { dialog: dialogTitle });
-    
-    try {
-      const result = await handleCategoryDialog(categoryData, isDigital);
-      DebugPanel.updateStep(stepId, 'success', result || 'Dialog traite');
-    } catch (e) {
-      DebugPanel.updateStep(stepId, 'error', e.message);
-    }
-    
-    handledDialogTitles.add(dialogTitle);
-    await sleep(1500);
-    maxAttempts--;
+// Fill the category field inline (new Etsy UI — category is in the main form, not a dialog)
+// Strategy A: match against the shop's pre-configured category checkboxes
+// Strategy B: type into the search input and click the first dropdown result
+async function fillCategoryInline(categoryData) {
+  if (!categoryData) return { skipped: true, reason: 'no category data' };
+
+  // Wait up to 5s for #field-category to appear
+  let fieldCategory = null;
+  for (let i = 0; i < 10; i++) {
+    fieldCategory = document.querySelector('#field-category');
+    if (fieldCategory) break;
+    await sleep(500);
   }
-}
 
-// Handle the category selection dialog
-async function handleCategoryDialog(categoryData, isDigital = false) {
-  const dialog = document.querySelector('[data-wt-dialog-root="true"]');
-  if (!dialog) return { skipped: true };
+  if (!fieldCategory) return { skipped: true, reason: 'no #field-category found' };
 
-  const dialogTitle = dialog.querySelector('.wt-dialog__header__heading')?.textContent || '';
-  const dialogContent = dialog.textContent || '';
-
-  if (dialogContent.includes('Vos principales catégories') || 
-      dialogTitle.includes('quelle sorte d\'article') || 
-      dialogTitle.includes('Quelle sorte') ||
-      dialog.querySelector('.le-category-action-group')) {
-    return await handleCategorySelectionDialog(dialog, categoryData);
-  } else if (dialogTitle.includes('Parlez-nous') || dialogTitle.includes('ensuite de votre article')) {
-    return await handleArticleDetailsDialog(dialog, categoryData, isDigital);
-  } else {
-    return await handleCategorySelectionDialog(dialog, categoryData);
-  }
-}
-
-// Handle the first dialog - category selection ("Vos principales catégories")
-// categoryData is now a simple string (the category name)
-async function handleCategorySelectionDialog(dialog, categoryData) {
-  const result = { action: 'category_selection' };
-  
-  if (!categoryData) {
-    await clickContinueButton(dialog);
-    return { ...result, skipped: true };
-  }
-  
-  let found = false;
-  let matchedCategory = null;
   const searchName = String(categoryData).toLowerCase().trim();
-  result.searchName = searchName;
-  
-  let checkboxes = dialog.querySelectorAll('input[type="checkbox"][id^="category-"]');
-  if (checkboxes.length === 0) {
-    checkboxes = document.querySelectorAll('input[type="checkbox"][id^="category-"]');
-  }
-  result.checkboxesFound = checkboxes.length;
-  
-  // First pass: exact match on h2 title
+
+  // Strategy A: click a matching checkbox from the shop's pre-configured categories
+  const checkboxes = fieldCategory.querySelectorAll('input[type="checkbox"][id^="category-"]');
   for (const checkbox of checkboxes) {
     const label = document.querySelector(`label[for="${checkbox.id}"]`);
     if (!label) continue;
-    
     const h2 = label.querySelector('h2.wt-text-title');
     if (!h2) continue;
-    
-    const categoryName = h2.textContent.toLowerCase().trim();
-    
-    if (categoryName === searchName || 
-        categoryName.includes(searchName) || 
-        searchName.includes(categoryName)) {
+    const name = h2.textContent.toLowerCase().trim();
+    if (name === searchName || name.includes(searchName) || searchName.includes(name)) {
       checkbox.click();
-      found = true;
-      matchedCategory = { id: checkbox.id, name: h2.textContent.trim() };
       await sleep(300);
-      break;
+      return { action: 'category_checkbox', matched: h2.textContent.trim() };
     }
   }
-  
-  // Second pass: match on full taxonomy path
-  if (!found) {
-    for (const checkbox of checkboxes) {
-      const label = document.querySelector(`label[for="${checkbox.id}"]`);
-      if (!label) continue;
-      
-      if (label.textContent.toLowerCase().includes(searchName)) {
-        checkbox.click();
-        found = true;
-        matchedCategory = { id: checkbox.id, name: 'taxonomy match' };
-        await sleep(300);
-        break;
-      }
+
+  // Strategy B: type into search input and click the first dropdown result
+  const searchInput = fieldCategory.querySelector('#category-field-search');
+  if (!searchInput) return { skipped: true, reason: 'no search input and no checkbox match' };
+
+  // Use native setter to trigger React's onChange
+  const nativeInputSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+  searchInput.focus();
+  await sleep(100);
+  nativeInputSetter.call(searchInput, categoryData);
+  searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+  searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+  // Wait for dropdown to populate
+  let dropdown = null;
+  for (let i = 0; i < 10; i++) {
+    await sleep(300);
+    dropdown = fieldCategory.querySelector('ul[role="listbox"]');
+    if (dropdown && dropdown.querySelectorAll('li[role="option"]').length > 0) break;
+    // Also check for the panel being visible (aria-hidden may toggle)
+    const panel = fieldCategory.querySelector('.le-category-search__panel');
+    if (panel && panel.getAttribute('aria-hidden') !== 'true') {
+      dropdown = panel.querySelector('ul[role="listbox"]');
+      if (dropdown && dropdown.querySelectorAll('li[role="option"]').length > 0) break;
     }
   }
-  
-  result.found = found;
-  result.matchedCategory = matchedCategory;
-  
-  if (!found && categoryData.etsy_name) {
-    result.error = `Categorie "${categoryData.etsy_name}" non trouvee`;
+
+  if (dropdown) {
+    const options = dropdown.querySelectorAll('li[role="option"]');
+    if (options.length > 0) {
+      simulateRealClick(options[0]);
+      await sleep(400);
+      return { action: 'category_search', matched: options[0].textContent.trim() };
+    }
   }
-  
-  await clickContinueButton(dialog);
-  return result;
+
+  return { skipped: true, reason: 'no dropdown results for: ' + categoryData };
 }
 
-// Handle the second dialog - article details (type, who made it, etc.)
-async function handleArticleDetailsDialog(dialog, categoryData, isDigital = false) {
-  const result = { action: 'article_details', selections: {} };
-  
-  // 1. Select article type: digital or physical
+// Fill article details inline (new Etsy UI — listing type, who made it, when made are in the main form)
+async function fillArticleDetailsInline(isDigital = false) {
+  const result = { action: 'article_details_inline', selections: {} };
+
+  // Wait briefly for the fields to be present
+  await sleep(500);
+
+  // 1. Listing type: physical or digital
   const typeValue = isDigital ? 'download' : 'physical';
-  const typeRadio = dialog.querySelector(`input[name="listing_type_options_group"][value="${typeValue}"]`);
-  if (typeRadio) {
+  const typeRadio = document.querySelector(`#field-listingType input[name="listing_type_options_group"][value="${typeValue}"]`);
+  if (typeRadio && !typeRadio.checked) {
     typeRadio.click();
     result.selections.type = typeValue;
     await sleep(300);
+  } else if (typeRadio) {
+    result.selections.type = typeValue + ' (already selected)';
   }
-  
-  // 2. Select "Who made it"
-  const whoMadeRadios = dialog.querySelectorAll('input[name="whoMade"]');
+
+  // 2. "Who made it" — only present for physical products in some flows
+  const whoMadeRadios = document.querySelectorAll('input[name="whoMade"]');
   if (whoMadeRadios.length >= 1) {
     if (isDigital) {
-      // Pour STL: "Je l'ai fait moi-meme" (option 1)
       whoMadeRadios[0].click();
       result.selections.whoMade = 'je lai fait';
     } else {
-      // Pour physique: "Une autre personne ou entreprise" (option 3)
       if (whoMadeRadios.length >= 3) {
         whoMadeRadios[2].click();
         result.selections.whoMade = 'autre personne';
@@ -591,169 +539,38 @@ async function handleArticleDetailsDialog(dialog, categoryData, isDigital = fals
     }
     await sleep(300);
   }
-  
-  // 3. Select "What is it": "Un produit fini" (first option)
-  const isSupplyRadios = dialog.querySelectorAll('input[name="isSupply"]');
+
+  // 3. "What is it" — "Un produit fini" (first option)
+  const isSupplyRadios = document.querySelectorAll('input[name="isSupply"]');
   if (isSupplyRadios.length >= 1) {
     isSupplyRadios[0].click();
     result.selections.isSupply = 'produit fini';
     await sleep(300);
   }
-  
-  // 4. Select "When made": "2020 - 2026"
-  const whenMadeSelect = dialog.querySelector('#when-made-select');
+
+  // 4. "When made" — select "2020 - 2026"
+  const whenMadeSelect = document.querySelector('#when-made-select');
   if (whenMadeSelect) {
     whenMadeSelect.value = '2020_2026';
     whenMadeSelect.dispatchEvent(new Event('change', { bubbles: true }));
     result.selections.whenMade = '2020-2026';
     await sleep(300);
   }
-  
-  // 5. Handle production partners - SKIP pour digital
-  if (!isDigital) {
-    const partnersResult = await handleProductionPartners(dialog);
-    result.selections.productionPartners = partnersResult;
-  } else {
-    console.log('🐀 Digital product - skipping production partners');
-    result.selections.productionPartners = { skipped: 'digital product' };
-  }
 
-  await clickContinueButton(dialog);
   return result;
 }
 
-// Handle production partners selection
-async function handleProductionPartners(dialog) {
-  const result = { action: 'production_partners' };
-  
-  // Find the production partners button
-  let selectPartnersBtn = dialog.querySelector('button[data-change-production-partners-button="true"]') ||
-                          dialog.querySelector('button[aria-controls="production-partners-overlay"]');
-  
-  if (!selectPartnersBtn) {
-    const buttons = dialog.querySelectorAll('button');
-    for (const btn of buttons) {
-      const text = btn.textContent.toLowerCase();
-      if (text.includes('partenaire') && (text.includes('ajouter') || text.includes('sélectionner'))) {
-        selectPartnersBtn = btn;
-        break;
-      }
-    }
-  }
-  
-  if (!selectPartnersBtn) {
-    result.skipped = 'button not found';
-    return result;
-  }
-  
-  selectPartnersBtn.click();
-  result.buttonClicked = true;
-  
-  // Wait for overlay
-  let overlay = null;
-  for (let i = 0; i < 20; i++) {
-    overlay = document.querySelector('.wt-overlay__modal.wt-overlay--animation-done');
-    if (overlay) break;
-    await sleep(200);
-  }
-  
-  if (!overlay) {
-    result.error = 'overlay not found';
-    return result;
-  }
-  
-  // Wait for checkbox
-  let firstCheckbox = null;
-  for (let i = 0; i < 20; i++) {
-    firstCheckbox = overlay.querySelector('input[type="checkbox"]');
-    if (firstCheckbox) break;
-    await sleep(200);
-  }
-  
-  if (firstCheckbox && firstCheckbox.getAttribute('aria-checked') !== 'true') {
-    firstCheckbox.click();
-    result.checkboxClicked = true;
-    await sleep(500);
-  } else {
-    result.checkboxAlreadyChecked = true;
-  }
-  
-  // Click "Terminé" button
-  await sleep(300);
-  let termineBtn = document.querySelector('button[data-apply-button="true"]');
-  for (let i = 0; i < 5 && !termineBtn; i++) {
-    await sleep(200);
-    termineBtn = document.querySelector('button[data-apply-button="true"]');
-  }
-  
-  if (termineBtn) {
-    termineBtn.click();
-    result.completed = true;
-    await sleep(500);
-  }
-  
-  return result;
-}
-
-// Helper to click the Continue button
-async function clickContinueButton(dialog) {
-  await sleep(500);
-  
-  const footer = dialog.querySelector('.wt-dialog__footer__container');
-  if (footer) {
-    const continueBtn = footer.querySelector('.wt-btn--primary');
-    if (continueBtn && continueBtn.textContent.trim() === 'Continuer') {
-      continueBtn.click();
-      await sleep(1000);
-      return;
-    }
-  }
-  
-  const buttons = dialog.querySelectorAll('.wt-btn--primary');
-  for (const btn of buttons) {
-    if (btn.textContent.includes('Continuer')) {
-      btn.click();
-      await sleep(1000);
-      return;
-    }
-  }
-}
-
-// Wait for the main form to appear after category dialog closes
-async function waitForFormAfterCategory() {
-  return new Promise((resolve) => {
-    let attempts = 0;
-    const maxAttempts = 20;
-    
-    const checkInterval = setInterval(() => {
-      attempts++;
-      
-      // Check if dialog is gone and form is visible
-      const dialog = document.querySelector('[data-wt-dialog-root="true"]');
-      const titleInput = document.querySelector('#listing-title-input, textarea[name="title"], [data-field-id="title"] textarea');
-      
-      if (!dialog && titleInput) {
-        clearInterval(checkInterval);
-        setTimeout(resolve, 1000); // Extra time for form to stabilize
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkInterval);
-        resolve(); // Continue anyway after timeout
-      }
-    }, 500);
-  });
-}
-
-// Wait for Etsy's React app to load (either category dialog or main form)
+// Wait for Etsy's React app to load (inline form fields)
 function waitForPageLoad() {
   return new Promise((resolve) => {
-    // Etsy uses React, so we need to wait for the form to render
+    // Etsy uses React — wait for the inline category field or title input to appear
     const checkInterval = setInterval(() => {
-      // Check for category dialog (appears first on create page)
-      const categoryDialog = document.querySelector('[data-wt-dialog-root="true"]');
-      // Or title input (main form)
+      // New inline UI: category search input
+      const categoryField = document.querySelector('#field-category, #category-field-search');
+      // Or title input (always present once the form is ready)
       const titleInput = document.querySelector('#listing-title-input, textarea[name="title"], #field-title textarea');
       
-      if (categoryDialog || titleInput) {
+      if (categoryField || titleInput) {
         clearInterval(checkInterval);
         // Give extra time for all fields to render
         setTimeout(resolve, 1500);

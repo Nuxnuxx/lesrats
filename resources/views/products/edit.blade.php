@@ -771,8 +771,6 @@
                         </button>
                         @if(!$hasCategory)
                             <p class="text-xs text-red-500 mt-2">Selectionnez une categorie Etsy.</p>
-                        @else
-                            <p class="text-xs text-green-600 mt-2">{{ $etsyCategory }}</p>
                         @endif
                     </div>
 
