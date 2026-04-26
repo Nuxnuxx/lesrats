@@ -82,6 +82,32 @@
                             </div>
                         </div>
 
+                        {{-- Logo (file upload — needs traditional form) --}}
+                        <div class="pt-3 border-t border-gray-100">
+                            <label class="text-xs font-medium text-gray-700">Logo</label>
+                            <form method="POST" action="{{ route('shops.update', $shop) }}" enctype="multipart/form-data" class="mt-1">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="name" value="{{ $shop->name }}">
+                                <input type="hidden" name="currency" value="{{ $shop->currency }}">
+                                <div class="flex items-center gap-3">
+                                    @if($shop->logo_path)
+                                        <img src="{{ $shop->logo_url }}" alt="Logo" class="w-12 h-12 object-contain rounded-lg border border-gray-200 bg-gray-50">
+                                    @endif
+                                    <input type="file" name="logo" accept="image/*"
+                                        class="flex-1 text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                                        onchange="this.closest('form').submit()">
+                                    @if($shop->logo_path)
+                                        <label class="inline-flex items-center text-xs text-red-500 cursor-pointer whitespace-nowrap">
+                                            <input type="checkbox" name="remove_logo" value="1"
+                                                class="rounded border-gray-300 text-red-600 mr-1 w-3 h-3"
+                                                onchange="this.closest('form').submit()">
+                                            Suppr.
+                                        </label>
+                                    @endif
+                                </div>
+                            </form>
+                        </div>
                     </div>
 
                     {{-- Etsy Settings --}}

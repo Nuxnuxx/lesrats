@@ -89,7 +89,7 @@
                             applyLogo: {{ ($product->shop->logo_path || count($logos) > 0) ? 'true' : 'false' }},
                             onlyLogo: false,
                             defaultBackground: @js($product->shop->default_ai_background ? Storage::disk('public')->url($product->shop->default_ai_background) : ''),
-                            defaultLogo: @js($product->shop->default_ai_logo ? Storage::disk('public')->url($product->shop->default_ai_logo) : ''),
+                            defaultLogo: @js($product->shop->default_ai_logo ? Storage::disk('public')->url($product->shop->default_ai_logo) : (count($logos) > 0 ? Storage::disk('public')->url($logos[0]['path']) : '')),
                             logos: @js(array_map(fn($l) => ['name' => $l['name'], 'url' => Storage::disk('public')->url($l['path'])], $logos))
                          })">
                         <div class="flex items-center justify-between mb-3">
