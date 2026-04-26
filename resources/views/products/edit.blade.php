@@ -250,22 +250,10 @@
                                             </select>
                                         </div>
 
-                                        {{-- Logo --}}
-                                        <div x-show="logos.length > 0">
-                                            <label class="text-sm font-medium text-gray-700 mb-1 block">Logo:</label>
-                                            <select x-model="selectedLogo"
-                                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
-                                                <option value="">Aucun</option>
-                                                <template x-for="logo in logos" :key="logo.url">
-                                                    <option :value="logo.url" x-text="logo.name"></option>
-                                                </template>
-                                            </select>
-                                        </div>
-
                                         </div>{{-- end x-show="!onlyLogo" --}}
 
                                         {{-- Only Logo Toggle --}}
-                                        @if($product->shop->logo_path)
+                                        @if($product->shop->logo_path || count($logos) > 0)
                                         <div class="flex items-center justify-between p-3 rounded-lg border"
                                              :class="onlyLogo ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'">
                                             <div>
@@ -282,22 +270,34 @@
                                         </div>
                                         @endif
 
-                                        {{-- Logo Toggle --}}
-                                        @if($product->shop->logo_path)
-                                        <div class="flex items-center justify-between p-3 rounded-lg border"
+                                        {{-- Logo Toggle + sélecteur --}}
+                                        @if($product->shop->logo_path || count($logos) > 0)
+                                        <div class="p-3 rounded-lg border"
                                              :class="applyLogo ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'">
-                                            <div class="flex items-center gap-2">
-                                                <img src="{{ Storage::disk('public')->url($product->shop->logo_path) }}"
-                                                     class="w-6 h-6 object-contain rounded" alt="Logo">
-                                                <span class="text-sm font-medium text-gray-700">Appliquer le logo</span>
+                                            <div class="flex items-center justify-between">
+                                                <div class="flex items-center gap-2">
+                                                    <img :src="selectedLogo || '{{ $product->shop->logo_path ? Storage::disk('public')->url($product->shop->logo_path) : '' }}'"
+                                                         class="w-6 h-6 object-contain rounded" alt="Logo">
+                                                    <span class="text-sm font-medium text-gray-700">Appliquer le logo</span>
+                                                </div>
+                                                <button type="button"
+                                                        @click="applyLogo = !applyLogo; fetch('/products/{{ $product->id }}/toggle-logo', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ apply_logo: applyLogo }) })"
+                                                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                                                        :class="applyLogo ? 'bg-orange-500' : 'bg-gray-300'">
+                                                    <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                                                          :class="applyLogo ? 'translate-x-6' : 'translate-x-1'"></span>
+                                                </button>
                                             </div>
-                                            <button type="button"
-                                                    @click="applyLogo = !applyLogo; fetch('/products/{{ $product->id }}/toggle-logo', { method: 'POST', headers: { 'X-CSRF-TOKEN': csrfToken, 'Content-Type': 'application/json' }, body: JSON.stringify({ apply_logo: applyLogo }) })"
-                                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
-                                                    :class="applyLogo ? 'bg-orange-500' : 'bg-gray-300'">
-                                                <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
-                                                      :class="applyLogo ? 'translate-x-6' : 'translate-x-1'"></span>
-                                            </button>
+                                            {{-- Sélecteur de logo (visible si logos uploadés et toggle ON) --}}
+                                            <div x-show="applyLogo && logos.length > 0" x-cloak class="mt-2">
+                                                <select x-model="selectedLogo"
+                                                        class="w-full rounded-lg border-orange-200 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm bg-white">
+                                                    <option value="">Logo par défaut</option>
+                                                    <template x-for="logo in logos" :key="logo.url">
+                                                        <option :value="logo.url" x-text="logo.name"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
                                         </div>
                                         @endif
 
