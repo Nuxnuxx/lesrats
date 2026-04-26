@@ -86,9 +86,11 @@
                             defaultPrompt: @js($product->shop->getEffectiveAiImagePrompt()),
                             specificPrompts: @js($product->shop->ai_specific_prompts ?? []),
                             csrfToken: '{{ csrf_token() }}',
-                            applyLogo: {{ $product->shop->logo_path ? 'true' : 'false' }},
+                            applyLogo: {{ ($product->shop->logo_path || count($logos) > 0) ? 'true' : 'false' }},
                             onlyLogo: false,
-                            defaultBackground: @js($product->shop->default_ai_background ? Storage::disk('public')->url($product->shop->default_ai_background) : '')
+                            defaultBackground: @js($product->shop->default_ai_background ? Storage::disk('public')->url($product->shop->default_ai_background) : ''),
+                            defaultLogo: @js($product->shop->default_ai_logo ? Storage::disk('public')->url($product->shop->default_ai_logo) : ''),
+                            logos: @js(array_map(fn($l) => ['name' => $l['name'], 'url' => Storage::disk('public')->url($l['path'])], $logos))
                          })">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-sm font-semibold text-gray-900">Images source</h3>
@@ -245,6 +247,18 @@
                                                 @foreach($backgrounds as $index => $bg)
                                                     <option value="{{ Storage::disk('public')->url($bg['path']) }}">{{ $bg['name'] }}</option>
                                                 @endforeach
+                                            </select>
+                                        </div>
+
+                                        {{-- Logo --}}
+                                        <div x-show="logos.length > 0">
+                                            <label class="text-sm font-medium text-gray-700 mb-1 block">Logo:</label>
+                                            <select x-model="selectedLogo"
+                                                    class="w-full rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 text-sm">
+                                                <option value="">Aucun</option>
+                                                <template x-for="logo in logos" :key="logo.url">
+                                                    <option :value="logo.url" x-text="logo.name"></option>
+                                                </template>
                                             </select>
                                         </div>
 
@@ -870,6 +884,8 @@
                 applyLogo: config.applyLogo ?? false,
                 onlyLogo: false,
                 defaultBackground: config.defaultBackground || '',
+                defaultLogo: config.defaultLogo || '',
+                logos: config.logos || [],
 
                 showModal: false,
                 showDeleted: false,
@@ -878,6 +894,7 @@
                 selectedModel: localStorage.getItem('ai_model') ?? 'v1',
                 selectedSpecificPromptIndex: localStorage.getItem('ai_specific_prompt') ?? '',
                 selectedBackground: config.defaultBackground || '',
+                selectedLogo: config.defaultLogo || '',
                 isGenerating: false,
                 errorMessage: null,
 
@@ -887,6 +904,7 @@
                     this.prompt = this.defaultPrompt || '';
                     this.selectedSpecificPromptIndex = localStorage.getItem('ai_specific_prompt') ?? '';
                     this.selectedBackground = this.defaultBackground;
+                    this.selectedLogo = this.defaultLogo;
                     this.errorMessage = null;
                     document.body.classList.add('overflow-hidden');
                 },
@@ -939,6 +957,7 @@
                                 background_url: this.onlyLogo ? null : (this.selectedBackground || null),
                                 apply_logo: this.applyLogo,
                                 only_logo: this.onlyLogo,
+                                logo_url: this.selectedLogo || null,
                                 model: this.selectedModel,
                             }),
                         });
@@ -946,6 +965,7 @@
                         const data = await response.json();
                         if (data.success) {
                             this.defaultBackground = this.selectedBackground;
+                            this.defaultLogo = this.selectedLogo;
                             window.dispatchEvent(new CustomEvent('ai-batch-started', {
                                 detail: { batchId: data.batch_id, total: data.total }
                             }));

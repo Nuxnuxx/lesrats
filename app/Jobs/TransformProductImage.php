@@ -26,6 +26,7 @@ class TransformProductImage implements ShouldQueue
         public ?string $falApiKey = null,
         public bool $onlyLogo = false,
         public string $model = 'v1',
+        public ?string $logoPath = null,
     ) {}
 
     public function handle(): void
@@ -57,8 +58,9 @@ class TransformProductImage implements ShouldQueue
                 throw new \RuntimeException('Image download failed for: '.$this->imageUrl);
             }
 
-            if ($product->shop->logo_path) {
-                $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
+            $effectiveLogo = $this->logoPath ?? $product->shop->logo_path;
+            if ($effectiveLogo) {
+                $falService->applyLogoOverlay($transformedPath, $effectiveLogo);
             }
         } else {
             // Normal AI mode
@@ -75,9 +77,12 @@ class TransformProductImage implements ShouldQueue
                 throw new \RuntimeException('Image transformation failed for: '.$this->imageUrl);
             }
 
-            // Apply logo overlay if requested
-            if ($this->applyLogo && $product->shop->logo_path) {
-                $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
+            // Apply logo overlay if requested (selected logo first, fallback to shop logo)
+            if ($this->applyLogo) {
+                $effectiveLogo = $this->logoPath ?? $product->shop->logo_path;
+                if ($effectiveLogo) {
+                    $falService->applyLogoOverlay($transformedPath, $effectiveLogo);
+                }
             }
         }
 

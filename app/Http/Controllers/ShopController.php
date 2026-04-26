@@ -263,6 +263,71 @@ class ShopController extends Controller
     }
 
     /**
+     * Upload a logo image for AI generation.
+     */
+    public function uploadLogo(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'logo' => 'required|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ]);
+
+        $path = $request->file('logo')->store("logos/shop_{$shop->id}", 'public');
+
+        $logos = $shop->ai_logos ?? [];
+        $logos[] = [
+            'name' => $validated['name'],
+            'path' => $path,
+        ];
+
+        $shop->update(['ai_logos' => $logos]);
+
+        return redirect()->route('shops.edit', $shop)
+            ->with('success', 'Logo "'.$validated['name'].'" ajoute avec succes !');
+    }
+
+    /**
+     * Delete a logo image.
+     */
+    public function deleteLogo(Request $request, Shop $shop)
+    {
+        Gate::authorize('update', $shop);
+
+        $validated = $request->validate([
+            'index' => 'required|integer|min:0',
+        ]);
+
+        $logos = $shop->ai_logos ?? [];
+        $index = $validated['index'];
+
+        if (isset($logos[$index])) {
+            $path = $logos[$index]['path'] ?? null;
+            if ($path && Storage::disk('public')->exists($path)) {
+                Storage::disk('public')->delete($path);
+            }
+
+            if ($shop->default_ai_logo === $path) {
+                $shop->default_ai_logo = null;
+            }
+
+            array_splice($logos, $index, 1);
+
+            $shop->update([
+                'ai_logos' => $logos,
+                'default_ai_logo' => $shop->default_ai_logo,
+            ]);
+
+            return redirect()->route('shops.edit', $shop)
+                ->with('success', 'Logo supprime avec succes !');
+        }
+
+        return redirect()->route('shops.edit', $shop)
+            ->with('error', 'Logo non trouve.');
+    }
+
+    /**
      * Upload a background image for AI generation.
      */
     public function uploadBackground(Request $request, Shop $shop)

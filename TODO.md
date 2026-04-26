@@ -3,18 +3,10 @@
 ## Prix
 - [ ] Problème de prix par pays (adapter les prix selon la localisation)
 
-## Photos / Images
-- [x] Ajouter le logo automatiquement sur les photos (trouver une librairie adaptée)
-- [x] Améliorer la qualité d'image
-- [x] Mettre les fonds d'écran par défaut 
-- [x] Image IA cliquable pour visualiser
+## Automatiser les champs, pour référencement
+[x] Couleur principale, couleur secondaire et matériaux remplis automatiquement par l'IA (valeurs fixes Etsy).
+[ ] Tester et fixer les sélecteurs CSS pour que l'extension remplisse ces champs directement dans le formulaire Etsy (inspecter les champs HTML sur Etsy).
 
+## Logos
+- [ ] Permettre d'ajouter plusieurs logos dans l'application
 
-## Produits
-- [x] Possibilité de changer le lien AliExpress
-- [x] Automatiser les tailles
-
-## Automatisation
-- [ ] Automatiser les envois
-
-## Objectif app utilisable pour le mois de Mars

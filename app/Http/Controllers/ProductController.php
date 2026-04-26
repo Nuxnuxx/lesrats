@@ -121,10 +121,11 @@ class ProductController extends Controller
     {
         Gate::authorize('update', $product->shop);
 
-        // Get backgrounds from the shop for AI image generation
+        // Get backgrounds and logos from the shop for AI image generation
         $backgrounds = $product->shop->ai_backgrounds ?? [];
+        $logos = $product->shop->ai_logos ?? [];
 
-        return view('products.edit', compact('product', 'backgrounds'));
+        return view('products.edit', compact('product', 'backgrounds', 'logos'));
     }
 
     /**
@@ -569,6 +570,7 @@ class ProductController extends Controller
             'prompt' => 'required|string|min:10',
             'background_url' => 'nullable|string',
             'apply_logo' => 'nullable|boolean',
+            'logo_url' => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -602,15 +604,17 @@ class ProductController extends Controller
                 ], 500);
             }
 
-            // Apply shop logo overlay if requested for this generation
-            Log::info('transformSingleImage: apply_logo check', [
-                'apply_logo_raw' => $request->input('apply_logo'),
-                'apply_logo_bool' => $request->boolean('apply_logo', false),
-                'logo_path' => $product->shop->logo_path,
-                'transformed_path' => $transformedPath,
-            ]);
-            if ($request->boolean('apply_logo', false) && $product->shop->logo_path) {
-                $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
+            // Apply logo overlay if requested
+            if ($request->boolean('apply_logo', false)) {
+                $logoUrl = $request->input('logo_url');
+                if ($logoUrl) {
+                    $logoPath = preg_replace('#^https?://[^/]+/storage/#', '', $logoUrl);
+                    if ($logoPath !== $logoUrl) {
+                        $falService->applyLogoOverlay($transformedPath, $logoPath);
+                    }
+                } elseif ($product->shop->logo_path) {
+                    $falService->applyLogoOverlay($transformedPath, $product->shop->logo_path);
+                }
             }
 
             // Add to real_images array
@@ -618,14 +622,23 @@ class ProductController extends Controller
             $realImages[] = $transformedPath;
             $product->update(['real_images' => $realImages]);
 
-            // Remember last used background on the shop
+            // Remember last used background and logo on the shop
             $shop = $product->shop;
+            $updates = [];
             if ($backgroundUrl) {
                 $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
-                $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
+                $updates['default_ai_background'] = $bgPath !== $backgroundUrl ? $bgPath : null;
             } else {
-                $shop->update(['default_ai_background' => null]);
+                $updates['default_ai_background'] = null;
             }
+            $logoUrl = $request->input('logo_url');
+            if ($logoUrl) {
+                $lPath = preg_replace('#^https?://[^/]+/storage/#', '', $logoUrl);
+                $updates['default_ai_logo'] = $lPath !== $logoUrl ? $lPath : null;
+            } else {
+                $updates['default_ai_logo'] = null;
+            }
+            $shop->update($updates);
 
             return response()->json([
                 'success' => true,
@@ -660,6 +673,7 @@ class ProductController extends Controller
             'background_url' => 'nullable|string',
             'apply_logo' => 'nullable|boolean',
             'only_logo' => 'nullable|boolean',
+            'logo_url' => 'nullable|string',
             'model' => 'nullable|string|in:v1,v2',
         ]);
 
@@ -675,16 +689,27 @@ class ProductController extends Controller
 
         $backgroundUrl = $onlyLogo ? null : $request->input('background_url');
         $applyLogo = $request->boolean('apply_logo', false);
+        $logoUrl = $request->input('logo_url');
 
-        // Remember last used background on the shop (only when using AI)
+        // Resolve logo path from URL
+        $logoPath = null;
+        if ($logoUrl) {
+            $resolved = preg_replace('#^https?://[^/]+/storage/#', '', $logoUrl);
+            $logoPath = $resolved !== $logoUrl ? $resolved : null;
+        }
+
+        // Remember last used background and logo on the shop (only when using AI)
         $shop = $product->shop;
         if (! $onlyLogo) {
+            $updates = [];
             if ($backgroundUrl) {
                 $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
-                $shop->update(['default_ai_background' => $bgPath !== $backgroundUrl ? $bgPath : null]);
+                $updates['default_ai_background'] = $bgPath !== $backgroundUrl ? $bgPath : null;
             } else {
-                $shop->update(['default_ai_background' => null]);
+                $updates['default_ai_background'] = null;
             }
+            $updates['default_ai_logo'] = $logoPath;
+            $shop->update($updates);
         }
 
         // Create jobs for each image
@@ -700,6 +725,7 @@ class ProductController extends Controller
                 falApiKey: $falApiKey,
                 onlyLogo: $onlyLogo,
                 model: $model,
+                logoPath: $logoPath,
             )
         )->all();
 

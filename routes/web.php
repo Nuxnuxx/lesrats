@@ -57,6 +57,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/shops/{shop}/tags', [ShopController::class, 'updateTags'])->name('shops.update-tags');
     Route::post('/shops/{shop}/backgrounds', [ShopController::class, 'uploadBackground'])->name('shops.upload-background');
     Route::delete('/shops/{shop}/backgrounds', [ShopController::class, 'deleteBackground'])->name('shops.delete-background');
+    Route::post('/shops/{shop}/logos', [ShopController::class, 'uploadLogo'])->name('shops.upload-logo');
+    Route::delete('/shops/{shop}/logos', [ShopController::class, 'deleteLogo'])->name('shops.delete-logo');
 
     // Product management routes
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');

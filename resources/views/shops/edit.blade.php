@@ -484,6 +484,56 @@
                         </form>
                     </div>
 
+                    {{-- Logos IA --}}
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3">Logos (images IA)</h3>
+
+                        @php $aiLogos = $shop->ai_logos ?? []; @endphp
+                        @if(count($aiLogos) > 0)
+                            <div class="grid grid-cols-4 gap-2 mb-3">
+                                @foreach($aiLogos as $index => $logo)
+                                    <div class="relative group">
+                                        <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                                            <img src="{{ Storage::disk('public')->url($logo['path']) }}" alt="{{ $logo['name'] }}"
+                                                 class="w-full h-full object-cover">
+                                        </div>
+                                        <p class="text-xs text-gray-600 mt-1 truncate" title="{{ $logo['name'] }}">{{ $logo['name'] }}</p>
+                                        <form method="POST" action="{{ route('shops.delete-logo', $shop) }}"
+                                              onsubmit="return confirm('Supprimer ?')" class="absolute top-1 right-1">
+                                            @csrf
+                                            @method('DELETE')
+                                            <input type="hidden" name="index" value="{{ $index }}">
+                                            <button type="submit" class="bg-red-500 hover:bg-red-600 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </form>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @else
+                            <p class="text-xs text-gray-400 text-center py-3 mb-3">Aucun logo</p>
+                        @endif
+
+                        <form method="POST" action="{{ route('shops.upload-logo', $shop) }}" enctype="multipart/form-data"
+                              class="pt-3 border-t border-gray-100">
+                            @csrf
+                            <div class="grid grid-cols-2 gap-2 mb-2">
+                                <input type="text" name="name" required
+                                       class="text-sm border-gray-300 rounded-lg focus:border-orange-500 focus:ring-orange-500"
+                                       placeholder="Nom du logo">
+                                <input type="file" name="logo" accept="image/*" required
+                                       class="text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100">
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="px-4 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700">
+                                    Ajouter
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
                     {{-- Danger Zone --}}
                     <div class="bg-white rounded-lg shadow-sm border border-red-200 p-4">
                         <div class="flex items-center justify-between">
