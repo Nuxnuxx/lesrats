@@ -58,7 +58,10 @@ class TransformProductImage implements ShouldQueue
                 throw new \RuntimeException('Image download failed for: '.$this->imageUrl);
             }
 
-            $effectiveLogo = $this->logoPath ?? $product->shop->logo_path;
+            $effectiveLogo = $this->logoPath
+                ?? $product->shop->default_ai_logo
+                ?? ($product->shop->ai_logos[0]['path'] ?? null)
+                ?? $product->shop->logo_path;
             if ($effectiveLogo) {
                 $falService->applyLogoOverlay($transformedPath, $effectiveLogo);
             }
@@ -79,7 +82,10 @@ class TransformProductImage implements ShouldQueue
 
             // Apply logo overlay if requested (selected logo first, fallback to shop logo)
             if ($this->applyLogo) {
-                $effectiveLogo = $this->logoPath ?? $product->shop->logo_path;
+                $effectiveLogo = $this->logoPath
+                    ?? $product->shop->default_ai_logo
+                    ?? ($product->shop->ai_logos[0]['path'] ?? null)
+                    ?? $product->shop->logo_path;
                 if ($effectiveLogo) {
                     $falService->applyLogoOverlay($transformedPath, $effectiveLogo);
                 }

@@ -588,11 +588,12 @@ class ProductController extends Controller
 
             $falService = new FalImageService($falApiKey);
             $backgroundUrl = $request->input('background_url');
+            $prompt = $this->buildEnrichedPrompt($request->input('prompt'), $product);
 
             // Transform the image with optional background
             $transformedPath = $falService->transformImage(
                 $request->image_url,
-                $request->prompt,
+                $prompt,
                 0.65, // Fixed strength
                 $backgroundUrl
             );
@@ -708,18 +709,22 @@ class ProductController extends Controller
             } else {
                 $updates['default_ai_background'] = null;
             }
-            $updates['default_ai_logo'] = $logoPath;
+            if ($logoPath !== null) {
+                $updates['default_ai_logo'] = $logoPath;
+            }
             $shop->update($updates);
         }
 
         // Create jobs for each image
         $model = $request->input('model', 'v1');
+        $basePrompt = $request->input('prompt', '');
+        $prompt = $onlyLogo ? $basePrompt : $this->buildEnrichedPrompt($basePrompt, $product);
 
         $jobs = collect($request->input('image_urls'))->map(
             fn (string $url) => new TransformProductImage(
                 productId: $product->id,
                 imageUrl: $url,
-                prompt: $request->input('prompt', ''),
+                prompt: $prompt,
                 backgroundUrl: $backgroundUrl,
                 applyLogo: $applyLogo,
                 falApiKey: $falApiKey,
@@ -1004,5 +1009,30 @@ class ProductController extends Controller
         $zip->close();
 
         return response()->download($zipPath, $slug.'.zip')->deleteFileAfterSend(true);
+    }
+
+    private function buildEnrichedPrompt(string $basePrompt, Product $product): string
+    {
+        $context = [];
+
+        if ($product->title) {
+            $context[] = 'Product: '.$product->title;
+        }
+        if ($product->main_color) {
+            $color = $product->main_color;
+            if ($product->secondary_color) {
+                $color .= ', '.$product->secondary_color;
+            }
+            $context[] = 'Color: '.$color;
+        }
+        if (! empty($product->materials)) {
+            $context[] = 'Materials: '.implode(', ', $product->materials);
+        }
+
+        if (empty($context)) {
+            return $basePrompt;
+        }
+
+        return $basePrompt."\n\n[Product context]\n".implode("\n", $context);
     }
 }
