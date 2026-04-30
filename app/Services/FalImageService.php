@@ -28,7 +28,7 @@ class FalImageService
      * @param  string|null  $backgroundUrl  Optional reference image URL
      * @return string|null The local path to the transformed image, or null on failure
      */
-    public function transformImage(string $imageUrl, string $prompt, float $strength = 0.65, ?string $backgroundUrl = null): ?string
+    public function transformImage(string $imageUrl, string $prompt, float $strength = 0.65, ?string $backgroundUrl = null, ?string $logoUrl = null): ?string
     {
         // Dev mode: skip API call, just copy the source image
         if (app()->environment('local')) {
@@ -61,6 +61,22 @@ class FalImageService
                 } else {
                     $imageUrls[] = $backgroundUrl;
                     Log::info('Using background reference', ['background_url' => $backgroundUrl]);
+                }
+            }
+
+            // Add logo image if provided (same approach as background)
+            if ($logoUrl) {
+                if ($this->isLocalUrl($logoUrl)) {
+                    $uploadedUrl = $this->uploadLocalFileToFal($logoUrl);
+                    if ($uploadedUrl) {
+                        $imageUrls[] = $uploadedUrl;
+                        Log::info('Logo uploaded to Fal.ai', ['original' => $logoUrl, 'uploaded' => $uploadedUrl]);
+                    } else {
+                        Log::warning('Failed to upload logo to Fal.ai', ['logo_url' => $logoUrl]);
+                    }
+                } else {
+                    $imageUrls[] = $logoUrl;
+                    Log::info('Using logo reference', ['logo_url' => $logoUrl]);
                 }
             }
 
@@ -119,7 +135,7 @@ class FalImageService
      * Transform an image using Nano Banana 2 (no upscaling).
      * Cost: ~$0.08 per image
      */
-    public function transformImageV2(string $imageUrl, string $prompt, ?string $backgroundUrl = null): ?string
+    public function transformImageV2(string $imageUrl, string $prompt, ?string $backgroundUrl = null, ?string $logoUrl = null): ?string
     {
         if (app()->environment('local')) {
             Log::info('FalImageService: DEV MODE (v2) — copying source image', ['image_url' => $imageUrl]);
@@ -144,6 +160,17 @@ class FalImageService
                     }
                 } else {
                     $imageUrls[] = $backgroundUrl;
+                }
+            }
+
+            if ($logoUrl) {
+                if ($this->isLocalUrl($logoUrl)) {
+                    $uploadedUrl = $this->uploadLocalFileToFal($logoUrl);
+                    if ($uploadedUrl) {
+                        $imageUrls[] = $uploadedUrl;
+                    }
+                } else {
+                    $imageUrls[] = $logoUrl;
                 }
             }
 
