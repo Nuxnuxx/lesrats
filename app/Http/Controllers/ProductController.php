@@ -674,7 +674,7 @@ class ProductController extends Controller
             'background_url' => 'nullable|string',
             'apply_logo' => 'nullable|boolean',
             'only_logo' => 'nullable|boolean',
-            'logo_url' => 'nullable|string',
+            'logo_path' => 'nullable|string',
             'model' => 'nullable|string|in:v1,v2',
         ]);
 
@@ -690,14 +690,7 @@ class ProductController extends Controller
 
         $backgroundUrl = $onlyLogo ? null : $request->input('background_url');
         $applyLogo = $request->boolean('apply_logo', false);
-        $logoUrl = $request->input('logo_url');
-
-        // Resolve logo path from URL
-        $logoPath = null;
-        if ($logoUrl) {
-            $resolved = preg_replace('#^https?://[^/]+/storage/#', '', $logoUrl);
-            $logoPath = $resolved !== $logoUrl ? $resolved : null;
-        }
+        $logoPath = $request->input('logo_path') ?: null;
 
         // Remember last used background and logo on the shop (only when using AI)
         $shop = $product->shop;

@@ -90,7 +90,8 @@
                             onlyLogo: false,
                             defaultBackground: @js($product->shop->default_ai_background ? Storage::disk('public')->url($product->shop->default_ai_background) : ''),
                             defaultLogo: @js($product->shop->default_ai_logo ? Storage::disk('public')->url($product->shop->default_ai_logo) : (count($logos) > 0 ? Storage::disk('public')->url($logos[0]['path']) : '')),
-                            logos: @js(array_map(fn($l) => ['name' => $l['name'], 'url' => Storage::disk('public')->url($l['path'])], $logos))
+                            defaultLogoPath: @js($product->shop->default_ai_logo ?? (count($logos) > 0 ? $logos[0]['path'] : '')),
+                            logos: @js(array_map(fn($l) => ['name' => $l['name'], 'url' => Storage::disk('public')->url($l['path']), 'path' => $l['path']], $logos))
                          })">
                         <div class="flex items-center justify-between mb-3">
                             <h3 class="text-sm font-semibold text-gray-900">Images source</h3>
@@ -885,6 +886,7 @@
                 onlyLogo: false,
                 defaultBackground: config.defaultBackground || '',
                 defaultLogo: config.defaultLogo || '',
+                defaultLogoPath: config.defaultLogoPath || '',
                 logos: config.logos || [],
 
                 showModal: false,
@@ -897,6 +899,12 @@
                 selectedLogo: config.defaultLogo || '',
                 isGenerating: false,
                 errorMessage: null,
+
+                get selectedLogoPath() {
+                    if (!this.selectedLogo) return '';
+                    const found = this.logos.find(l => l.url === this.selectedLogo);
+                    return found ? found.path : this.defaultLogoPath;
+                },
 
                 openModal() {
                     this.showModal = true;
@@ -957,7 +965,7 @@
                                 background_url: this.onlyLogo ? null : (this.selectedBackground || null),
                                 apply_logo: this.applyLogo,
                                 only_logo: this.onlyLogo,
-                                logo_url: this.selectedLogo || null,
+                                logo_path: this.selectedLogoPath || null,
                                 model: this.selectedModel,
                             }),
                         });
@@ -966,6 +974,7 @@
                         if (data.success) {
                             this.defaultBackground = this.selectedBackground;
                             this.defaultLogo = this.selectedLogo;
+                            this.defaultLogoPath = this.selectedLogoPath;
                             window.dispatchEvent(new CustomEvent('ai-batch-started', {
                                 detail: { batchId: data.batch_id, total: data.total }
                             }));

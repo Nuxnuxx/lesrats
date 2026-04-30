@@ -8,7 +8,6 @@ use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 class TransformProductImage implements ShouldQueue
 {
@@ -67,21 +66,10 @@ class TransformProductImage implements ShouldQueue
                 $falService->applyLogoOverlay($transformedPath, $effectiveLogo);
             }
         } else {
-            // Normal AI mode — resolve logo URL to pass as reference image to the AI (same as background)
-            $logoUrl = null;
-            if ($this->applyLogo) {
-                $effectiveLogo = $this->logoPath
-                    ?? $product->shop->default_ai_logo
-                    ?? ($product->shop->ai_logos[0]['path'] ?? null)
-                    ?? $product->shop->logo_path;
-                if ($effectiveLogo) {
-                    $logoUrl = Storage::disk('public')->url($effectiveLogo);
-                }
-            }
-
+            // Normal AI mode
             $transformedPath = $this->model === 'v2'
-                ? $falService->transformImageV2($this->imageUrl, $this->prompt, $this->backgroundUrl, $logoUrl)
-                : $falService->transformImage($this->imageUrl, $this->prompt, 0.65, $this->backgroundUrl, $logoUrl);
+                ? $falService->transformImageV2($this->imageUrl, $this->prompt, $this->backgroundUrl)
+                : $falService->transformImage($this->imageUrl, $this->prompt, 0.65, $this->backgroundUrl);
 
             if (! $transformedPath) {
                 Log::error('TransformProductImage: transformation failed', [
@@ -90,6 +78,17 @@ class TransformProductImage implements ShouldQueue
                 ]);
 
                 throw new \RuntimeException('Image transformation failed for: '.$this->imageUrl);
+            }
+
+            // Apply logo overlay if requested (selected logo first, fallback to shop logo)
+            if ($this->applyLogo) {
+                $effectiveLogo = $this->logoPath
+                    ?? $product->shop->default_ai_logo
+                    ?? ($product->shop->ai_logos[0]['path'] ?? null)
+                    ?? $product->shop->logo_path;
+                if ($effectiveLogo) {
+                    $falService->applyLogoOverlay($transformedPath, $effectiveLogo);
+                }
             }
         }
 
