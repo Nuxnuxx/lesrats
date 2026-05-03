@@ -157,7 +157,7 @@ class AliExpressScraperService
                 'title' => $title,
                 'price' => $price,
                 'description' => $extract['description'] ?? null,
-                'images' => $extract['images'] ?? [],
+                'images' => $this->deduplicateImages($extract['images'] ?? []),
                 'specs' => [],
             ];
 
@@ -185,5 +185,28 @@ class AliExpressScraperService
     private function normalizeUrl(string $url): string
     {
         return preg_replace('/\/\/(fr|de|es|it|ru|nl|pl)\./i', '//www.', $url);
+    }
+
+    /**
+     * Deduplicate images by filename — AliExpress serves the same image
+     * from multiple CDNs (ae-pic-a1.aliexpress-media.com and ae01.alicdn.com).
+     */
+    private function deduplicateImages(array $images): array
+    {
+        $seen = [];
+        $result = [];
+
+        foreach ($images as $url) {
+            // Extract filename without query string
+            $path = parse_url($url, PHP_URL_PATH) ?? '';
+            $filename = basename($path);
+
+            if ($filename && ! isset($seen[$filename])) {
+                $seen[$filename] = true;
+                $result[] = $url;
+            }
+        }
+
+        return $result;
     }
 }
