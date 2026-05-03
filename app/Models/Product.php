@@ -17,6 +17,7 @@ class Product extends Model
         'etsy_category',
         'price',
         'cost_price',
+        'shipping_fee',
         'country_prices',
         'price_us',
         'price_other',
@@ -41,6 +42,7 @@ class Product extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'cost_price' => 'decimal:2',
+        'shipping_fee' => 'decimal:2',
         'country_prices' => 'array',
         'price_us' => 'decimal:2',
         'price_other' => 'decimal:2',
@@ -146,12 +148,24 @@ class Product extends Model
     }
 
     /**
+     * Get the effective shipping fee: product-level override or shop default.
+     */
+    public function getEffectiveShippingFeeAttribute(): float
+    {
+        if ($this->shipping_fee !== null) {
+            return (float) $this->shipping_fee;
+        }
+
+        return $this->shop->default_shipping_fee;
+    }
+
+    /**
      * Calculate estimated net profit per sale (after Etsy fees, cost, and URSSAF).
      */
     public function getEtsyProfitAttribute(): float
     {
         $price = (float) ($this->price ?? 0);
-        $shipping = (float) ($this->shop->shipping_fee ?? 0);
+        $shipping = $this->effectiveShippingFee;
         $cost = (float) ($this->cost_price ?? 0);
 
         $etsyRevenue = ($price + $shipping) * (1 - self::ETSY_FEE_RATE) - self::ETSY_FIXED_FEE;
@@ -166,7 +180,7 @@ class Product extends Model
     public function getEtsyFeesAttribute(): float
     {
         $price = (float) ($this->price ?? 0);
-        $shipping = (float) ($this->shop->shipping_fee ?? 0);
+        $shipping = $this->effectiveShippingFee;
 
         return round(($price + $shipping) * self::ETSY_FEE_RATE + self::ETSY_FIXED_FEE, 2);
     }

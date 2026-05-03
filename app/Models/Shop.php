@@ -27,6 +27,7 @@ class Shop extends Model
         'etsy_categories',
         'available_tags',
         'shipping_fee',
+        'shipping_fees',
         'discount_percentage',
         'expert_mode',
         'pricing_k',
@@ -99,6 +100,7 @@ PROMPT;
         'etsy_categories' => 'array',
         'available_tags' => 'array',
         'shipping_fee' => 'decimal:2',
+        'shipping_fees' => 'array',
         'discount_percentage' => 'decimal:2',
         'expert_mode' => 'boolean',
         'pricing_k' => 'decimal:4',
@@ -152,6 +154,19 @@ PROMPT;
         }
 
         return \Illuminate\Support\Facades\Storage::disk('public')->url($this->logo_path);
+    }
+
+    /**
+     * Get the default shipping fee (first entry in shipping_fees, or legacy shipping_fee).
+     */
+    public function getDefaultShippingFeeAttribute(): float
+    {
+        $fees = $this->shipping_fees;
+        if (!empty($fees) && isset($fees[0]['value'])) {
+            return (float) $fees[0]['value'];
+        }
+
+        return (float) ($this->shipping_fee ?? 0);
     }
 
     /**

@@ -142,6 +142,7 @@ class ProductController extends Controller
             'etsy_category' => 'nullable|string|max:255',
             'price' => 'required|numeric|min:0',
             'cost_price' => 'nullable|numeric|min:0',
+            'shipping_fee' => 'nullable|numeric|min:0',
             'price_us' => 'nullable|numeric|min:0',
             'price_other' => 'nullable|numeric|min:0',
 
@@ -187,6 +188,7 @@ class ProductController extends Controller
             'etsy_category' => 'sometimes|nullable|string|max:255',
             'price' => 'sometimes|numeric|min:0',
             'cost_price' => 'sometimes|nullable|numeric|min:0',
+            'shipping_fee' => 'sometimes|nullable|numeric|min:0',
             'price_us' => 'sometimes|nullable|numeric|min:0',
             'price_other' => 'sometimes|nullable|numeric|min:0',
             'quantity' => 'sometimes|integer|min:0',

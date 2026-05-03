@@ -115,18 +115,43 @@
                         <h3 class="text-sm font-semibold text-gray-900 mb-3">Parametres Etsy</h3>
 
                         <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label for="shipping_fee" class="text-xs font-medium text-gray-700">Frais de livraison</label>
-                                <div class="mt-1 relative">
-                                    <input type="number" id="shipping_fee" step="0.01" min="0"
-                                           value="{{ number_format($shop->shipping_fee ?? 0, 2, '.', '') }}"
-                                           @input.debounce.800ms="save({ shipping_fee: $el.value })"
-                                           class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-12 text-sm">
-                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <span class="text-gray-500 text-xs">{{ $shop->currency }}</span>
-                                    </div>
+                            {{-- Frais de livraison multiples --}}
+                            <div x-data="shippingFeesManager(@js($shop->shipping_fees ?? []), @js((float)($shop->shipping_fee ?? 0)))">
+                                <label class="text-xs font-medium text-gray-700">Frais de livraison</label>
+                                <div class="mt-1 space-y-2">
+                                    <template x-for="(fee, index) in fees" :key="index">
+                                        <div class="flex items-center gap-1.5">
+                                            <input type="text" x-model="fees[index].label"
+                                                   placeholder="Ex: Standard"
+                                                   @input.debounce.800ms="saveFees()"
+                                                   class="flex-1 min-w-0 text-xs rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-1.5">
+                                            <div class="relative w-24 shrink-0">
+                                                <input type="text" inputmode="decimal"
+                                                       x-model="fees[index].value"
+                                                       placeholder="0.00"
+                                                       @input.debounce.800ms="fees[index].value = parseFloat($el.value) || 0; saveFees()"
+                                                       class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 pr-8 text-xs py-1.5 [appearance:textfield]">
+                                                <div class="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none">
+                                                    <span class="text-gray-500 text-xs">{{ $shop->currency }}</span>
+                                                </div>
+                                            </div>
+                                            <button type="button" @click="removeFee(index)"
+                                                    class="text-gray-300 hover:text-red-500 shrink-0">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
-                                <p class="mt-1 text-xs text-gray-400">Facture au client sur Etsy</p>
+                                <button type="button" @click="addFee()"
+                                        class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-700">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Ajouter
+                                </button>
+                                <p class="mt-1 text-xs text-gray-400">Le premier sera le frais par defaut.</p>
                             </div>
                             <div>
                                 <label for="discount_percentage" class="text-xs font-medium text-gray-700">Reduction boutique</label>
@@ -748,6 +773,25 @@
                     _shopAutoSave.save({ available_tags: JSON.stringify(this.tags) });
                 }
             }
+        }
+
+        function shippingFeesManager(initialFees, legacyFee) {
+            const seed = (initialFees && initialFees.length > 0)
+                ? initialFees
+                : (legacyFee > 0 ? [{ label: 'Standard', value: legacyFee }] : [{ label: 'Standard', value: 0 }]);
+            return {
+                fees: seed,
+                addFee() {
+                    this.fees.push({ label: '', value: 0 });
+                },
+                removeFee(index) {
+                    this.fees.splice(index, 1);
+                    this.saveFees();
+                },
+                saveFees() {
+                    _shopAutoSave.save({ shipping_fees: JSON.stringify(this.fees) });
+                }
+            };
         }
     </script>
     @endpush

@@ -90,6 +90,7 @@ class ShopController extends Controller
             'ai_image_prompt' => 'nullable|string|max:5000',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'shipping_fee' => 'nullable|numeric|min:0',
+            'shipping_fees' => 'nullable|string',
             'discount_percentage' => 'nullable|numeric|min:0|max:99',
             'expert_mode' => 'boolean',
             'pricing_k' => 'nullable|numeric|min:0.01|max:100',
@@ -116,6 +117,21 @@ class ShopController extends Controller
 
         // Remove 'logo' from validated as it's not a model field
         unset($validated['logo']);
+
+        if (isset($validated['shipping_fees']) && is_string($validated['shipping_fees'])) {
+            $fees = json_decode($validated['shipping_fees'], true) ?? [];
+            $validated['shipping_fees'] = collect($fees)
+                ->filter(fn ($f) => isset($f['value']) && is_numeric($f['value']))
+                ->map(fn ($f) => [
+                    'label' => trim($f['label'] ?? ''),
+                    'value' => round((float) $f['value'], 2),
+                ])
+                ->values()
+                ->toArray();
+            if (! empty($validated['shipping_fees'])) {
+                $validated['shipping_fee'] = $validated['shipping_fees'][0]['value'];
+            }
+        }
 
         $shop->update($validated);
 
@@ -148,6 +164,7 @@ class ShopController extends Controller
             'ai_specific_prompts' => 'sometimes|nullable|string',
             'etsy_categories' => 'sometimes|nullable|string',
             'available_tags' => 'sometimes|nullable|string',
+            'shipping_fees' => 'sometimes|nullable|string',
         ]);
 
         // Decode JSON strings for array fields
@@ -181,6 +198,21 @@ class ShopController extends Controller
                 ->unique()
                 ->values()
                 ->toArray();
+        }
+
+        if (isset($validated['shipping_fees']) && is_string($validated['shipping_fees'])) {
+            $fees = json_decode($validated['shipping_fees'], true) ?? [];
+            $validated['shipping_fees'] = collect($fees)
+                ->filter(fn ($f) => isset($f['value']) && is_numeric($f['value']))
+                ->map(fn ($f) => [
+                    'label' => trim($f['label'] ?? ''),
+                    'value' => round((float) $f['value'], 2),
+                ])
+                ->values()
+                ->toArray();
+            if (! empty($validated['shipping_fees'])) {
+                $validated['shipping_fee'] = $validated['shipping_fees'][0]['value'];
+            }
         }
 
         $shop->update($validated);
