@@ -49,7 +49,11 @@
         $k = \App\Models\Product::ETSY_FEE_RATE;
         $f = \App\Models\Product::ETSY_FIXED_FEE;
         $u = \App\Models\Product::URSSAF_RATE;
-        $shippingFee = (float) ($product->shop->shipping_fee ?? 0);
+        $shopShippingFees = $product->shop->shipping_fees ?? [];
+        if (empty($shopShippingFees) && ($product->shop->shipping_fee ?? 0) > 0) {
+            $shopShippingFees = [['label' => 'Standard', 'value' => (float)$product->shop->shipping_fee]];
+        }
+        $shippingFee = $product->effective_shipping_fee;
         $initPrice = (float) $product->price;
         $initCost = (float) ($product->cost_price ?? 0);
         $initEtsyFees = ($initPrice + $shippingFee) * $k + $f;
@@ -684,8 +688,8 @@
                             </div>
                         </div>
 
-                        {{-- Profit Breakdown --}}
-                        <div class="mt-3 p-3 bg-gray-50 rounded-lg text-xs" x-data="{
+                        {{-- Zone calcul: dropdown livraison + breakdown profit --}}
+                        <div class="mt-3" x-data="{
                             k: {{ $k }}, f: {{ $f }}, u: {{ $u }},
                             shipping: {{ $shippingFee }}, cost: {{ $initCost }},
                             profit: {{ $initProfit }},
@@ -701,10 +705,26 @@
                                 this.margin = p > 0 ? Math.round((this.profit / p) * 1000) / 10 : 0;
                             }
                         }" x-init="document.getElementById('price').addEventListener('input', () => recalc())">
+                            @if(count($shopShippingFees) > 1)
+                            <div class="mb-3">
+                                <label class="text-xs font-medium text-gray-700">Frais de livraison</label>
+                                <select @change="shipping = parseFloat($el.value); save({ shipping_fee: shipping }); recalc()"
+                                        class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm py-1.5">
+                                    @foreach($shopShippingFees as $fee)
+                                        <option value="{{ $fee['value'] }}"
+                                                {{ abs($shippingFee - (float)$fee['value']) < 0.001 ? 'selected' : '' }}>
+                                            {{ $fee['label'] }} — {{ number_format((float)$fee['value'], 2) }} {{ $product->shop->currency }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @endif
+
+                        <div class="p-3 bg-gray-50 rounded-lg text-xs">
                             <div class="space-y-1.5">
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Livraison</span>
-                                    <span>+{{ number_format($shippingFee, 2) }}</span>
+                                    <span x-text="'+' + shipping.toFixed(2)"></span>
                                 </div>
                                 <div class="flex justify-between">
                                     <span class="text-gray-500">Etsy ({{ round($k * 100, 1) }}%+{{ number_format($f, 2) }})</span>
@@ -735,6 +755,7 @@
                                     </span>
                                 </div>
                             </div>
+                        </div>
                         </div>
                     </div>
 

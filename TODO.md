@@ -8,5 +8,5 @@
 [ ] Tester et fixer les sélecteurs CSS pour que l'extension remplisse ces champs directement dans le formulaire Etsy (inspecter les champs HTML sur Etsy).
 
 ## Logos
-- [ ] Permettre d'ajouter plusieurs logos dans l'application
+- [x] Permettre d'ajouter plusieurs logos dans l'application
 
