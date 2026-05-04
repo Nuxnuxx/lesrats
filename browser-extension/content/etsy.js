@@ -708,6 +708,227 @@ async function fillProductAttributes(product) {
   }
 }
 
+// Native setters — bypasse les wrappers React
+// Déclarés en lazy (pas au top-level) pour ne pas crasher le script au chargement
+function nativeSet(el, value) {
+  try {
+    const proto = el instanceof HTMLSelectElement ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+    const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    if (setter) {
+      setter.call(el, value);
+    } else {
+      el.value = value; // fallback si le getter n'existe pas
+    }
+  } catch(e) {
+    el.value = value; // fallback safe
+  }
+}
+
+// Attend qu'un sélecteur apparaisse dans le DOM (polling toutes les 100ms)
+async function waitForElement(selector, timeout = 5000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const el = document.querySelector(selector);
+    if (el) return el;
+    await sleep(100);
+  }
+  return null;
+}
+
+// Lit le texte visible d'un bouton :
+//   - spans sans SVG (pattern matériaux/couleurs)
+//   - paragraphes (pattern tailles : <p>M</p>)
+//   - textContent brut en fallback
+function readButtonText(btn) {
+  for (const span of btn.querySelectorAll('span')) {
+    if (span.querySelector('svg')) continue;
+    const t = span.textContent?.trim();
+    if (t) return t;
+  }
+  const p = btn.querySelector('p');
+  if (p) return p.textContent?.trim() || '';
+  return btn.textContent?.trim() || '';
+}
+
+// Détecte la saison depuis le titre/description du produit
+function detectSeason(title = '', description = '') {
+  const text = (title + ' ' + description).toLowerCase();
+  if (/hiver|winter|froid|cold|ski|snow|neige|duvet|polaire|fleece/.test(text)) return '475';  // Hiver
+  if (/\bété\b|summer|estival|beach|plage/.test(text))                           return '466';  // Été
+  if (/printemps|spring/.test(text))                                              return '462';  // Printemps
+  if (/automne|autumn|\bfall\b/.test(text))                                       return '1065'; // Automne
+  return '3454'; // Toutes saisons
+}
+
+// Clique le bouton "Ajouter des variations" dans la section item-options.
+// Ce bouton DOIT être cliqué en premier pour révéler la section taille inline.
+async function clickAddVariationsButton() {
+  const section = document.querySelector('[data-testid="item-options-variations-section"]');
+  if (!section) return false;
+  for (const btn of section.querySelectorAll('button')) {
+    const text = btn.textContent?.trim().toLowerCase() || '';
+    if (text.includes('ajouter des variations') || text.includes('add variation')) {
+      simulateRealClick(btn);
+      await sleep(800);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Remplit un champ typeahead d'attribut Etsy (matériaux, couleur secondaire, motif…) :
+//   1. Native setter → React détecte la valeur et ouvre le menu filtré
+//   2. simulateRealClick sur le bouton correspondant dans le menu
+async function fillAttributeTypeahead(containerSelector, value) {
+  const container = document.querySelector(containerSelector);
+  if (!container) return false;
+
+  const input = container.querySelector('input[id^="typeahead-input-"]');
+  if (!input) return false;
+
+  input.focus();
+  await sleep(100);
+  nativeSet(input, value);
+  input.dispatchEvent(new Event('input',  { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+  await sleep(600);
+
+  for (const btn of container.querySelectorAll('button[role="menuitemradio"], button[role="option"]')) {
+    if (readButtonText(btn).toLowerCase() === value.toLowerCase()) {
+      simulateRealClick(btn);
+      await sleep(300);
+      console.log('🐀 Attribute set:', containerSelector, '→', value);
+      return true;
+    }
+  }
+  return false;
+}
+
+// Remplissage de l'attribut Taille via le bouton "J'en propose plusieurs".
+// Sélecteurs génériques car l'overlay ID varie selon le point d'entrée.
+async function fillSizeAttribute(sizes) {
+  const container = document.querySelector('#field-attributes-attribute-295');
+  if (!container) {
+    console.log('🐀 Conteneur Taille (attribute-295) introuvable');
+    return;
+  }
+
+  const triggerBtn = container.querySelector('button[data-variations-overlay-trigger="true"]');
+  if (!triggerBtn) {
+    console.log('🐀 Bouton "J\'en propose plusieurs" introuvable dans Taille');
+    return;
+  }
+
+  simulateRealClick(triggerBtn);
+  console.log('🐀 Cliqué "J\'en propose plusieurs"');
+  await sleep(1200);
+
+  // Chercher l'overlay avec plusieurs sélecteurs possibles
+  const overlaySelectors = [
+    '#le-variations-overlay',
+    '[role="dialog"]',
+    '.wt-overlay__modal',
+    '[data-overlay]',
+  ];
+  let overlay = null;
+  for (const sel of overlaySelectors) {
+    overlay = document.querySelector(sel);
+    if (overlay) { console.log('🐀 Overlay trouvé:', sel); break; }
+  }
+  if (!overlay) {
+    // Attendre un peu plus — React peut être lent
+    await sleep(2000);
+    for (const sel of overlaySelectors) {
+      overlay = document.querySelector(sel);
+      if (overlay) { console.log('🐀 Overlay trouvé (2e tentative):', sel); break; }
+    }
+  }
+  if (!overlay) {
+    console.log('🐀 Aucun overlay détecté après clic — capture le HTML (copy(document.body.outerHTML)) avec l\'overlay ouvert');
+    return;
+  }
+  await sleep(500);
+
+  // Si l'overlay montre une liste de types de variation, sélectionner "Taille"
+  const overlayButtons = Array.from(overlay.querySelectorAll('button'));
+  const hasTailleType = overlayButtons.some(b => {
+    const t = (b.textContent?.trim() || '').toLowerCase();
+    return t === 'taille' || t === 'size' || t === 'größe';
+  });
+  if (hasTailleType) {
+    console.log('🐀 Sélection du type Taille dans l\'overlay');
+    await selectStructuredVariationType(['taille', 'size', 'größe'], ['taille de bague', 'ring size', 'ringgröße']);
+    await sleep(800);
+  }
+
+  // Sélectionner l'échelle US (sélecteur générique, pas seulement #le-structured-variation-scale-select)
+  const scaleSelect = document.querySelector('#le-structured-variation-scale-select, [id*="scale-select"]');
+  if (scaleSelect) {
+    await selectUSScale('clothing');
+    await sleep(800);
+  } else {
+    console.log('🐀 Select échelle non trouvé dans l\'overlay');
+  }
+
+  // Ajouter chaque taille via le typeahead de l'overlay
+  await toggleSizeCheckboxes(sizes);
+
+  // Fermer : "Terminé" puis "Appliquer"
+  await sleep(500);
+  await clickOverlayFooterButton();
+  await sleep(2000);
+  await clickOverlayFooterButton();
+
+  console.log('🐀 Tailles attribut remplies:', sizes);
+}
+
+// Remplissage des attributs spécifiques à "Vestes et manteaux"
+async function fillVestesManteaux(product) {
+  try {
+    // Saison — <select> React contrôlé : native setter + change
+    const saisonSelect = document.querySelector('select#attribute-475');
+    if (saisonSelect) {
+      const season = detectSeason(product.title, product.description);
+      nativeSet(saisonSelect, season);
+      saisonSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      await sleep(300);
+      console.log('🐀 Saison:', season);
+    }
+
+    // Tailles — mapping AliExpress → Etsy puis overlay multi-sélection
+    if (product.sizes && product.sizes.length > 0) {
+      const etsySizes = [...new Set(product.sizes.map(mapSizeToEtsy))];
+      await fillSizeAttribute(etsySizes);
+    }
+
+    // Matériaux (attribute-357) — typeahead, max 3
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 3)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+
+    // Couleur secondaire (attribute-271) — typeahead
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+
+  } catch (e) {
+    console.log('🐀 fillVestesManteaux error:', e.message);
+  }
+}
+
+// Dispatcher — route vers la bonne fonction selon la catégorie Etsy du produit
+async function fillCategoryAttributes(product) {
+  const cat = (product.etsy_category || '').toLowerCase();
+  if (!cat) return;
+
+  if (cat.includes('veste') || cat.includes('manteau') || cat.includes('jacket') || cat.includes('coat')) {
+    await fillVestesManteaux(product);
+  }
+  // Ajouter d'autres catégories ici au fur et à mesure
+}
+
 // Main function to fill Etsy's listing form
 async function fillEtsyForm(product) {
   console.log('🐀 Filling Etsy form with:', product);
@@ -739,13 +960,17 @@ async function fillEtsyForm(product) {
     await uploadImages(product.images, product.title);
   }
 
-  // Fill size variations if available
+  // Fill size variations if available — mapping AliExpress → Etsy appliqué ici aussi
   if (product.sizes && product.sizes.length > 0) {
-    await fillVariations(product.sizes, product.size_type || 'custom');
+    const etsySizes = [...new Set(product.sizes.map(mapSizeToEtsy))];
+    await fillVariations(etsySizes, product.size_type || 'custom');
   }
 
   // Fill product attributes (color, materials)
   await fillProductAttributes(product);
+
+  // Fill category-specific attributes (season, size scale, category fields)
+  await fillCategoryAttributes(product);
 
   // Show STL upload reminder for digital products
   if (product.is_digital) {
@@ -1671,9 +1896,28 @@ async function toggleSizeCheckboxes(sizes) {
 // Normalize a size string for comparison
 function normalizeSize(size) {
   return String(size).trim().toUpperCase()
-    .replace(/½/g, '.5')    // Convert ½ to .5
-    .replace(/,/g, '.')     // Normalize decimal separator
-    .replace(/\s+/g, '');   // Remove whitespace
+    .replace(/½/g, '.5')
+    .replace(/,/g, '.')
+    .replace(/\s+/g, '');
+}
+
+// Convertit les tailles AliExpress vers le format Etsy :
+//   - Supprime les apostrophes parasites (L' → L)
+//   - Mappe XXL/XXXL/XXXXL+ → 2X/3X/4X (max Etsy)
+function mapSizeToEtsy(size) {
+  let s = String(size).trim().replace(/'/g, '').toUpperCase();
+  const map = {
+    'XXL':    '2X',
+    '2XL':    '2X',
+    'XXXL':   '3X',
+    '3XL':    '3X',
+    'XXXXL':  '4X',
+    '4XL':    '4X',
+    'XXXXXL': '4X',
+    '5XL':    '4X',
+    '6XL':    '4X',
+  };
+  return map[s] ?? s;
 }
 
 // Simulate a click using full mouse event sequence + .click()
