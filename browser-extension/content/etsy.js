@@ -960,8 +960,10 @@ async function fillEtsyForm(product) {
     await uploadImages(product.images, product.title);
   }
 
-  // Fill size variations if available — mapping AliExpress → Etsy appliqué ici aussi
-  if (product.sizes && product.sizes.length > 0) {
+  // Fill size variations — skip pour les catégories qui gèrent les tailles via leur propre attribut
+  const _cat = (product.etsy_category || '').toLowerCase();
+  const _categoryHandlesSizes = _cat.includes('veste') || _cat.includes('manteau') || _cat.includes('jacket') || _cat.includes('coat');
+  if (product.sizes && product.sizes.length > 0 && !_categoryHandlesSizes) {
     const etsySizes = [...new Set(product.sizes.map(mapSizeToEtsy))];
     await fillVariations(etsySizes, product.size_type || 'custom');
   }
