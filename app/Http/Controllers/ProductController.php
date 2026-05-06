@@ -1018,7 +1018,7 @@ class ProductController extends Controller
             if ($product->secondary_color) {
                 $color .= ', '.$product->secondary_color;
             }
-            $context[] = 'Color: '.$color;
+            $context[] = 'COULEUR DU PRODUIT (à respecter obligatoirement, ne pas modifier) : '.$color;
         }
         if (! empty($product->materials)) {
             $context[] = 'Materials: '.implode(', ', $product->materials);
