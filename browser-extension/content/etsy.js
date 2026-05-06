@@ -805,17 +805,17 @@ async function fillAttributeTypeahead(containerSelector, value) {
 }
 
 // Remplissage de l'attribut Taille via le bouton "J'en propose plusieurs".
-// Sélecteurs génériques car l'overlay ID varie selon le point d'entrée.
-async function fillSizeAttribute(sizes) {
-  const container = document.querySelector('#field-attributes-attribute-295');
+// containerSelector : ID du conteneur Taille (varie selon catégorie).
+async function fillSizeAttribute(sizes, containerSelector = '#field-attributes-attribute-295') {
+  const container = document.querySelector(containerSelector);
   if (!container) {
-    console.log('🐀 Conteneur Taille (attribute-295) introuvable');
+    console.log('🐀 Conteneur Taille introuvable:', containerSelector);
     return;
   }
 
   const triggerBtn = container.querySelector('button[data-variations-overlay-trigger="true"]');
   if (!triggerBtn) {
-    console.log('🐀 Bouton "J\'en propose plusieurs" introuvable dans Taille');
+    console.log('🐀 Bouton "J\'en propose plusieurs" introuvable dans', containerSelector);
     return;
   }
 
@@ -918,6 +918,64 @@ async function fillVestesManteaux(product) {
   }
 }
 
+// Remplissage des attributs spécifiques à "Pantalons"
+async function fillPantalons(product) {
+  try {
+    // Style de pantalon — <select> React contrôlé
+    const styleSelect = document.querySelector('select#attribute-441');
+    if (styleSelect && product.pant_style) {
+      nativeSet(styleSelect, product.pant_style);
+      styleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+      await sleep(300);
+      console.log('🐀 Style pantalon:', product.pant_style);
+    }
+
+    // Tailles — échelle US (49) puis overlay via "J'en propose plusieurs"
+    // Le select d'échelle (attributes-4-scale-select) DOIT être sélectionné avant
+    // pour que le champ Taille apparaisse dans #field-attributes-attribute-299
+    if (product.sizes && product.sizes.length > 0) {
+      const echelleSelect = document.querySelector('select#attributes-4-scale-select');
+      if (echelleSelect) {
+        nativeSet(echelleSelect, '49');
+        echelleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(600);
+      }
+      const etsySizes = [...new Set(product.sizes.map(mapSizeToEtsy))];
+      await fillSizeAttribute(etsySizes, '#field-attributes-attribute-299');
+    }
+
+    // Matériaux (attribute-357) — typeahead, max 5
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+
+    // Couleur principale (attribute-2) — typeahead
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+
+    // Couleur secondaire (attribute-271) — typeahead
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+
+    // Style de vêtements (attribute-378) — typeahead
+    if (product.clothing_style) {
+      await fillAttributeTypeahead('#field-attributes-attribute-378', product.clothing_style);
+    }
+
+    // Occasion (attribute-3) — typeahead
+    if (product.occasion) {
+      await fillAttributeTypeahead('#field-attributes-attribute-3', product.occasion);
+    }
+
+  } catch (e) {
+    console.log('🐀 fillPantalons error:', e.message);
+  }
+}
+
 // Dispatcher — route vers la bonne fonction selon la catégorie Etsy du produit
 async function fillCategoryAttributes(product) {
   const cat = (product.etsy_category || '').toLowerCase();
@@ -925,6 +983,8 @@ async function fillCategoryAttributes(product) {
 
   if (cat.includes('veste') || cat.includes('manteau') || cat.includes('jacket') || cat.includes('coat')) {
     await fillVestesManteaux(product);
+  } else if (cat.includes('pantalon') || cat.includes('trouser') || cat.includes('pant')) {
+    await fillPantalons(product);
   }
   // Ajouter d'autres catégories ici au fur et à mesure
 }

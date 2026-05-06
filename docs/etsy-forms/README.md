@@ -133,3 +133,4 @@ Claude génère :
 | Catégorie | Dossier | Statut |
 |---|---|---|
 | Vestes et manteaux | `Vestes et manteaux/` | ✅ Implémenté |
+| Pantalons | `vetements-pantalons/` | ✅ Implémenté |
