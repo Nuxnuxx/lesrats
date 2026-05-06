@@ -590,7 +590,7 @@ class ProductController extends Controller
 
             $falService = new FalImageService($falApiKey);
             $backgroundUrl = $request->input('background_url');
-            $prompt = $this->buildEnrichedPrompt($request->input('prompt'), $product);
+            $prompt = $this->buildEnrichedPrompt($request->input('prompt'), $product, $backgroundUrl);
 
             // Transform the image with optional background
             $transformedPath = $falService->transformImage(
@@ -713,7 +713,7 @@ class ProductController extends Controller
         // Create jobs for each image
         $model = $request->input('model', 'v1');
         $basePrompt = $request->input('prompt', '');
-        $prompt = $onlyLogo ? $basePrompt : $this->buildEnrichedPrompt($basePrompt, $product);
+        $prompt = $onlyLogo ? $basePrompt : $this->buildEnrichedPrompt($basePrompt, $product, $backgroundUrl);
 
         $jobs = collect($request->input('image_urls'))->map(
             fn (string $url) => new TransformProductImage(
@@ -1006,28 +1006,39 @@ class ProductController extends Controller
         return response()->download($zipPath, $slug.'.zip')->deleteFileAfterSend(true);
     }
 
-    private function buildEnrichedPrompt(string $basePrompt, Product $product): string
+    private function buildEnrichedPrompt(string $basePrompt, Product $product, ?string $backgroundUrl = null): string
     {
+        $prefix = '';
         $context = [];
 
-        if ($product->title) {
-            $context[] = 'Product: '.$product->title;
+        // Clarify image roles upfront when a background reference is provided
+        if ($backgroundUrl) {
+            $prefix .= "IMPORTANT : La première image fournie est le PRODUIT à conserver tel quel (couleurs, forme, textures intactes). La deuxième image est uniquement une référence pour l'environnement ou l'arrière-plan — ne pas en copier les couleurs sur le produit.\n\n";
         }
+
+        // Prepend color rule before the base prompt so it is the very first instruction the model reads
         if ($product->main_color) {
             $color = $product->main_color;
             if ($product->secondary_color) {
-                $color .= ', '.$product->secondary_color;
+                $color .= ' et '.$product->secondary_color;
             }
-            $context[] = 'COULEUR DU PRODUIT (à respecter obligatoirement, ne pas modifier) : '.$color;
+            $prefix .= "RÈGLE ABSOLUE — COULEUR : Le produit est de couleur {$color}. Conserver EXACTEMENT cette couleur. Ne jamais l'assombrir, l'éclaircir ou la modifier sous aucun prétexte.\n\n";
+            $context[] = 'Couleur du produit (immuable) : '.$color;
+        }
+
+        if ($product->title) {
+            $context[] = 'Product: '.$product->title;
         }
         if (! empty($product->materials)) {
             $context[] = 'Materials: '.implode(', ', $product->materials);
         }
 
-        if (empty($context)) {
-            return $basePrompt;
+        $result = $prefix.$basePrompt;
+
+        if (! empty($context)) {
+            $result .= "\n\n[Product context]\n".implode("\n", $context);
         }
 
-        return $basePrompt."\n\n[Product context]\n".implode("\n", $context);
+        return $result;
     }
 }
