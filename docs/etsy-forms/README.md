@@ -1,44 +1,59 @@
 # Référence des formulaires Etsy par catégorie
 
-Ce dossier contient des snapshots HTML des formulaires de création de fiches Etsy, organisés par catégorie. Claude les utilise pour identifier les sélecteurs CSS et implémenter le remplissage automatique dans `browser-extension/content/etsy.js`.
+Ce dossier contient la cartographie des formulaires Etsy par catégorie, utilisée par Claude pour implémenter le remplissage automatique dans `browser-extension/content/etsy.js`.
 
 ---
 
-## Pourquoi plusieurs fichiers par catégorie ?
+## Stratégie : JSON léger uniquement
 
-Le formulaire Etsy est **dynamique** : certains champs n'apparaissent qu'après avoir interagi avec d'autres (sélectionner une option, cocher une case...). Un seul snapshot HTML ne suffit pas — il faut capturer chaque état significatif.
+Plus de fichiers HTML (trop lourds, trop de tokens). Chaque catégorie est documentée dans un seul `flow.json` capturé directement depuis la console DevTools. Claude reçoit uniquement les IDs, sélecteurs et valeurs — suffisant pour générer le code.
 
 ---
 
-## Structure d'un dossier catégorie
+## Structure
 
 ```
 docs/etsy-forms/
-└── {categorie-parente}-{sous-categorie}/
-    ├── flow.json                    ← arbre d'interactions (OBLIGATOIRE)
-    ├── 01_base.html                 ← état initial après sélection de la catégorie
-    ├── 02_{description}.html        ← état après une interaction
-    └── 03_{description}.html        ← état après une autre interaction
+└── {categorie}/
+    └── flow.json    ← unique fichier, contient tous les états et champs
 ```
 
-### Convention de nommage des dossiers
+---
 
-Format : `{categorie-parente}-{sous-categorie}` — kebab-case, minuscules, sans accents
+## Script de capture — à coller dans la console DevTools
 
-| Catégorie Etsy | Dossier |
-|---|---|
-| Bijoux & Accessoires > Bagues | `bijoux-bagues/` |
-| Bijoux & Accessoires > Colliers | `bijoux-colliers/` |
-| Vêtements > Femme | `vetements-femme/` |
-| Maison & Jardin > Décoration | `maison-decoration/` |
-| Art & Objets de collection | `art-collection/` |
+Sur la page Etsy (formulaire de création de fiche, catégorie sélectionnée) :
 
-### Convention de nommage des fichiers HTML
+```js
+copy(JSON.stringify({
+  url: location.href,
+  fields: [
+    ...document.querySelectorAll('[id^="attribute-"], [id^="field-attributes-"], select, input[type="radio"], input[type="checkbox"]')
+  ].map(el => {
+    const label = document.querySelector(`label[for="${el.id}"]`)?.textContent?.trim()
+      || el.closest('[data-attribute-wrapper]')?.querySelector('p')?.textContent?.trim()
+      || null;
+    const opts = el.tagName === 'SELECT'
+      ? Array.from(el.options).map(o => ({ value: o.value, label: o.text.trim() }))
+      : undefined;
+    return {
+      id: el.id || undefined,
+      name: el.name || undefined,
+      type: el.type || el.tagName.toLowerCase(),
+      label,
+      options: opts
+    };
+  }).filter(f => f.id || f.name),
+  buttons: [...document.querySelectorAll('button[role="menuitemradio"], button[data-variations-overlay-trigger]')]
+    .map(b => ({
+      text: b.textContent?.trim(),
+      role: b.getAttribute('role'),
+      container: b.closest('[id]')?.id || null
+    }))
+}, null, 2))
+```
 
-- `01_base.html` → toujours l'état initial
-- `02_`, `03_`... → états déclenchés par des interactions, décrits en kebab-case
-
-Exemples : `02_metal-or-selectionne.html`, `03_pierre-activee.html`, `04_modal-tailles.html`
+Colle le résultat JSON ici — Claude génère le `flow.json` complet et le bloc `etsy.js`.
 
 ---
 
@@ -47,33 +62,34 @@ Exemples : `02_metal-or-selectionne.html`, `03_pierre-activee.html`, `04_modal-t
 ```json
 {
   "category": "Nom affiché dans Etsy",
-  "etsy_category_id": null,
   "states": [
     {
       "id": "base",
-      "file": "01_base.html",
-      "description": "Formulaire après sélection de la catégorie",
-      "fields": []
+      "description": "État initial après sélection de la catégorie",
+      "fields": [
+        {
+          "label": "Saison",
+          "selector": "select#attribute-475",
+          "type": "select",
+          "options": [
+            { "value": "462", "label": "Printemps" },
+            { "value": "466", "label": "Été" }
+          ]
+        },
+        {
+          "label": "Matériaux",
+          "selector": "#field-attributes-attribute-357",
+          "type": "typeahead"
+        }
+      ]
     },
     {
-      "id": "metal-or",
-      "file": "02_metal-or-selectionne.html",
-      "description": "Après sélection 'Or' dans le champ Métal principal",
+      "id": "sous-etat",
+      "description": "Champs apparus après une interaction",
       "trigger": {
-        "field": "Métal principal",
-        "action": "select",
-        "value": "Or"
-      },
-      "fields": []
-    },
-    {
-      "id": "pierre-activee",
-      "file": "03_pierre-activee.html",
-      "description": "Après activation de l'option Pierre précieuse",
-      "trigger": {
-        "field": "Pierre précieuse",
-        "action": "checkbox",
-        "value": true
+        "field": "Nom du champ déclencheur",
+        "action": "select|click|checkbox",
+        "value": "valeur sélectionnée"
       },
       "fields": []
     }
@@ -81,50 +97,39 @@ Exemples : `02_metal-or-selectionne.html`, `03_pierre-activee.html`, `04_modal-t
 }
 ```
 
-**Types d'action dans `trigger`** :
-- `"select"` — menu déroulant ou radio button
-- `"checkbox"` — case à cocher
-- `"click"` — bouton qui ouvre un modal ou un panneau
-- `"input"` — saisie de texte qui révèle des options
+**Types de champ :**
+| type | description |
+|---|---|
+| `select` | `<select>` contrôlé par React — nécessite `nativeSet` |
+| `typeahead` | Input + menu déroulant filtrable |
+| `typeahead_menu` | Typeahead avec sélection multiple via boutons `menuitemradio` |
+| `radio` | Groupe de `<input type="radio">` |
+| `checkbox` | `<input type="checkbox">` |
 
-Le tableau `fields` est laissé vide — Claude le remplit après analyse du HTML.
-
----
-
-## Comment capturer les états
-
-### Étape 1 — État de base
-1. Ouvrir Etsy → **Créer une fiche** (ou en modifier une existante)
-2. Sélectionner la catégorie cible dans le formulaire
-3. Attendre que les champs spécifiques à la catégorie apparaissent
-4. **Clic droit → Enregistrer sous → "Page web, HTML uniquement"**
-5. Nommer le fichier `01_base.html` et le placer dans le bon sous-dossier
-
-### Étape 2 — États déclenchés
-6. Interagir avec un champ (sélectionner une valeur, cocher une case, cliquer un bouton...)
-7. Attendre que le sous-formulaire ou les nouveaux champs apparaissent
-8. **Clic droit → Enregistrer sous** → nommer `02_{description}.html`
-9. Répéter pour chaque interaction qui révèle de nouveaux champs
-
-### Astuce : état d'un modal
-Si un modal s'ouvre (ex: sélecteur de tailles), sauvegarder la page pendant que le modal est visible — il sera inclus dans le HTML.
+**Types d'action dans `trigger` :**
+| action | quand |
+|---|---|
+| `select` | sélection dans un `<select>` |
+| `click` | clic sur un bouton qui révèle des champs |
+| `checkbox` | activation d'une case à cocher |
 
 ---
 
 ## Workflow avec Claude
 
-Une fois les fichiers déposés :
+1. Ouvrir Etsy → Créer une fiche → sélectionner la catégorie cible
+2. Coller le script de capture dans la console DevTools → `copy(...)` met le JSON dans le presse-papier
+3. Si des champs apparaissent après interaction (ex: sélectionner une valeur ouvre un sous-formulaire) : interagir, puis relancer le script et coller le second JSON
+4. Partager les JSONs ici avec : *"Génère le flow.json et le code etsy.js pour la catégorie X"*
 
-1. **Analyser** : demander à Claude de lire le dossier et d'identifier les champs
-   > "Analyse `docs/etsy-forms/bijoux-bagues/` et liste les champs spécifiques à cette catégorie"
-
-2. **Implémenter** : Claude met à jour `etsy.js` avec la logique conditionnelle
-   > "Implémente le remplissage automatique pour la catégorie bijoux-bagues"
-
-3. **Documenter** : Claude complète les tableaux `fields` dans `flow.json`
+Claude génère :
+- Le `flow.json` complet avec sélecteurs et valeurs
+- Le bloc de code à ajouter dans `fillCategoryAttributes()` et la fonction `fill{Categorie}()`
 
 ---
 
-## Catégories déjà documentées
+## Catégories documentées
 
-_(aucune pour l'instant — ajouter les dossiers au fur et à mesure)_
+| Catégorie | Dossier | Statut |
+|---|---|---|
+| Vestes et manteaux | `Vestes et manteaux/` | ✅ Implémenté |
