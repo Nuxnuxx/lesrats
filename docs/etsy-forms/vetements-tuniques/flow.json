@@ -1,0 +1,163 @@
+{
+  "category": "Tuniques",
+  "etsy_category_path": "Vetements > Vetements femme > Hauts et t-shirts > Tuniques",
+  "states": [
+    {
+      "id": "base",
+      "description": "Etat initial apres selection de la categorie Tuniques. 11 champs visibles apres clic 'Afficher tous les attributs'. INCLUT 9 echelles de taille internationales (US, GB, FR, DE, AU, JP, IN). Champs Poches (radio Oui/Non), Encolure (typeahead, plus de choix que T-shirts), Occasion (SELECT, courte liste).",
+      "fields": [
+        {
+          "label": "Materiaux",
+          "selector": "#field-attributes-attribute-357",
+          "type": "checkbox_typeahead",
+          "max_select": 5,
+          "note": "551 options pre-chargees comme checkboxes."
+        },
+        {
+          "label": "Couleur principale",
+          "selector": "#field-attributes-attribute-2",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Echelle de taille",
+          "selector": "select#attributes-2-scale-select",
+          "type": "select",
+          "options": [
+            { "value": "-1",  "label": "Choisissez une echelle" },
+            { "value": "24",  "label": "Numerique Femmes (US)" },
+            { "value": "25",  "label": "Lettres Femmes (US)" },
+            { "value": "26",  "label": "Femmes (GB)" },
+            { "value": "27",  "label": "Femmes (FR)" },
+            { "value": "28",  "label": "Femmes (DE)" },
+            { "value": "29",  "label": "Femmes (AU)" },
+            { "value": "38",  "label": "Femmes (JP)" },
+            { "value": "151", "label": "Lettres Femmes (IN)" }
+          ],
+          "note": "9 echelles internationales (vs seulement 1 'US Lettre' pour Pantalons/T-shirts/Vestes). Selectionner une echelle declenche l'apparition d'un champ Taille typeahead dans le meme container #field-attributes-attribute-292."
+        },
+        {
+          "label": "Poches",
+          "selector": "#field-attributes-attribute-381",
+          "type": "radio",
+          "name": "attribute-381",
+          "options": [
+            { "value": "2591", "label": "Oui" },
+            { "value": "2592", "label": "Non" }
+          ],
+          "note": "Champ unique a Tuniques - radio buttons (input[type='radio'][name='attribute-381'])."
+        },
+        {
+          "label": "Motif",
+          "selector": "#field-attributes-attribute-185",
+          "type": "typeahead_menu",
+          "options": ["Abstrait", "Imprime animal", "Losanges", "Oiseau", "Camouflage", "Chat", "Damier", "Chevrons", "Chien", "Fleuri", "Geometrique", "Pied-de-poule", "Ikat", "Ombre", "Cachemire", "Patchwork", "Ecossais", "Plantes et arbres", "Pois", "Crane et squelette", "Uni", "Etoiles et formes celestes", "Rayures", "Volutes", "Tie and dye"]
+        },
+        {
+          "label": "Longueur de manches",
+          "selector": "select#attribute-408",
+          "type": "select",
+          "options": [
+            { "value": "",     "label": "Choisir : longueur de manches" },
+            { "value": "2672", "label": "Sans manche" },
+            { "value": "2668", "label": "Manche courte" },
+            { "value": "2669", "label": "Manche mi-longue" },
+            { "value": "2670", "label": "Manche 3/4" },
+            { "value": "2671", "label": "Manche longue" }
+          ]
+        },
+        {
+          "label": "Encolure",
+          "selector": "#field-attributes-attribute-409",
+          "type": "typeahead_menu",
+          "options": ["Bateau", "Epaule denudee", "Avec col", "Benitier", "Rond", "V plongeant", "Avec ouverture boutonnee", "Goutte", "Col cheminee", "Epaules decouvertes", "Une epaule", "Plongeant", "Profond", "Fendu", "Carre", "Col roule", "Col V"],
+          "note": "ATTENTION: Encolure est typeahead pour Tuniques (vs SELECT pour T-shirts). Liste plus longue (17 options vs 6 pour T-shirts)."
+        },
+        {
+          "label": "Couleur secondaire",
+          "selector": "#field-attributes-attribute-271",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Durabilite",
+          "selector": "#field-attributes-attribute-739",
+          "type": "checkbox_typeahead",
+          "max_select": 3,
+          "options": ["Chanvre", "Lin", "Coton biologique", "Polyester recycle"]
+        },
+        {
+          "label": "Style de vetements",
+          "selector": "#field-attributes-attribute-378",
+          "type": "typeahead_menu",
+          "options": ["Boheme et hippie", "Evenement officiel", "Gothique", "Harajuku", "Lolita", "Vetements homme", "Militaire", "Minimaliste", "Mod", "BCBG", "Teuf", "Rocker", "Steampunk", "Streetwear", "Victorien", "Western et cowboy"]
+        },
+        {
+          "label": "Occasion",
+          "selector": "select#attribute-3",
+          "type": "select",
+          "options": [
+            { "value": "",     "label": "Choisir : occasion" },
+            { "value": "15",   "label": "Enterrement de vie de jeune fille" },
+            { "value": "19",   "label": "Anniversaire" },
+            { "value": "22",   "label": "Fiancailles" },
+            { "value": "2774", "label": "Marche des fiertes" },
+            { "value": "29",   "label": "Bal de promo" },
+            { "value": "32",   "label": "Mariage" }
+          ],
+          "note": "ATTENTION: Occasion est SELECT pour Tuniques (vs typeahead pour Pantalons/Chapeaux/Kits/T-shirts/Valises). Liste reduite a 6 valeurs."
+        }
+      ]
+    },
+    {
+      "id": "echelle-lettres-femmes-us-selectionnee",
+      "description": "Apres selection de 'Lettres Femmes (US)' (value=25) - un champ Taille (typeahead) apparait. Les options de tailles different selon l'echelle choisie.",
+      "trigger": {
+        "field": "Echelle de taille",
+        "action": "select",
+        "value": "25"
+      },
+      "fields": [
+        {
+          "label": "Taille",
+          "selector": "#field-attributes-attribute-292 input[type='text']",
+          "type": "typeahead_menu",
+          "options": ["XXS", "XS", "S", "M", "L", "XL", "0X", "1X", "2X", "3X", "4X", "5X", "Taille unique", "Taille unique (grande taille)"],
+          "note": "Avec echelle 25 (Lettres Femmes US): 14 tailles (vs 9 pour Pantalons/T-shirts en US Lettre). Avec echelle 24 (Numerique Femmes US): tailles numeriques 00-30 + Taille unique."
+        }
+      ]
+    },
+    {
+      "id": "echelle-numerique-femmes-us-selectionnee",
+      "description": "Alternative: avec echelle 24 (Numerique Femmes US) - les tailles deviennent numeriques.",
+      "trigger": {
+        "field": "Echelle de taille",
+        "action": "select",
+        "value": "24"
+      },
+      "fields": [
+        {
+          "label": "Taille",
+          "selector": "#field-attributes-attribute-292 input[type='text']",
+          "type": "typeahead_menu",
+          "options": ["00", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "22", "24", "26", "28", "30", "Taille unique", "Taille unique (grande taille)"]
+        }
+      ]
+    }
+  ],
+  "fill_order": [
+    "1. Selectionner la categorie Tuniques",
+    "2. Cliquer 'Afficher tous les attributs' pour reveler tous les champs",
+    "3. Echelle de taille (select#attributes-2-scale-select=25 pour Lettres US ou 24 pour Numerique US) - DOIT etre avant Taille",
+    "4. Taille - cliquer button[role='menuitemradio'] dans #field-attributes-attribute-292",
+    "5. Longueur de manches (select#attribute-408)",
+    "6. Encolure (typeahead - PAS un select ici)",
+    "7. Poches - radio button (input[name='attribute-381'][value='2591'/'2592'])",
+    "8. Materiaux (max 5)",
+    "9. Couleur principale + secondaire",
+    "10. Motif",
+    "11. Style de vetements",
+    "12. Durabilite (max 3)",
+    "13. Occasion (SELECT - PAS un typeahead ici)"
+  ]
+}

@@ -134,3 +134,11 @@ Claude génère :
 |---|---|---|
 | Vestes et manteaux | `Vestes et manteaux/` | ✅ Implémenté |
 | Pantalons | `vetements-pantalons/` | ✅ Implémenté |
+| Kits | `fournitures-kits/` | ✅ Implémenté |
+| Masques de déguisement | `accessoires-masques-deguisement/` | ✅ Implémenté |
+| T-shirts | `vetements-tshirts/` | ✅ Implémenté |
+| Tuniques | `vetements-tuniques/` | ✅ Implémenté |
+| Chemises habillées | `vetements-chemises-habillees/` | ✅ Implémenté |
+| Chapeaux et casquettes | `accessoires-chapeaux-casquettes/` | ✅ Implémenté |
+| Valises | `sacs-valises/` | ✅ Implémenté |
+| Éventails | `accessoires-eventails/` | ✅ Implémenté |

@@ -1,0 +1,83 @@
+{
+  "category": "Eventails",
+  "etsy_category_path": "Accessoires > Eventails",
+  "states": [
+    {
+      "id": "base",
+      "description": "Etat initial apres selection. 7 champs visibles apres clic 'Afficher tous les attributs'. Champ specifique 'Style d'eventail' (radio Fixe/Pliable). Pas de Taille/Echelle, pas de Pattern, pas de Fete, pas de Style de vetements (remplace par Style d'accessoire).",
+      "fields": [
+        {
+          "label": "Materiaux",
+          "selector": "#field-attributes-attribute-357",
+          "type": "checkbox_typeahead",
+          "max_select": 5,
+          "note": "551 options pre-chargees comme checkboxes."
+        },
+        {
+          "label": "Couleur principale",
+          "selector": "#field-attributes-attribute-2",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Style d'eventail",
+          "selector": "#field-attributes-attribute-471",
+          "type": "radio",
+          "name": "attribute-471",
+          "options": [
+            { "value": "3450", "label": "Fixe" },
+            { "value": "3451", "label": "Pliable" }
+          ],
+          "note": "Champ unique a la categorie Eventails."
+        },
+        {
+          "label": "Couleur secondaire",
+          "selector": "#field-attributes-attribute-271",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Durabilite",
+          "selector": "#field-attributes-attribute-739",
+          "type": "checkbox_typeahead",
+          "max_select": 3,
+          "options": ["Bois certifie FSC", "Coton recycle", "Polyester recycle"],
+          "note": "Differe des autres categories - inclut 'Bois certifie FSC' (specifique eventails). Pas de Chanvre/Lin/Coton biologique."
+        },
+        {
+          "label": "Style d'accessoire",
+          "selector": "select#attribute-557",
+          "type": "select",
+          "options": [
+            { "value": "",     "label": "Choisir : style d'accessoire" },
+            { "value": "2382", "label": "Art deco" },
+            { "value": "2408", "label": "Edouardien" },
+            { "value": "2546", "label": "Evenement officiel" },
+            { "value": "2409", "label": "Gothique" },
+            { "value": "2552", "label": "Teuf" },
+            { "value": "2533", "label": "Steampunk" },
+            { "value": "2399", "label": "Victorien" }
+          ],
+          "note": "Style 557 est ici un SELECT (vs typeahead pour Chapeaux/T-shirts/Tuniques, vs SELECT pour Valises). Liste reduite a 7 valeurs."
+        },
+        {
+          "label": "Occasion",
+          "selector": "#field-attributes-attribute-3",
+          "type": "typeahead_menu",
+          "options": ["1er anniversaire", "Anniversaires", "Fete prenatale", "Anniversaire", "Fete prenuptiale", "Remise de diplomes", "Marche des fiertes", "Bal de promo", "Fete des 15 ou 16 ans", "Mariage"],
+          "note": "Liste reduite a 10 occasions (pas de Fiancailles, Retraite, etc. - cible mariages/fetes)."
+        }
+      ]
+    }
+  ],
+  "fill_order": [
+    "1. Selectionner la categorie Eventails",
+    "2. Cliquer 'Afficher tous les attributs'",
+    "3. Style d'eventail (radio): input[name='attribute-471'][value=3450/3451]",
+    "4. Style d'accessoire (select#attribute-557)",
+    "5. Materiaux (max 5)",
+    "6. Couleur principale + secondaire",
+    "7. Durabilite (max 3)",
+    "8. Occasion"
+  ]
+}

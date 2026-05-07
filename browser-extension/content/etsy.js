@@ -976,6 +976,423 @@ async function fillPantalons(product) {
   }
 }
 
+// ─── Shared helpers for category fill functions ────────────────────────────
+
+async function clickShowAllAttributes() {
+  const btn = Array.from(document.querySelectorAll('button')).find(b =>
+    b.textContent?.trim().toLowerCase().includes('afficher tous')
+  );
+  if (!btn) return false;
+  simulateRealClick(btn);
+  await sleep(600);
+  console.log('🐀 "Afficher tous les attributs" cliqué');
+  return true;
+}
+
+async function fillRadio(name, value) {
+  const radio = document.querySelector(`input[type="radio"][name="${name}"][value="${value}"]`);
+  if (!radio) return false;
+  simulateRealClick(radio);
+  radio.checked = true;
+  radio.dispatchEvent(new Event('change', { bubbles: true }));
+  await sleep(200);
+  console.log('🐀 Radio set:', name, '=', value);
+  return true;
+}
+
+// Sets a <select> by text label or by option value
+function selectByText(selector, textOrValue) {
+  const sel = document.querySelector(selector);
+  if (!sel || !textOrValue) return false;
+  const tv = String(textOrValue).toLowerCase();
+  const opt = Array.from(sel.options).find(o =>
+    o.text.trim().toLowerCase() === tv || o.value === String(textOrValue)
+  );
+  if (!opt) return false;
+  nativeSet(sel, opt.value);
+  sel.dispatchEvent(new Event('change', { bubbles: true }));
+  return true;
+}
+
+// ─── fillKits ──────────────────────────────────────────────────────────────
+
+async function fillKits(product) {
+  try {
+    // Type d'artisanat (attribute-20) — OBLIGATOIRE
+    if (product.craft_type) {
+      await fillAttributeTypeahead('#field-attributes-attribute-20', product.craft_type);
+    }
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+    // Couleur/Occasion/Fête sont masqués jusqu'au clic "Afficher tous les attributs"
+    await clickShowAllAttributes();
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+    if (product.occasion) {
+      await fillAttributeTypeahead('#field-attributes-attribute-3', product.occasion);
+    }
+    if (product.holiday) {
+      await fillAttributeTypeahead('#field-attributes-attribute-4', product.holiday);
+    }
+  } catch (e) {
+    console.log('🐀 fillKits error:', e.message);
+  }
+}
+
+// ─── fillMasquesDeguisement ────────────────────────────────────────────────
+
+async function fillMasquesDeguisement(product) {
+  try {
+    await clickShowAllAttributes();
+    if (product.costume_theme) {
+      await fillAttributeTypeahead('#field-attributes-attribute-379', product.costume_theme);
+    }
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+    if (product.recipient) {
+      const recipients = Array.isArray(product.recipient) ? product.recipient : [product.recipient];
+      for (const r of recipients.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-342', r);
+      }
+    }
+    // Occasion et Fête sont des SELECTs natifs pour cette catégorie
+    if (product.occasion) {
+      selectByText('select#attribute-3', product.occasion);
+      await sleep(300);
+    }
+    if (product.holiday) {
+      selectByText('select#attribute-4', product.holiday);
+      await sleep(300);
+    }
+  } catch (e) {
+    console.log('🐀 fillMasquesDeguisement error:', e.message);
+  }
+}
+
+// ─── fillTshirts ───────────────────────────────────────────────────────────
+
+async function fillTshirts(product) {
+  try {
+    await clickShowAllAttributes();
+    // Tailles — échelle US Lettre (value=51)
+    if (product.sizes && product.sizes.length > 0) {
+      const echelleSelect = document.querySelector('select#attributes-2-scale-select');
+      if (echelleSelect) {
+        nativeSet(echelleSelect, '51');
+        echelleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(600);
+      }
+      const etsySizes = [...new Set(product.sizes.map(mapSizeToEtsy))];
+      await fillSizeAttribute(etsySizes, '#field-attributes-attribute-300');
+    }
+    // Longueur de manches (SELECT)
+    if (product.sleeve_length) {
+      selectByText('select#attribute-408', product.sleeve_length);
+      await sleep(300);
+    }
+    // Encolure (SELECT pour T-shirts)
+    if (product.neckline) {
+      selectByText('select#attribute-409', product.neckline);
+      await sleep(300);
+    }
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+    if (product.clothing_style) {
+      await fillAttributeTypeahead('#field-attributes-attribute-378', product.clothing_style);
+    }
+    // Graphique (attribute-426) — spécifique aux T-shirts
+    if (product.graphic) {
+      await fillAttributeTypeahead('#field-attributes-attribute-426', product.graphic);
+    }
+    if (product.occasion) {
+      await fillAttributeTypeahead('#field-attributes-attribute-3', product.occasion);
+    }
+    if (product.holiday) {
+      await fillAttributeTypeahead('#field-attributes-attribute-4', product.holiday);
+    }
+  } catch (e) {
+    console.log('🐀 fillTshirts error:', e.message);
+  }
+}
+
+// ─── fillTuniques ──────────────────────────────────────────────────────────
+
+async function fillTuniques(product) {
+  try {
+    await clickShowAllAttributes();
+    // Tailles — échelle Lettres Femmes US (value=25)
+    if (product.sizes && product.sizes.length > 0) {
+      const echelleSelect = document.querySelector('select#attributes-2-scale-select');
+      if (echelleSelect) {
+        nativeSet(echelleSelect, '25');
+        echelleSelect.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(600);
+      }
+      const etsySizes = [...new Set(product.sizes.map(mapSizeToEtsy))];
+      await fillSizeAttribute(etsySizes, '#field-attributes-attribute-292');
+    }
+    // Longueur de manches (SELECT)
+    if (product.sleeve_length) {
+      selectByText('select#attribute-408', product.sleeve_length);
+      await sleep(300);
+    }
+    // Encolure (typeahead pour Tuniques — différent de T-shirts qui utilise un SELECT)
+    if (product.neckline) {
+      await fillAttributeTypeahead('#field-attributes-attribute-409', product.neckline);
+    }
+    // Poches — radio Oui=2591 / Non=2592
+    if (product.pockets != null) {
+      await fillRadio('attribute-381', product.pockets ? '2591' : '2592');
+    }
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+    if (product.pattern) {
+      await fillAttributeTypeahead('#field-attributes-attribute-185', product.pattern);
+    }
+    if (product.clothing_style) {
+      await fillAttributeTypeahead('#field-attributes-attribute-378', product.clothing_style);
+    }
+    // Occasion (SELECT pour Tuniques — différent de T-shirts/Pantalons qui utilisent typeahead)
+    if (product.occasion) {
+      selectByText('select#attribute-3', product.occasion);
+      await sleep(300);
+    }
+  } catch (e) {
+    console.log('🐀 fillTuniques error:', e.message);
+  }
+}
+
+// ─── fillChemisesHabillees ─────────────────────────────────────────────────
+
+async function fillChemisesHabillees(product) {
+  try {
+    await clickShowAllAttributes();
+    // Tour de poitrine — échelle US Lettre (value=42) → taille dans attribute-295
+    if (product.sizes && product.sizes.length > 0) {
+      const echellePoitrine = document.querySelector('select#attributes-2-scale-select');
+      if (echellePoitrine) {
+        nativeSet(echellePoitrine, '42');
+        echellePoitrine.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(600);
+      }
+      const etsySizes = [...new Set(product.sizes.map(mapSizeToEtsy))];
+      await fillSizeAttribute(etsySizes, '#field-attributes-attribute-295');
+    }
+    // Taille de col — échelle US Lettre (value=46) → taille dans attribute-297
+    if (product.collar_sizes && product.collar_sizes.length > 0) {
+      const echelleCol = document.querySelector('select#attributes-3-scale-select');
+      if (echelleCol) {
+        nativeSet(echelleCol, '46');
+        echelleCol.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(600);
+      }
+      await fillSizeAttribute(product.collar_sizes, '#field-attributes-attribute-297');
+    }
+    // Longueur de manches — échelle pouces (value=88) → taille dans attribute-456
+    if (product.sleeve_sizes && product.sleeve_sizes.length > 0) {
+      const echelleManche = document.querySelector('select#attributes-4-scale-select');
+      if (echelleManche) {
+        nativeSet(echelleManche, '88');
+        echelleManche.dispatchEvent(new Event('change', { bubbles: true }));
+        await sleep(600);
+      }
+      await fillSizeAttribute(product.sleeve_sizes, '#field-attributes-attribute-456');
+    }
+    // Coupe (SELECT attribute-449)
+    if (product.cut) {
+      selectByText('select#attribute-449', product.cut);
+      await sleep(300);
+    }
+    // Style de col (SELECT attribute-433)
+    if (product.collar_style) {
+      selectByText('select#attribute-433', product.collar_style);
+      await sleep(300);
+    }
+    // Poches (radio attribute-381)
+    if (product.pockets != null) {
+      await fillRadio('attribute-381', product.pockets ? '2591' : '2592');
+    }
+    // Fermeture des poignets (radio attribute-434: Simple=2860, Mousquetaire=2861)
+    if (product.cuff_style) {
+      await fillRadio('attribute-434', product.cuff_style);
+    }
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+    if (product.pattern) {
+      await fillAttributeTypeahead('#field-attributes-attribute-185', product.pattern);
+    }
+    if (product.clothing_style) {
+      await fillAttributeTypeahead('#field-attributes-attribute-378', product.clothing_style);
+    }
+  } catch (e) {
+    console.log('🐀 fillChemisesHabillees error:', e.message);
+  }
+}
+
+// ─── fillChapeaux ──────────────────────────────────────────────────────────
+
+async function fillChapeaux(product) {
+  try {
+    await clickShowAllAttributes();
+    // Type de chapeau (attribute-761) — spécifique à cette catégorie
+    if (product.hat_type) {
+      await fillAttributeTypeahead('#field-attributes-attribute-761', product.hat_type);
+    }
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+    if (product.pattern) {
+      await fillAttributeTypeahead('#field-attributes-attribute-185', product.pattern);
+    }
+    // Style (typeahead attribute-557 pour Chapeaux — différent de Valises/Éventails qui utilisent SELECT)
+    if (product.style) {
+      await fillAttributeTypeahead('#field-attributes-attribute-557', product.style);
+    }
+    // Destinataire (max 4)
+    if (product.recipient) {
+      const recipients = Array.isArray(product.recipient) ? product.recipient : [product.recipient];
+      for (const r of recipients.slice(0, 4)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-342', r);
+      }
+    }
+    if (product.occasion) {
+      await fillAttributeTypeahead('#field-attributes-attribute-3', product.occasion);
+    }
+    if (product.holiday) {
+      await fillAttributeTypeahead('#field-attributes-attribute-4', product.holiday);
+    }
+  } catch (e) {
+    console.log('🐀 fillChapeaux error:', e.message);
+  }
+}
+
+// ─── fillValises ───────────────────────────────────────────────────────────
+
+async function fillValises(product) {
+  try {
+    await clickShowAllAttributes();
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+    // Type de tissu principal (attribute-278)
+    if (product.main_fabric) {
+      await fillAttributeTypeahead('#field-attributes-attribute-278', product.main_fabric);
+    }
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+    // Type de tissu secondaire (attribute-279)
+    if (product.secondary_fabric) {
+      await fillAttributeTypeahead('#field-attributes-attribute-279', product.secondary_fabric);
+    }
+    // Style (SELECT attribute-557 pour Valises — différent de Chapeaux qui utilise typeahead)
+    if (product.style) {
+      selectByText('select#attribute-557', product.style);
+      await sleep(300);
+    }
+    if (product.occasion) {
+      await fillAttributeTypeahead('#field-attributes-attribute-3', product.occasion);
+    }
+    if (product.holiday) {
+      await fillAttributeTypeahead('#field-attributes-attribute-4', product.holiday);
+    }
+  } catch (e) {
+    console.log('🐀 fillValises error:', e.message);
+  }
+}
+
+// ─── fillEventails ─────────────────────────────────────────────────────────
+
+async function fillEventails(product) {
+  try {
+    await clickShowAllAttributes();
+    // Style d'éventail (radio attribute-471: Fixe=3450, Pliable=3451)
+    if (product.fan_style) {
+      await fillRadio('attribute-471', product.fan_style);
+    }
+    // Style d'accessoire (SELECT attribute-557)
+    if (product.style) {
+      selectByText('select#attribute-557', product.style);
+      await sleep(300);
+    }
+    if (product.materials && product.materials.length > 0) {
+      for (const mat of product.materials.slice(0, 5)) {
+        await fillAttributeTypeahead('#field-attributes-attribute-357', mat);
+      }
+    }
+    if (product.main_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-2', product.main_color);
+    }
+    if (product.secondary_color) {
+      await fillAttributeTypeahead('#field-attributes-attribute-271', product.secondary_color);
+    }
+    // Pas de Fête pour les Éventails
+    if (product.occasion) {
+      await fillAttributeTypeahead('#field-attributes-attribute-3', product.occasion);
+    }
+  } catch (e) {
+    console.log('🐀 fillEventails error:', e.message);
+  }
+}
+
+// ─── Dispatcher ────────────────────────────────────────────────────────────
+
 // Dispatcher — route vers la bonne fonction selon la catégorie Etsy du produit
 async function fillCategoryAttributes(product) {
   const cat = (product.etsy_category || '').toLowerCase();
@@ -985,8 +1402,23 @@ async function fillCategoryAttributes(product) {
     await fillVestesManteaux(product);
   } else if (cat.includes('pantalon') || cat.includes('trouser') || cat.includes('pant')) {
     await fillPantalons(product);
+  } else if (cat.includes('kit')) {
+    await fillKits(product);
+  } else if (cat.includes('masque') || cat.includes('deguisement') || cat.includes('déguisement')) {
+    await fillMasquesDeguisement(product);
+  } else if (cat.includes('t-shirt') || cat.includes('tshirt')) {
+    await fillTshirts(product);
+  } else if (cat.includes('tunique')) {
+    await fillTuniques(product);
+  } else if (cat.includes('chemise')) {
+    await fillChemisesHabillees(product);
+  } else if (cat.includes('chapeau') || cat.includes('casquette')) {
+    await fillChapeaux(product);
+  } else if (cat.includes('valise')) {
+    await fillValises(product);
+  } else if (cat.includes('ventail') || cat.includes('eventail') || cat.includes('éventail')) {
+    await fillEventails(product);
   }
-  // Ajouter d'autres catégories ici au fur et à mesure
 }
 
 // Main function to fill Etsy's listing form

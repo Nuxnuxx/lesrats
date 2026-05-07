@@ -1,0 +1,100 @@
+{
+  "category": "Chapeaux et casquettes",
+  "etsy_category_path": "Accessoires > Chapeaux et couvre-tetes > Chapeaux et casquettes",
+  "states": [
+    {
+      "id": "base",
+      "description": "Etat initial apres selection de la categorie. 5 champs visibles + bouton 'Afficher tous les attributs' qui revele 5 champs supplementaires (Durabilite, Style, Occasion, Fete, Destinataire). Aucun champ Echelle/Taille - les chapeaux n'ont pas de variation de taille structuree par defaut.",
+      "fields": [
+        {
+          "label": "Materiaux",
+          "selector": "#field-attributes-attribute-357",
+          "type": "checkbox_typeahead",
+          "max_select": 5,
+          "note": "551 options pre-chargees comme checkboxes. Liste massive - ne pas inliner."
+        },
+        {
+          "label": "Couleur principale",
+          "selector": "#field-attributes-attribute-2",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Pattern",
+          "selector": "#field-attributes-attribute-185",
+          "type": "typeahead_menu",
+          "options": ["Abstrait", "Imprime animal", "Losanges", "Oiseau", "Camouflage", "Chat", "Damier", "Chevrons", "Chien", "Animal exotique", "Fleuri", "Geometrique", "Vichy", "Pied-de-poule", "Ikat", "Lettres et mots", "Marbre", "Ombre", "Cachemire", "Patchwork", "Ecossais", "Plantes et arbres", "Pois", "Crane et squelette", "Uni", "Etoiles et formes celestes", "Rayures", "Volutes", "Tie and dye"]
+        },
+        {
+          "label": "Type de chapeau",
+          "selector": "#field-attributes-attribute-761",
+          "type": "typeahead_menu",
+          "options": ["Casquette", "Bonnet", "Beret", "Canotier", "Beguin", "Melon", "Bob", "Cloche", "Deguisement", "Cowboy", "Fedora", "Evenement officiel", "Militaire", "Gavroche", "Panama", "Bibi", "Charlotte hygienique", "Calotte", "Souple", "Chapeau de soleil", "Beret ecossais", "Haut-de-forme", "Trappeur et chapka", "Visiere", "Hiver"],
+          "note": "Champ specifique a la categorie Chapeaux et casquettes."
+        },
+        {
+          "label": "Couleur secondaire",
+          "selector": "#field-attributes-attribute-271",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        }
+      ]
+    },
+    {
+      "id": "tous-attributs-affiches",
+      "description": "Apres clic sur 'Afficher tous les attributs' - 5 champs supplementaires apparaissent.",
+      "trigger": {
+        "field": "Afficher tous les attributs",
+        "action": "click",
+        "value": "Bouton dont textContent contient 'Afficher tous'"
+      },
+      "fields": [
+        {
+          "label": "Durabilite",
+          "selector": "#field-attributes-attribute-739",
+          "type": "checkbox_typeahead",
+          "max_select": 3,
+          "options": ["Chanvre", "Lin", "Coton biologique", "Polyester recycle", "Surcycle"],
+          "note": "Differe de Pantalons (4 options) - ici 5 options dont 'Surcycle'."
+        },
+        {
+          "label": "Style",
+          "selector": "#field-attributes-attribute-557",
+          "type": "typeahead_menu",
+          "options": ["Art deco", "Avant-garde", "Boheme et hippie", "Edouardien", "Evenement officiel", "Gothique", "Lolita", "Annees 1950", "Militaire", "Minimaliste", "Mod", "BCBG", "Teuf", "Rocker", "Steampunk", "Victorien", "Western et cowboy"]
+        },
+        {
+          "label": "Occasion",
+          "selector": "#field-attributes-attribute-3",
+          "type": "typeahead_menu",
+          "options": ["1er anniversaire", "Anniversaires", "Fete prenatale", "Enterrement de vie de garcon", "Enterrement de vie de jeune fille", "Rentree", "Bapteme", "Bar ou Bat Mitzvah", "Anniversaire", "Fete prenuptiale", "Divorce et separation", "Fiancailles", "Remise de diplomes", "Tristesse et deuil", "Pendaison de cremaillere", "Marche des fiertes", "Demenagement", "Bal de promo", "Fete des 15 ou 16 ans", "Retraite", "Mariage"]
+        },
+        {
+          "label": "Fete",
+          "selector": "#field-attributes-attribute-4",
+          "type": "typeahead_menu",
+          "options": ["Noel", "Cinco de Mayo", "Paques", "Fete des peres", "Halloween", "Hanoucca", "Jour de l'independance americaine", "Kwanzaa", "Nouvelle annee lunaire", "Fete des meres", "Nouvel An", "Paque juive", "St Patrick", "Thanksgiving", "Saint-Valentin", "Jour des veterans"]
+        },
+        {
+          "label": "Destinataire",
+          "selector": "#field-attributes-attribute-342",
+          "type": "checkbox_typeahead",
+          "max_select": 4,
+          "options": ["Adulte", "Bebe", "Enfant", "Petit enfant"]
+        }
+      ]
+    }
+  ],
+  "fill_order": [
+    "1. Selectionner Chapeaux et casquettes (recherche dans le champ catégorie)",
+    "2. Cliquer 'Afficher tous les attributs' AVANT de remplir Durabilite/Style/Occasion/Fete/Destinataire (sinon ces champs ne sont pas dans le DOM)",
+    "3. Type de chapeau - typeahead",
+    "4. Materiaux (max 5) - checkboxes",
+    "5. Couleur principale + secondaire - typeaheads",
+    "6. Pattern - typeahead",
+    "7. Style - typeahead",
+    "8. Destinataire (max 4) - checkboxes",
+    "9. Durabilite (max 3) - checkboxes",
+    "10. Occasion + Fete - typeaheads"
+  ]
+}

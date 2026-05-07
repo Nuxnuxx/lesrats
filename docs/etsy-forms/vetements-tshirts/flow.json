@@ -1,0 +1,135 @@
+{
+  "category": "T-shirts",
+  "etsy_category_path": "Vetements > Vetements adultes non genres > Hauts et t-shirts > T-shirts",
+  "states": [
+    {
+      "id": "base",
+      "description": "Etat initial apres selection de la categorie T-shirts. 11 champs visibles apres clic 'Afficher tous les attributs'. 3 SELECTs natifs (Echelle, Longueur de manches, Encolure) + 8 typeaheads. Champs Graphique unique a cette categorie.",
+      "fields": [
+        {
+          "label": "Materiaux",
+          "selector": "#field-attributes-attribute-357",
+          "type": "checkbox_typeahead",
+          "max_select": 5,
+          "note": "551 options pre-chargees comme checkboxes."
+        },
+        {
+          "label": "Couleur principale",
+          "selector": "#field-attributes-attribute-2",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Echelle de taille",
+          "selector": "select#attributes-2-scale-select",
+          "type": "select",
+          "options": [
+            { "value": "-1", "label": "Choisissez une echelle" },
+            { "value": "51", "label": "US (Lettre)" }
+          ],
+          "note": "Selectionner une echelle declenche l'apparition d'un champ Taille (typeahead) DANS LE MEME container #field-attributes-attribute-300. Index N=2 pour T-shirts (vs N=4 pour Pantalons)."
+        },
+        {
+          "label": "Longueur de manches",
+          "selector": "select#attribute-408",
+          "type": "select",
+          "options": [
+            { "value": "",     "label": "Choisir : longueur de manches" },
+            { "value": "2672", "label": "Sans manche" },
+            { "value": "2668", "label": "Manche courte" },
+            { "value": "2669", "label": "Manche mi-longue" },
+            { "value": "2670", "label": "Manche 3/4" },
+            { "value": "2671", "label": "Manche longue" }
+          ],
+          "note": "Champ specifique aux hauts/t-shirts."
+        },
+        {
+          "label": "Encolure",
+          "selector": "select#attribute-409",
+          "type": "select",
+          "options": [
+            { "value": "",     "label": "Choisir : encolure" },
+            { "value": "2676", "label": "Avec col" },
+            { "value": "2678", "label": "Rond" },
+            { "value": "2692", "label": "V plongeant" },
+            { "value": "2680", "label": "Avec ouverture boutonnee" },
+            { "value": "2686", "label": "Profond" },
+            { "value": "2691", "label": "Col V" }
+          ],
+          "note": "Champ specifique aux hauts/t-shirts."
+        },
+        {
+          "label": "Couleur secondaire",
+          "selector": "#field-attributes-attribute-271",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Durabilite",
+          "selector": "#field-attributes-attribute-739",
+          "type": "checkbox_typeahead",
+          "max_select": 3,
+          "options": ["Chanvre", "Lin", "Coton biologique", "Polyester recycle"]
+        },
+        {
+          "label": "Style de vetements",
+          "selector": "#field-attributes-attribute-378",
+          "type": "typeahead_menu",
+          "options": ["Sportif", "Boheme et hippie", "Gothique", "Harajuku", "Lolita", "Militaire", "Minimaliste", "Pinup et rockabilly", "BCBG", "Teuf", "Rocker", "Steampunk", "Streetwear", "Travail", "Victorien", "Western et cowboy"],
+          "note": "Liste differente vs Pantalons - inclut Harajuku, Pinup et rockabilly; n'inclut pas Mod, Evenement officiel, Rockabilly seul."
+        },
+        {
+          "label": "Occasion",
+          "selector": "#field-attributes-attribute-3",
+          "type": "typeahead_menu",
+          "options": ["Anniversaires", "Enterrement de vie de garcon", "Enterrement de vie de jeune fille", "Rentree", "Anniversaire", "Divorce et separation", "Fiancailles", "Remise de diplomes", "Tristesse et deuil", "Marche des fiertes", "Demenagement", "Bal de promo", "Fete des 15 ou 16 ans", "Retraite", "Mariage"]
+        },
+        {
+          "label": "Fete",
+          "selector": "#field-attributes-attribute-4",
+          "type": "typeahead_menu",
+          "options": ["Noel", "Cinco de Mayo", "Diwali", "Paques", "Aid", "Fete des peres", "Halloween", "Hanoucca", "Holi", "Jour de l'independance americaine", "Kwanzaa", "Fete des meres", "St Patrick", "Thanksgiving", "Saint-Valentin", "Jour des veterans"],
+          "note": "Inclut Diwali, Aid, Holi (absentes de Chapeaux et Kits)."
+        },
+        {
+          "label": "Graphique",
+          "selector": "#field-attributes-attribute-426",
+          "type": "typeahead_menu",
+          "options": ["Abstrait et geometrique", "Animal", "Dessins animes", "Bollywood", "Marque et logo", "BD et mangas", "Science-fiction et fantastique", "Inspiration fitness", "Fleurs", "Nourriture et boissons", "Geographique et local", "Horreur et gothique", "Phrase humoristique", "Phrase inspirante", "Marche des fiertes", "Litteraire", "Militaire et historique", "Film", "Musique", "Marin", "Patriotique et drapeaux", "Phrase et citation", "Plantes et arbres", "Politique et elections", "Manifestation", "Religieux", "Science et technologie", "Sport et fitness", "Etoiles et formes celestes", "Super-heros", "Surf et skate", "Voyage et transports", "TV", "Jeu video"],
+          "note": "Champ specifique aux T-shirts. 34 themes graphiques - decrit le motif/dessin imprime sur le t-shirt."
+        }
+      ]
+    },
+    {
+      "id": "echelle-us-selectionnee",
+      "description": "Apres selection de 'US (Lettre)' (value=51) sur l'echelle - un champ Taille (typeahead) apparait dans le meme container.",
+      "trigger": {
+        "field": "Echelle de taille",
+        "action": "select",
+        "value": "51"
+      },
+      "fields": [
+        {
+          "label": "Taille",
+          "selector": "#field-attributes-attribute-300 input[type='text']",
+          "type": "typeahead_menu",
+          "options": ["XXS", "XS", "S", "M", "L", "XL", "2X", "3X", "4X"],
+          "note": "L'id de l'input est dynamique (typeahead-input-{uuid}) - cibler via le container parent."
+        }
+      ]
+    }
+  ],
+  "fill_order": [
+    "1. Selectionner la categorie T-shirts",
+    "2. Cliquer 'Afficher tous les attributs' pour reveler tous les champs",
+    "3. Echelle de taille (select#attributes-2-scale-select=51) - DOIT etre avant Taille",
+    "4. Taille - cliquer button[role='menuitemradio'] dans #field-attributes-attribute-300",
+    "5. Longueur de manches (select#attribute-408)",
+    "6. Encolure (select#attribute-409)",
+    "7. Materiaux (max 5)",
+    "8. Couleur principale + secondaire",
+    "9. Durabilite (max 3)",
+    "10. Style de vetements + Graphique",
+    "11. Occasion + Fete"
+  ]
+}
