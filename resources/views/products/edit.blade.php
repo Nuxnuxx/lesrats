@@ -60,6 +60,7 @@
         $initRevenue = ($initPrice + $shippingFee) * (1 - $k) - $f;
         $initUrssaf = $initRevenue * $u;
         $initProfit = round($initRevenue - $initCost - $initUrssaf, 2);
+        $priceVariants = is_array($product->price_variants) ? array_values($product->price_variants) : [];
         $etsyCategory = $product->etsy_category;
         $hasCategory = $etsyCategory && in_array($etsyCategory, $shopCategories);
         $etsyColors = \App\Models\Product::ETSY_COLORS;
@@ -708,7 +709,7 @@
                             @if(count($shopShippingFees) > 1)
                             <div class="mb-3">
                                 <label class="text-xs font-medium text-gray-700">Frais de livraison</label>
-                                <select @change="shipping = parseFloat($el.value); save({ shipping_fee: shipping }); recalc()"
+                                <select @change="shipping = parseFloat($el.value); save({ shipping_fee: shipping }); recalc(); window.dispatchEvent(new CustomEvent('shipping-changed', { detail: shipping }))"
                                         class="mt-1 block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm py-1.5">
                                     @foreach($shopShippingFees as $fee)
                                         <option value="{{ $fee['value'] }}"
@@ -756,6 +757,107 @@
                                 </div>
                             </div>
                         </div>
+                        </div>
+
+                        {{-- Variantes de prix --}}
+                        <div class="mt-4"
+                             x-data="priceVariants({
+                                 initialVariants: @js($priceVariants),
+                                 k: {{ $k }},
+                                 f: {{ $f }},
+                                 u: {{ $u }},
+                                 defaultShipping: {{ $shippingFee }}
+                             })"
+                             @shipping-changed.window="defaultShipping = $event.detail">
+
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Variantes de prix</span>
+                                    <p class="text-xs text-gray-400">Pack x2, lot de 3...</p>
+                                </div>
+                                <button type="button"
+                                        @click="addVariant()"
+                                        class="inline-flex items-center px-2 py-0.5 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100 transition-colors">
+                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Ajouter
+                                </button>
+                            </div>
+
+                            <template x-for="(variant, index) in variants" :key="index">
+                                <div class="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <input type="text"
+                                               x-model="variant.label"
+                                               @input.debounce.800ms="persistVariants()"
+                                               placeholder="Ex: Pack x2"
+                                               class="flex-1 text-xs font-medium rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-1">
+                                        <button type="button"
+                                                @click="removeVariant(index)"
+                                                class="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                                                title="Supprimer">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <div class="flex items-end gap-2">
+                                        <div class="flex-1">
+                                            <label class="text-xs text-gray-500">Prix de vente</label>
+                                            <div class="relative mt-0.5">
+                                                <input type="number" step="0.01" min="0"
+                                                       x-model="variant.price"
+                                                       @input.debounce.800ms="persistVariants()"
+                                                       placeholder="0.00"
+                                                       class="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-0.5 px-1.5 pr-6 text-xs">
+                                                <span class="absolute inset-y-0 right-1 flex items-center text-gray-400 text-xs pointer-events-none">€</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1">
+                                            <label class="text-xs text-gray-500">Coût achat</label>
+                                            <div class="relative mt-0.5">
+                                                <input type="number" step="0.01" min="0"
+                                                       x-model="variant.cost_price"
+                                                       @input.debounce.800ms="persistVariants()"
+                                                       placeholder="0.00"
+                                                       class="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-0.5 px-1.5 pr-6 text-xs">
+                                                <span class="absolute inset-y-0 right-1 flex items-center text-gray-400 text-xs pointer-events-none">€</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-2 p-2 bg-white rounded border border-gray-100 text-xs space-y-1.5">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-500">Livraison</span>
+                                            <span x-text="'+' + effectiveShipping(variant.shipping_fee).toFixed(2)"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-500">Etsy ({{ round($k * 100, 1) }}%+{{ number_format($f, 2) }})</span>
+                                            <span class="text-red-600" x-text="'-' + calcEtsyFees(variant.price, variant.shipping_fee).toFixed(2)"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-500">Cout achat</span>
+                                            <span class="text-red-600" x-text="'-' + (parseFloat(variant.cost_price) || 0).toFixed(2)"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-500">URSSAF ({{ round($u * 100, 1) }}%)</span>
+                                            <span class="text-red-600" x-text="'-' + calcUrssaf(variant.price, variant.shipping_fee).toFixed(2)"></span>
+                                        </div>
+                                        <div class="border-t border-gray-200 pt-1.5 flex justify-between">
+                                            <span class="font-medium text-gray-700">Profit net</span>
+                                            <span class="font-bold flex items-baseline gap-1"
+                                                  :class="calcProfit(variant.price, variant.cost_price, variant.shipping_fee) >= 0 ? 'text-green-600' : 'text-red-600'">
+                                                <span x-text="(calcProfit(variant.price, variant.cost_price, variant.shipping_fee) >= 0 ? '+' : '') + calcProfit(variant.price, variant.cost_price, variant.shipping_fee).toFixed(2)"></span>
+                                                <span class="font-normal text-xs opacity-70" x-text="'(' + calcMargin(variant.price, variant.cost_price, variant.shipping_fee) + '%)'"></span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
                         </div>
                     </div>
 
@@ -890,6 +992,66 @@
 
                     setTimeout(() => status.classList.add('hidden'), 2000);
                 }
+            };
+        }
+
+        function priceVariants(config) {
+            return {
+                variants: config.initialVariants || [],
+                k: config.k,
+                f: config.f,
+                u: config.u,
+                defaultShipping: config.defaultShipping,
+
+                effectiveShipping(shipping) {
+                    return (shipping !== null && shipping !== undefined && shipping !== '') ? parseFloat(shipping) : this.defaultShipping;
+                },
+
+                calcProfit(price, cost, shipping) {
+                    const s = this.effectiveShipping(shipping);
+                    const p = parseFloat(price) || 0;
+                    const c = parseFloat(cost) || 0;
+                    const revenue = (p + s) * (1 - this.k) - this.f;
+                    const urssaf = revenue * this.u;
+                    return Math.round((revenue - c - urssaf) * 100) / 100;
+                },
+
+                calcEtsyFees(price, shipping) {
+                    const s = this.effectiveShipping(shipping);
+                    const p = parseFloat(price) || 0;
+                    return Math.round(((p + s) * this.k + this.f) * 100) / 100;
+                },
+
+                calcUrssaf(price, shipping) {
+                    const s = this.effectiveShipping(shipping);
+                    const p = parseFloat(price) || 0;
+                    const revenue = (p + s) * (1 - this.k) - this.f;
+                    return Math.round((revenue * this.u) * 100) / 100;
+                },
+
+                calcMargin(price, cost, shipping) {
+                    const p = parseFloat(price) || 0;
+                    if (p === 0) return 0;
+                    return Math.round(this.calcProfit(price, cost, shipping) / p * 1000) / 10;
+                },
+
+                addVariant() {
+                    this.variants.push({
+                        label: 'Pack x' + (this.variants.length + 2),
+                        price: '',
+                        cost_price: '',
+                        shipping_fee: null,
+                    });
+                },
+
+                removeVariant(index) {
+                    this.variants.splice(index, 1);
+                    this.persistVariants();
+                },
+
+                persistVariants() {
+                    this.$root.save({ price_variants: JSON.stringify(this.variants) });
+                },
             };
         }
 
