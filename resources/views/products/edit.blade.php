@@ -72,7 +72,7 @@
     <div class="py-4" x-data="productAutoSave({
         productId: {{ $product->id }},
         csrfToken: '{{ csrf_token() }}'
-    })">
+    })" @persist-variants.window="save($event.detail)">
         <div class="mx-auto px-4 sm:px-6 lg:px-8">
 
             {{-- 3-column grid --}}
@@ -1050,7 +1050,7 @@
                 },
 
                 persistVariants() {
-                    this.$root.save({ price_variants: JSON.stringify(this.variants) });
+                    this.$dispatch('persist-variants', { price_variants: JSON.stringify(this.variants) });
                 },
             };
         }
