@@ -201,6 +201,7 @@ class ProductController extends Controller
             'main_color' => 'sometimes|nullable|string|max:50',
             'secondary_color' => 'sometimes|nullable|string|max:50',
             'materials' => 'sometimes|nullable|string',
+            'price_variants' => 'sometimes|nullable|string',
         ]);
 
         // Convert sizes JSON string to array
@@ -219,6 +220,11 @@ class ProductController extends Controller
         // Convert materials JSON string to array
         if (isset($validated['materials']) && is_string($validated['materials'])) {
             $validated['materials'] = json_decode($validated['materials'], true) ?? [];
+        }
+
+        // Convert price_variants JSON string to array
+        if (isset($validated['price_variants']) && is_string($validated['price_variants'])) {
+            $validated['price_variants'] = json_decode($validated['price_variants'], true) ?? [];
         }
 
         $product->update($validated);
