@@ -1,0 +1,71 @@
+{
+  "category": "Kits",
+  "etsy_category_path": "Fournitures creatives et outils > Modeles et tutoriels > Kits",
+  "states": [
+    {
+      "id": "base",
+      "description": "Etat initial apres selection de la categorie Kits. 2 champs visibles + bouton 'Afficher tous les attributs' qui revele les autres. Aucun SELECT natif - tous typeaheads. Pas de champ Echelle/Taille. Type d'artisanat est OBLIGATOIRE pour publier.",
+      "fields": [
+        {
+          "label": "Type d'artisanat",
+          "selector": "#field-attributes-attribute-20",
+          "type": "checkbox_typeahead",
+          "max_select": 5,
+          "required": true,
+          "options": ["Impression 3D", "Patisserie", "Vannerie", "Perlage", "Reliure", "Brassage", "Calligraphie", "Fabrication de bougies", "Fabrication de bonbons", "Conserves", "Fabrication de papeterie et cartes", "Taille et sculpture", "Ceramique et poterie", "Collage", "Coloriage", "Broderie Crewel", "Crochet", "Point de croix", "Laitages et kombucha", "Fabrication de poupees", "Maisons de poupees et miniatures", "Dessin et schemas", "Teinture et batik", "Electronique et circuits", "Broderie", "Emaillage", "Gravure", "Feutre", "Arrangement floral", "Encadrement", "Jardinage", "Soufflage du verre", "Fusing", "Creation de chapeaux et coiffes", "Bricolage", "Fabrication de bijoux", "Loisirs creatifs pour enfants", "Tricot", "Filage et modelage au chalumeau", "Travail du cuir", "Macrame", "Maquillage classique et ludique", "Marbrage", "Travail du metal", "Fabrication de modeles reduits", "Moulage et fonte", "Fabrication de mosaiques", "Nail Art", "Tapisserie", "Creations en tubes neon", "Origami", "Peinture", "Paperolles", "Estampage sur papier", "Fetes et cadeaux", "Photographie", "Canevas plastique", "Impression et gravure", "Matelassage", "Robotique", "Fabrication de tapis", "Scrapbooking", "Sculpture", "Couture", "Fabrication de chaussures", "Fabrication de savon et produits pour le bain", "Filage de la laine", "Vitrail", "Fabrication de dentelle", "Tatouage", "Terrariums", "Ameublement", "Fabrication de montres", "Tapisserie et tissage", "Fabrication de vin", "Travail du bois et charpente"],
+          "note": "76 options pre-chargees comme checkboxes. Champ specifique a la categorie Kits/Fournitures. CHAMP OBLIGATOIRE - sans selection, l'erreur 'Corrigez l'erreur suivante : Type d'artisanat' apparait."
+        },
+        {
+          "label": "Materiaux",
+          "selector": "#field-attributes-attribute-357",
+          "type": "checkbox_typeahead",
+          "max_select": 5,
+          "note": "551 options pre-chargees comme checkboxes."
+        }
+      ]
+    },
+    {
+      "id": "tous-attributs-affiches",
+      "description": "Apres clic sur 'Afficher tous les attributs' - 4 champs supplementaires apparaissent (Couleur principale, Couleur secondaire, Occasion, Fete).",
+      "trigger": {
+        "field": "Afficher tous les attributs",
+        "action": "click",
+        "value": "Bouton dont textContent contient 'Afficher tous'"
+      },
+      "fields": [
+        {
+          "label": "Couleur principale",
+          "selector": "#field-attributes-attribute-2",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Couleur secondaire",
+          "selector": "#field-attributes-attribute-271",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Occasion",
+          "selector": "#field-attributes-attribute-3",
+          "type": "typeahead_menu",
+          "options": ["Anniversaires", "Fete prenatale", "Enterrement de vie de garcon", "Enterrement de vie de jeune fille", "Rentree", "Bapteme", "Bar ou Bat Mitzvah", "Anniversaire", "Fete prenuptiale", "Confirmation", "Fiancailles", "Premiere communion", "Remise de diplomes", "Pendaison de cremaillere", "Marche des fiertes", "Bal de promo", "Fete des 15 ou 16 ans", "Retraite", "Mariage"]
+        },
+        {
+          "label": "Fete",
+          "selector": "#field-attributes-attribute-4",
+          "type": "typeahead_menu",
+          "options": ["Noel", "Cinco de Mayo", "Paques", "Fete des peres", "Halloween", "Hanoucca", "Jour de l'independance americaine", "Kwanzaa", "Nouvelle annee lunaire", "Fete des meres", "Nouvel An", "St Patrick", "Thanksgiving", "Saint-Valentin"]
+        }
+      ]
+    }
+  ],
+  "fill_order": [
+    "1. Selectionner la categorie Kits (recherche)",
+    "2. Type d'artisanat (max 5) - OBLIGATOIRE",
+    "3. Materiaux (max 5)",
+    "4. Cliquer 'Afficher tous les attributs' AVANT de remplir Couleur/Occasion/Fete",
+    "5. Couleur principale + secondaire",
+    "6. Occasion + Fete"
+  ]
+}

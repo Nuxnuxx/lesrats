@@ -1,0 +1,131 @@
+{
+  "category": "Pantalons",
+  "etsy_category_path": "Vetements > Vetements adultes non genres > Pantalons",
+  "states": [
+    {
+      "id": "base",
+      "description": "Etat initial apres selection de la categorie Pantalons. 8 champs attributs visibles.",
+      "fields": [
+        {
+          "label": "Materiaux",
+          "selector": "#field-attributes-attribute-357",
+          "type": "checkbox_typeahead",
+          "max_select": 5,
+          "note": "551 options pre-chargees comme checkboxes. Ne pas inliner la liste."
+        },
+        {
+          "label": "Couleur principale",
+          "selector": "#field-attributes-attribute-2",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Style de pantalon",
+          "selector": "select#attribute-441",
+          "type": "select",
+          "options": [
+            { "value": "",     "label": "Choisir : style de pantalon" },
+            { "value": "2904", "label": "Cargo" },
+            { "value": "2906", "label": "Sarouel" },
+            { "value": "2907", "label": "Jogging" },
+            { "value": "2908", "label": "Moto" },
+            { "value": "2909", "label": "Equitation" },
+            { "value": "2910", "label": "Survetement" },
+            { "value": "2911", "label": "Course" },
+            { "value": "2912", "label": "Pantalon" }
+          ]
+        },
+        {
+          "label": "Couleur secondaire",
+          "selector": "#field-attributes-attribute-271",
+          "type": "typeahead_menu",
+          "options": ["Beige", "Noir", "Bleu", "Bronze", "Marron", "Transparent", "Cuivre", "Or", "Gris", "Vert", "Orange", "Rose", "Violet", "Multicolore", "Rouge", "Or rose", "Argent", "Blanc", "Jaune"]
+        },
+        {
+          "label": "Echelle de taille",
+          "selector": "select#attributes-4-scale-select",
+          "type": "select",
+          "options": [
+            { "value": "-1", "label": "Choisissez une echelle" },
+            { "value": "49", "label": "US (Lettre)" }
+          ],
+          "note": "Selectionner une echelle declenche l'apparition d'un champ Taille (typeahead) DANS LE MEME container #field-attributes-attribute-299."
+        },
+        {
+          "label": "Durabilite",
+          "selector": "#field-attributes-attribute-739",
+          "type": "checkbox_typeahead",
+          "max_select": 3,
+          "options": ["Chanvre", "Lin", "Coton biologique", "Polyester recycle"]
+        },
+        {
+          "label": "Style de vetements",
+          "selector": "#field-attributes-attribute-378",
+          "type": "typeahead_menu",
+          "options": ["Sportif", "Boheme et hippie", "Evenement officiel", "Gothique", "Militaire", "Minimaliste", "Mod", "BCBG", "Teuf", "Rockabilly", "Rocker", "Steampunk", "Streetwear", "Travail", "Victorien", "Western et cowboy"]
+        },
+        {
+          "label": "Occasion",
+          "selector": "#field-attributes-attribute-3",
+          "type": "typeahead_menu",
+          "options": ["Anniversaires", "Enterrement de vie de garcon", "Enterrement de vie de jeune fille", "Rentree", "Anniversaire", "Divorce et separation", "Fiancailles", "Remise de diplomes", "Tristesse et deuil", "Marche des fiertes", "Demenagement", "Bal de promo", "Fete des 15 ou 16 ans", "Retraite", "Mariage"]
+        }
+      ]
+    },
+    {
+      "id": "echelle-us-selectionnee",
+      "description": "Apres selection de 'US (Lettre)' sur l'echelle - un champ Taille (typeahead) apparait dans le meme container.",
+      "trigger": {
+        "field": "Echelle de taille",
+        "action": "select",
+        "value": "49"
+      },
+      "fields": [
+        {
+          "label": "Taille",
+          "selector": "#field-attributes-attribute-299 input[type='text']",
+          "type": "typeahead_menu",
+          "options": ["XXS", "XS", "S", "M", "L", "XL", "2X", "3X", "4X"],
+          "note": "L'id de l'input est dynamique (typeahead-input-{uuid}) - cibler via le container parent."
+        }
+      ]
+    },
+    {
+      "id": "modal-variation-taille",
+      "description": "Modal Variation Taille (apres clic 'Ajouter des variations' puis 'Taille'). Rendu dans #wt-portals.",
+      "trigger": {
+        "field": "Variations",
+        "action": "click",
+        "value": "Ajouter des variations puis Taille"
+      },
+      "fields": [
+        {
+          "label": "Echelle (variation)",
+          "selector": "select#le-structured-variation-scale-select",
+          "type": "select",
+          "options": [
+            { "value": "-1", "label": "Choisissez une echelle" },
+            { "value": "49", "label": "US (Lettre)" }
+          ]
+        },
+        {
+          "label": "Options de tailles (multi-select, apparait apres echelle=49)",
+          "selector": "#le-variations-overlay input[type='text']",
+          "type": "typeahead_menu",
+          "options": ["XXS", "XS", "S", "M", "L", "XL", "2X", "3X", "4X"],
+          "extras": ["Ajouter toutes les options"]
+        }
+      ]
+    }
+  ],
+  "fill_order": [
+    "1. Selectionner Pantalons",
+    "2. Style de pantalon (select#attribute-441)",
+    "3. Echelle de taille (select#attributes-4-scale-select=49) - DOIT etre avant Taille",
+    "4. Taille - cliquer button[role='menuitemradio'] dans #field-attributes-attribute-299",
+    "5. Materiaux (max 5)",
+    "6. Couleur principale + secondaire",
+    "7. Durabilite (max 3)",
+    "8. Style de vetements + Occasion"
+  ]
+}

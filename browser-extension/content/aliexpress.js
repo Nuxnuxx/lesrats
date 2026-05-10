@@ -92,6 +92,16 @@ async function extractProductData(includeCountryPrices = false) {
     }
   }
 
+  // Normaliser les tailles vers le format Etsy (XXL→2X, XXXL→3X, etc.)
+  if (data.variants) {
+    data.variants = data.variants.map(v => ({
+      ...v,
+      values: [...new Set(
+        (v.values || []).map(s => mapSizeToEtsy(s))
+      )]
+    }));
+  }
+
   // Toujours ajouter ces infos
   data.source_url = window.location.href;
   data.aliexpress_product_id = extractProductId();
@@ -235,7 +245,7 @@ function extractFromPageData(_debug = []) {
               data.variants = [{
                 name: originalName,
                 values: sizeProp.skuPropertyValues
-                  .map(v => v.propertyValueDisplayName || v.propertyValueName)
+                  .map(v => (v.propertyValueDisplayName || v.propertyValueName || '').replace(/'/g, '').trim())
                   .filter(Boolean)
               }];
               console.log('🐀 AliExpress - Sizes extracted (' + originalName + '):', data.variants[0].values);
@@ -476,6 +486,17 @@ function extractDescriptionFromDOM() {
 }
 
 // Extraire les tailles depuis le DOM (fallback)
+function mapSizeToEtsy(size) {
+  let s = String(size).trim().replace(/'/g, '').toUpperCase();
+  const map = {
+    'XXL': '2X', '2XL': '2X',
+    'XXXL': '3X', '3XL': '3X',
+    'XXXXL': '4X', '4XL': '4X',
+    'XXXXXL': '4X', '5XL': '4X', '6XL': '4X',
+  };
+  return map[s] ?? s;
+}
+
 function extractSizesFromDOM(_debug = []) {
   const sizes = [];
 
@@ -485,8 +506,8 @@ function extractSizesFromDOM(_debug = []) {
     const items = row.querySelectorAll('[class*="sku-item--text"]');
     const values = [];
     for (const item of items) {
-      const title = item.getAttribute('title');
-      if (title) values.push(title.trim());
+      const title = (item.getAttribute('title') || '').replace(/'/g, '').trim();
+      if (title) values.push(title);
     }
     // Vérifier si c'est bien une row de tailles (S, M, L, XL, ring sizes, etc.)
     const sizePatterns = /^(XXS|XS|S|M|L|XL|XXL|XXXL|4XL|5XL|6XL|\d{1,3}([.,]\d)?(cm)?)$/i;
@@ -505,7 +526,7 @@ function extractSizesFromDOM(_debug = []) {
     if (labelText.includes('size') || labelText.includes('taille') || labelText.includes('talla')) {
       const items = prop.querySelectorAll('[class*="sku-item--text"]');
       for (const item of items) {
-        const title = item.getAttribute('title') || item.textContent?.trim();
+        const title = (item.getAttribute('title') || item.textContent?.trim() || '').replace(/'/g, '').trim();
         if (title) sizes.push(title);
       }
       if (sizes.length > 0) {

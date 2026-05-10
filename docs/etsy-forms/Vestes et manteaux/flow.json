@@ -1,0 +1,120 @@
+{
+  "category": "Vestes et manteaux",
+  "etsy_category_id": null,
+  "states": [
+    {
+      "id": "base",
+      "file": "01_base.html",
+      "description": "Formulaire initial après sélection de la catégorie",
+      "trigger": null,
+      "fields": [
+        {
+          "label": "Saison",
+          "selector": "select#attribute-475",
+          "type": "select",
+          "options": [
+            { "value": "462",  "label": "Printemps" },
+            { "value": "466",  "label": "Été" },
+            { "value": "1065", "label": "Automne" },
+            { "value": "475",  "label": "Hiver" },
+            { "value": "3454", "label": "Toutes saisons" }
+          ]
+        },
+        {
+          "label": "Échelle de taille",
+          "selector": "select#attributes-2-scale-select",
+          "type": "select",
+          "options": [
+            { "value": "-1", "label": "Choisissez une Échelle" },
+            { "value": "42", "label": "US (Lettre)" }
+          ],
+          "note": "Sélectionner cette valeur déclenche l'apparition du champ Taille (attribute-295)"
+        },
+        {
+          "label": "Matériaux",
+          "selector": "#field-attributes-attribute-357",
+          "type": "typeahead"
+        },
+        {
+          "label": "Couleur secondaire",
+          "selector": "#field-attributes-attribute-271",
+          "type": "typeahead"
+        },
+        {
+          "label": "Motif",
+          "selector": "#field-attributes-attribute-185",
+          "type": "typeahead"
+        },
+        {
+          "label": "À capuche",
+          "selector": "#field-attributes-attribute-389",
+          "type": "checkbox_or_boolean"
+        },
+        {
+          "label": "Style de vêtements",
+          "selector": "#field-attributes-attribute-378",
+          "type": "select_or_typeahead"
+        },
+        {
+          "label": "Fermeture",
+          "selector": "#field-attributes-attribute-380",
+          "type": "select_or_typeahead",
+          "note": "Type de fermeture : zip, boutons, etc."
+        },
+        {
+          "label": "Style de veste",
+          "selector": "#field-attributes-attribute-453",
+          "type": "select_or_typeahead",
+          "note": "Bomber, trench, parka, etc."
+        },
+        {
+          "label": "Durabilité",
+          "selector": "#field-attributes-attribute-739",
+          "type": "select_or_typeahead"
+        }
+      ]
+    },
+    {
+      "id": "echelle-us-selectionnee",
+      "file": "02_tailleusselected",
+      "description": "Après sélection de 'US (Lettre)' dans le champ Échelle — le champ Taille apparaît (fermé)",
+      "trigger": {
+        "field": "Échelle de taille",
+        "selector": "select#attributes-2-scale-select",
+        "action": "select",
+        "value": "42"
+      },
+      "fields": [
+        {
+          "label": "Taille",
+          "attribute_id": "attribute-295",
+          "container_selector": "#field-attributes-attribute-295",
+          "input_selector": "input[id^='typeahead-input-']",
+          "type": "typeahead_menu",
+          "options_selector": "button[role='menuitemradio']",
+          "options": ["XXS", "XS", "S", "M", "L", "XL", "2X", "3X", "4X"],
+          "note": "Menu fermé par défaut (aria-expanded=false). Cliquer sur l'input pour ouvrir."
+        }
+      ]
+    },
+    {
+      "id": "menu-tailles-ouvert",
+      "file": "03_tailleselection",
+      "description": "Menu des tailles ouvert (après clic sur le champ Taille)",
+      "trigger": {
+        "field": "Taille",
+        "selector": "#field-attributes-attribute-295 input[id^='typeahead-input-']",
+        "action": "click"
+      },
+      "fields": [
+        {
+          "label": "Taille",
+          "options_selector": "button[role='menuitemradio'][aria-checked='false']",
+          "type": "typeahead_menu",
+          "options": ["XXS", "XS", "S", "M", "L", "XL", "2X", "3X", "4X"],
+          "fill_strategy": "Cliquer sur le bouton dont le texte correspond à la taille souhaitée"
+        }
+      ]
+    }
+  ]
+}
