@@ -72,7 +72,7 @@
     <div class="py-4" x-data="productAutoSave({
         productId: {{ $product->id }},
         csrfToken: '{{ csrf_token() }}'
-    })" @persist-variants.window="save($event.detail)">
+    })">
         <div class="mx-auto px-4 sm:px-6 lg:px-8">
 
             {{-- 3-column grid --}}
@@ -766,7 +766,9 @@
                                  k: {{ $k }},
                                  f: {{ $f }},
                                  u: {{ $u }},
-                                 defaultShipping: {{ $shippingFee }}
+                                 defaultShipping: {{ $shippingFee }},
+                                 productId: {{ $product->id }},
+                                 csrfToken: '{{ csrf_token() }}'
                              })"
                              @shipping-changed.window="defaultShipping = $event.detail">
 
@@ -1005,6 +1007,8 @@
                 f: config.f,
                 u: config.u,
                 defaultShipping: config.defaultShipping,
+                productId: config.productId,
+                csrfToken: config.csrfToken,
 
                 effectiveShipping(shipping) {
                     return (shipping !== null && shipping !== undefined && shipping !== '') ? parseFloat(shipping) : this.defaultShipping;
@@ -1053,8 +1057,20 @@
                     this.persistVariants();
                 },
 
-                persistVariants() {
-                    this.$dispatch('persist-variants', { price_variants: JSON.stringify(this.variants) });
+                async persistVariants() {
+                    try {
+                        await fetch(`/products/${this.productId}/autosave`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': this.csrfToken,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ price_variants: JSON.stringify(this.variants) }),
+                        });
+                    } catch (e) {
+                        console.error('Variant save error:', e);
+                    }
                 },
             };
         }
