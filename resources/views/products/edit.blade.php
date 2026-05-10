@@ -792,6 +792,7 @@
                                         <input type="text"
                                                x-model="variant.label"
                                                @input.debounce.800ms="persistVariants()"
+                                               @blur="persistVariants()"
                                                placeholder="Ex: Pack x2"
                                                class="flex-1 text-xs font-medium rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-1">
                                         <button type="button"
@@ -811,6 +812,7 @@
                                                 <input type="number" step="0.01" min="0"
                                                        x-model="variant.price"
                                                        @input.debounce.800ms="persistVariants()"
+                                                       @blur="persistVariants()"
                                                        placeholder="0.00"
                                                        class="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-0.5 px-1.5 pr-6 text-xs">
                                                 <span class="absolute inset-y-0 right-1 flex items-center text-gray-400 text-xs pointer-events-none">€</span>
@@ -822,6 +824,7 @@
                                                 <input type="number" step="0.01" min="0"
                                                        x-model="variant.cost_price"
                                                        @input.debounce.800ms="persistVariants()"
+                                                       @blur="persistVariants()"
                                                        placeholder="0.00"
                                                        class="w-full rounded border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 py-0.5 px-1.5 pr-6 text-xs">
                                                 <span class="absolute inset-y-0 right-1 flex items-center text-gray-400 text-xs pointer-events-none">€</span>
@@ -1042,6 +1045,7 @@
                         cost_price: '',
                         shipping_fee: null,
                     });
+                    this.persistVariants();
                 },
 
                 removeVariant(index) {
