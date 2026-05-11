@@ -472,8 +472,8 @@
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                         <h3 class="text-sm font-semibold text-gray-900 mb-3">Backgrounds (images IA)</h3>
 
-                        @php $backgrounds = $shop->ai_backgrounds ?? []; @endphp
-                        @if(count($backgrounds) > 0)
+                        @php($backgrounds = $shop->ai_backgrounds ?? [])
+                        @if(!empty($backgrounds))
                             <div class="grid grid-cols-4 gap-2 mb-3">
                                 @foreach($backgrounds as $index => $bg)
                                     <div class="relative group">
@@ -522,8 +522,8 @@
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                         <h3 class="text-sm font-semibold text-gray-900 mb-3">Logos (images IA)</h3>
 
-                        @php $aiLogos = $shop->ai_logos ?? []; @endphp
-                        @if(count($aiLogos) > 0)
+                        @php($aiLogos = $shop->ai_logos ?? [])
+                        @if(!empty($aiLogos))
                             <div class="grid grid-cols-4 gap-2 mb-3">
                                 @foreach($aiLogos as $index => $logo)
                                     <div class="relative group">
