@@ -33,13 +33,23 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Étape 1 : valider d'abord le code d'invitation SEUL.
+        // Sans code valide, on refuse avant même de lire l'email — un attaquant
+        // sans code ne peut pas s'en servir pour énumérer les comptes.
+        $request->validate([
+            'invitation_code' => ['required', 'string', 'max:32', Rule::exists('invitation_codes', 'code')->whereNull('used_at')],
+        ], [
+            'invitation_code.exists' => 'Code d\'invitation invalide ou déjà utilisé.',
+        ]);
+
+        // Étape 2 : valider le reste du formulaire avec un message d'erreur générique
+        // pour l'email (anti-énumération : pas de "cet email existe déjà").
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'invitation_code' => ['required', 'string', 'max:32', Rule::exists('invitation_codes', 'code')->whereNull('used_at')],
         ], [
-            'invitation_code.exists' => 'Code d\'invitation invalide ou déjà utilisé.',
+            'email.unique' => 'Impossible de créer le compte avec cet email.',
         ]);
 
         $user = DB::transaction(function () use ($request) {

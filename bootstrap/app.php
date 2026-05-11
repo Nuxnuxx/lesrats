@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
         $middleware->web(append: [
+            // Track the password hash dans la session : permet logoutOtherDevices()
+            // et invalide automatiquement les sessions tierces quand le mot de passe change.
+            \Illuminate\Session\Middleware\AuthenticateSession::class,
             \App\Http\Middleware\SetActiveShop::class,
         ]);
 

@@ -39,6 +39,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/tokens', [ProfileController::class, 'createToken'])->name('profile.create-token');
     Route::post('/profile/extension-connect', [ProfileController::class, 'createExtensionToken'])->name('profile.extension-connect');
     Route::delete('/profile/tokens/{token}', [ProfileController::class, 'revokeToken'])->name('profile.revoke-token');
+    Route::post('/profile/logout-everywhere', [ProfileController::class, 'logoutEverywhere'])
+        ->middleware('throttle:5,15')
+        ->name('profile.logout-everywhere');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Shop management routes (shops.index redirects to dashboard)
