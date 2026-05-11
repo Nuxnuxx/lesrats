@@ -85,7 +85,9 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:30,1')
         ->name('products.optimize-content');
     Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
-    Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])->name('products.generate-ai-images');
+    Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])
+        ->middleware('throttle:10,1')
+        ->name('products.generate-ai-images');
     // Throttle AI photo endpoints — coût Fal.ai à $0.039/image, on cape à 30 req/min/user
     Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])
         ->middleware('throttle:30,1')

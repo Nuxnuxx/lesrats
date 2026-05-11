@@ -517,6 +517,20 @@ class ProductController extends Controller
                 ->with('error', 'Ce produit n\'a pas d\'images a transformer.');
         }
 
+        // Quota beta : on transforme au max 5 images, vérifier que ça rentre
+        $batchSize = min(5, count($images));
+        if (! $user->canGeneratePhotos($batchSize)) {
+            Log::warning('AI photo quota exceeded', [
+                'user_id' => $user->id,
+                'requested' => $batchSize,
+                'remaining' => $user->remainingPhotos(),
+                'endpoint' => $request->path(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', "Limite beta : il vous reste {$user->remainingPhotos()}/".User::BETA_PHOTO_LIMIT." photos. Demande refusée ({$batchSize} demandées).");
+        }
+
         try {
             // Get Fal.ai API key
             $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
@@ -539,6 +553,8 @@ class ProductController extends Controller
                     }
                     $transformedImages[] = $transformedPath;
                     $successCount++;
+                    // Quota lifetime — incrément atomique côté SQL après chaque succès Fal
+                    $user->increment('ai_photos_count');
                 } else {
                     // Keep original image if transformation fails
                     $transformedImages[] = $imageUrl;
