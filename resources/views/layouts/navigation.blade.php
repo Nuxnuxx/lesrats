@@ -19,9 +19,6 @@
                         {{ __('Produits') }}
                     </x-nav-link>
                     @if(Auth::user()?->isAdmin())
-                        <x-nav-link :href="route('admin.invitations.index')" :active="request()->routeIs('admin.invitations.*')">
-                            {{ __('Invitations') }}
-                        </x-nav-link>
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
                             {{ __('Utilisateurs') }}
                         </x-nav-link>
@@ -85,9 +82,6 @@
                 {{ __('Produits') }}
             </x-responsive-nav-link>
             @if(Auth::user()?->isAdmin())
-                <x-responsive-nav-link :href="route('admin.invitations.index')" :active="request()->routeIs('admin.invitations.*')">
-                    {{ __('Invitations') }}
-                </x-responsive-nav-link>
                 <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
                     {{ __('Utilisateurs') }}
                 </x-responsive-nav-link>

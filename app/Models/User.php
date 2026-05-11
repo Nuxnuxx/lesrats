@@ -27,8 +27,7 @@ class User extends Authenticatable
      */
     /**
      * Mass-assignable. NE PAS ajouter `role` ou `ai_photos_count` ici :
-     *   - role est attribué uniquement par RegisteredUserController (beta_tester)
-     *     ou via la migration / commande artisan (admin).
+     *   - role est attribué explicitement par Admin\UserController (création / promotion).
      *   - ai_photos_count est uniquement modifié via $user->increment() en backend.
      * Les laisser fillable ouvrirait une escalade de privilèges si une route faisait
      * un jour fill($request->all()) ou update($request->all()).

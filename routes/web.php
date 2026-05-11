@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\InvitationCodeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
@@ -102,17 +101,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/products/{product}/download-images', [ProductController::class, 'downloadImages'])->name('products.download-images');
 });
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/invitations', [InvitationCodeController::class, 'index'])->name('invitations.index');
-    Route::post('/invitations', [InvitationCodeController::class, 'store'])
-        ->middleware('throttle:30,1')
-        ->name('invitations.store');
-    Route::delete('/invitations/{invitation}', [InvitationCodeController::class, 'destroy'])->name('invitations.destroy');
-
+Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
+    Route::post('/users', [AdminUserController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('users.store');
     Route::patch('/users/{user}/role', [AdminUserController::class, 'updateRole'])
         ->middleware('throttle:30,1')
         ->name('users.role');
+    Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])
+        ->middleware('throttle:30,1')
+        ->name('users.destroy');
 });
 
 require __DIR__.'/auth.php';

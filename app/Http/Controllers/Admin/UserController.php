@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -25,6 +28,86 @@ class UserController extends Controller
             'users' => $users,
             'adminCount' => User::where('role', User::ROLE_ADMIN)->count(),
         ]);
+    }
+
+    public function create(): View
+    {
+        return view('admin.users.create');
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
+            'password' => ['required', 'confirmed', Password::defaults()],
+            'role' => ['required', 'in:'.User::ROLE_ADMIN.','.User::ROLE_BETA_TESTER],
+        ]);
+
+        $user = new User;
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->password = $validated['password']; // hashed via cast
+        // role n'est pas fillable — assignation explicite obligatoire.
+        $user->role = $validated['role'];
+        // Admin-created accounts are pre-verified : l'admin a vérifié l'email lui-même.
+        $user->email_verified_at = now();
+        $user->save();
+
+        event(new Registered($user));
+
+        Log::warning('User created via admin UI', [
+            'admin_id' => $request->user()->id,
+            'new_user_id' => $user->id,
+            'role' => $user->role,
+        ]);
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('status', 'user-created');
+    }
+
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        $currentAdmin = $request->user();
+
+        // Pas d'auto-suppression : on doit toujours pouvoir supprimer un admin
+        // depuis un AUTRE compte admin (et pas perdre sa propre session par accident).
+        if ($user->id === $currentAdmin->id) {
+            throw ValidationException::withMessages([
+                'delete' => 'Vous ne pouvez pas supprimer votre propre compte ici. Utilisez la page Profil.',
+            ]);
+        }
+
+        // Garde-fou contre la suppression du dernier admin (même logique que demote).
+        // Lock pessimiste sur la cible pour bloquer toute concurrence entre demote/delete.
+        DB::transaction(function () use ($user) {
+            $target = User::where('id', $user->id)->lockForUpdate()->first();
+
+            if ($target->role === User::ROLE_ADMIN) {
+                $remainingAdmins = User::where('role', User::ROLE_ADMIN)
+                    ->where('id', '!=', $target->id)
+                    ->count();
+
+                if ($remainingAdmins === 0) {
+                    throw ValidationException::withMessages([
+                        'delete' => 'Impossible de supprimer le dernier admin.',
+                    ]);
+                }
+            }
+
+            $target->delete();
+        });
+
+        Log::warning('User deleted via admin UI', [
+            'admin_id' => $currentAdmin->id,
+            'deleted_user_id' => $user->id,
+            'deleted_user_email' => $user->email,
+        ]);
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with('status', 'user-deleted');
     }
 
     public function updateRole(Request $request, User $user): RedirectResponse

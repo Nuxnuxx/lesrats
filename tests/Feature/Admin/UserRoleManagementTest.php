@@ -145,4 +145,188 @@ class UserRoleManagementTest extends TestCase
 
         $this->assertSame(User::ROLE_BETA_TESTER, $user->fresh()->role);
     }
+
+    // --- /register is gone ---------------------------------------------------
+
+    public function test_register_route_no_longer_exists(): void
+    {
+        $this->get('/register')->assertNotFound();
+        $this->post('/register', [
+            'name' => 'X', 'email' => 'x@x.com',
+            'password' => 'password', 'password_confirmation' => 'password',
+        ])->assertNotFound();
+    }
+
+    // --- Create user --------------------------------------------------------
+
+    public function test_admin_can_view_create_user_page(): void
+    {
+        $this->actingAs($this->admin())
+            ->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee('Créer un utilisateur');
+    }
+
+    public function test_beta_tester_cannot_view_create_user_page(): void
+    {
+        $this->actingAs($this->betaTester())
+            ->get(route('admin.users.create'))
+            ->assertForbidden();
+    }
+
+    public function test_admin_can_create_user(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.store'), [
+                'name' => 'New Tester',
+                'email' => 'new@example.com',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                'role' => User::ROLE_BETA_TESTER,
+            ])
+            ->assertRedirect(route('admin.users.index'))
+            ->assertSessionHas('status', 'user-created');
+
+        $created = User::where('email', 'new@example.com')->first();
+        $this->assertNotNull($created);
+        $this->assertSame(User::ROLE_BETA_TESTER, $created->role);
+        $this->assertNotNull($created->email_verified_at);
+    }
+
+    public function test_admin_can_create_another_admin(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->post(route('admin.users.store'), [
+                'name' => 'Other Admin',
+                'email' => 'admin2@example.com',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                'role' => User::ROLE_ADMIN,
+            ])
+            ->assertRedirect(route('admin.users.index'));
+
+        $this->assertSame(User::ROLE_ADMIN, User::where('email', 'admin2@example.com')->value('role'));
+    }
+
+    public function test_create_user_rejects_duplicate_email(): void
+    {
+        $existing = $this->betaTester();
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.users.store'), [
+                'name' => 'X',
+                'email' => $existing->email,
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                'role' => User::ROLE_BETA_TESTER,
+            ])
+            ->assertSessionHasErrors('email');
+    }
+
+    public function test_create_user_rejects_invalid_role(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.users.store'), [
+                'name' => 'X',
+                'email' => 'x@example.com',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                'role' => 'super_admin',
+            ])
+            ->assertSessionHasErrors('role');
+
+        $this->assertDatabaseMissing('users', ['email' => 'x@example.com']);
+    }
+
+    public function test_create_user_requires_password_confirmation(): void
+    {
+        $this->actingAs($this->admin())
+            ->post(route('admin.users.store'), [
+                'name' => 'X',
+                'email' => 'x@example.com',
+                'password' => 'Password123!',
+                'password_confirmation' => 'DifferentPassword!',
+                'role' => User::ROLE_BETA_TESTER,
+            ])
+            ->assertSessionHasErrors('password');
+    }
+
+    public function test_beta_tester_cannot_create_user(): void
+    {
+        $this->actingAs($this->betaTester())
+            ->post(route('admin.users.store'), [
+                'name' => 'X',
+                'email' => 'x@example.com',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
+                'role' => User::ROLE_BETA_TESTER,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('users', ['email' => 'x@example.com']);
+    }
+
+    // --- Delete user --------------------------------------------------------
+
+    public function test_admin_can_delete_beta_tester(): void
+    {
+        $admin = $this->admin();
+        $target = $this->betaTester();
+
+        $this->actingAs($admin)
+            ->delete(route('admin.users.destroy', $target))
+            ->assertRedirect(route('admin.users.index'))
+            ->assertSessionHas('status', 'user-deleted');
+
+        $this->assertDatabaseMissing('users', ['id' => $target->id]);
+    }
+
+    public function test_admin_cannot_delete_themselves(): void
+    {
+        $admin = $this->admin();
+        // Another admin must exist so the last-admin guard isn't the one stopping us.
+        $this->admin();
+
+        $this->actingAs($admin)
+            ->delete(route('admin.users.destroy', $admin))
+            ->assertSessionHasErrors('delete');
+
+        $this->assertDatabaseHas('users', ['id' => $admin->id]);
+    }
+
+    public function test_admin_cannot_delete_last_admin(): void
+    {
+        $adminA = $this->admin();
+        $adminB = $this->admin();
+
+        // A deletes B → fine (still one admin left, $adminA).
+        $this->actingAs($adminA)
+            ->delete(route('admin.users.destroy', $adminB))
+            ->assertSessionHas('status', 'user-deleted');
+
+        $this->assertSame(1, User::where('role', User::ROLE_ADMIN)->count());
+
+        // A then tries to delete themselves → blocked by self rule (defense in depth).
+        $this->actingAs($adminA)
+            ->delete(route('admin.users.destroy', $adminA))
+            ->assertSessionHasErrors('delete');
+
+        $this->assertDatabaseHas('users', ['id' => $adminA->id]);
+    }
+
+    public function test_beta_tester_cannot_delete_anyone(): void
+    {
+        $attacker = $this->betaTester();
+        $target = $this->betaTester();
+
+        $this->actingAs($attacker)
+            ->delete(route('admin.users.destroy', $target))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
+    }
 }

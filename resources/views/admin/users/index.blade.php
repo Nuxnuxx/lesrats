@@ -16,6 +16,14 @@
                 <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
                     {{ __('Utilisateur rétrogradé en beta tester.') }}
                 </div>
+            @elseif(session('status') === 'user-created')
+                <div class="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                    {{ __('Utilisateur créé.') }}
+                </div>
+            @elseif(session('status') === 'user-deleted')
+                <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                    {{ __('Utilisateur supprimé.') }}
+                </div>
             @elseif(session('status') === 'role-unchanged')
                 <div class="p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
                     {{ __('Aucun changement.') }}
@@ -29,15 +37,21 @@
             @endif
 
             <div class="p-4 sm:p-6 bg-white shadow sm:rounded-lg">
-                <header class="mb-4 flex items-center justify-between">
+                <header class="mb-4 flex items-center justify-between gap-4">
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">{{ __('Tous les utilisateurs') }}</h3>
                         <p class="mt-1 text-sm text-gray-600">
-                            {{ __('Promouvez un beta tester en admin ou rétrogradez un admin.') }}
+                            {{ __('Créez, promouvez ou supprimez des comptes.') }}
                         </p>
                     </div>
-                    <div class="text-sm text-gray-500">
-                        {{ __('Admins') }} : <span class="font-semibold text-gray-900">{{ $adminCount }}</span>
+                    <div class="flex items-center gap-4">
+                        <div class="text-sm text-gray-500">
+                            {{ __('Admins') }} : <span class="font-semibold text-gray-900">{{ $adminCount }}</span>
+                        </div>
+                        <a href="{{ route('admin.users.create') }}"
+                           class="inline-flex items-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-md">
+                            {{ __('+ Créer un utilisateur') }}
+                        </a>
                     </div>
                 </header>
 
@@ -80,31 +94,45 @@
                                     </td>
                                     <td class="py-2 pr-4 text-gray-600">{{ $u->owned_shops_count }}</td>
                                     <td class="py-2 pr-4 text-gray-600">{{ $u->created_at->format('d/m/Y') }}</td>
-                                    <td class="py-2 pr-4 text-right">
+                                    <td class="py-2 pr-4 text-right whitespace-nowrap">
                                         @if($isSelf)
                                             <span class="text-xs text-gray-400">{{ __('vous-même') }}</span>
-                                        @elseif($isLastAdmin)
-                                            <span class="text-xs text-gray-400">{{ __('dernier admin') }}</span>
                                         @else
-                                            <form method="POST" action="{{ route('admin.users.role', $u) }}" class="inline">
-                                                @csrf
-                                                @method('PATCH')
-                                                @if($isAdmin)
-                                                    <input type="hidden" name="role" value="{{ \App\Models\User::ROLE_BETA_TESTER }}">
-                                                    <button type="submit"
-                                                            class="text-blue-600 hover:text-blue-800"
-                                                            onclick="return confirm('Rétrograder {{ $u->email }} en beta tester ?')">
-                                                        {{ __('Rétrograder') }}
-                                                    </button>
+                                            <div class="inline-flex items-center gap-3">
+                                                @if($isLastAdmin)
+                                                    <span class="text-xs text-gray-400">{{ __('dernier admin') }}</span>
                                                 @else
-                                                    <input type="hidden" name="role" value="{{ \App\Models\User::ROLE_ADMIN }}">
-                                                    <button type="submit"
-                                                            class="text-orange-600 hover:text-orange-800"
-                                                            onclick="return confirm('Promouvoir {{ $u->email }} en admin ? L\'admin a tous les droits.')">
-                                                        {{ __('Promouvoir admin') }}
-                                                    </button>
+                                                    <form method="POST" action="{{ route('admin.users.role', $u) }}" class="inline">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        @if($isAdmin)
+                                                            <input type="hidden" name="role" value="{{ \App\Models\User::ROLE_BETA_TESTER }}">
+                                                            <button type="submit"
+                                                                    class="text-blue-600 hover:text-blue-800"
+                                                                    onclick="return confirm('Rétrograder {{ $u->email }} en beta tester ?')">
+                                                                {{ __('Rétrograder') }}
+                                                            </button>
+                                                        @else
+                                                            <input type="hidden" name="role" value="{{ \App\Models\User::ROLE_ADMIN }}">
+                                                            <button type="submit"
+                                                                    class="text-orange-600 hover:text-orange-800"
+                                                                    onclick="return confirm('Promouvoir {{ $u->email }} en admin ? L\'admin a tous les droits.')">
+                                                                {{ __('Promouvoir admin') }}
+                                                            </button>
+                                                        @endif
+                                                    </form>
+
+                                                    <form method="POST" action="{{ route('admin.users.destroy', $u) }}" class="inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit"
+                                                                class="text-red-600 hover:text-red-800"
+                                                                onclick="return confirm('Supprimer définitivement le compte {{ $u->email }} ? Cette action est irréversible.')">
+                                                            {{ __('Supprimer') }}
+                                                        </button>
+                                                    </form>
                                                 @endif
-                                            </form>
+                                            </div>
                                         @endif
                                     </td>
                                 </tr>
