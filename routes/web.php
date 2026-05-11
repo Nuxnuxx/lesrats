@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\InvitationCodeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProductController;
@@ -102,11 +103,13 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
-    Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
-    Route::post('/users', [AdminUserController::class, 'store'])
+    Route::get('/invitations', [InvitationCodeController::class, 'index'])->name('invitations.index');
+    Route::post('/invitations', [InvitationCodeController::class, 'store'])
         ->middleware('throttle:30,1')
-        ->name('users.store');
+        ->name('invitations.store');
+    Route::delete('/invitations/{invitation}', [InvitationCodeController::class, 'destroy'])->name('invitations.destroy');
+
+    Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
     Route::patch('/users/{user}/role', [AdminUserController::class, 'updateRole'])
         ->middleware('throttle:30,1')
         ->name('users.role');

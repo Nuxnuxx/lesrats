@@ -4,13 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -28,43 +25,6 @@ class UserController extends Controller
             'users' => $users,
             'adminCount' => User::where('role', User::ROLE_ADMIN)->count(),
         ]);
-    }
-
-    public function create(): View
-    {
-        return view('admin.users.create');
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')],
-            'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => ['required', 'in:'.User::ROLE_ADMIN.','.User::ROLE_BETA_TESTER],
-        ]);
-
-        $user = new User;
-        $user->name = $validated['name'];
-        $user->email = $validated['email'];
-        $user->password = $validated['password']; // hashed via cast
-        // role n'est pas fillable — assignation explicite obligatoire.
-        $user->role = $validated['role'];
-        // Admin-created accounts are pre-verified : l'admin a vérifié l'email lui-même.
-        $user->email_verified_at = now();
-        $user->save();
-
-        event(new Registered($user));
-
-        Log::warning('User created via admin UI', [
-            'admin_id' => $request->user()->id,
-            'new_user_id' => $user->id,
-            'role' => $user->role,
-        ]);
-
-        return redirect()
-            ->route('admin.users.index')
-            ->with('status', 'user-created');
     }
 
     public function destroy(Request $request, User $user): RedirectResponse

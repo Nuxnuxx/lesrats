@@ -16,10 +16,6 @@
                 <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
                     {{ __('Utilisateur rétrogradé en beta tester.') }}
                 </div>
-            @elseif(session('status') === 'user-created')
-                <div class="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
-                    {{ __('Utilisateur créé.') }}
-                </div>
             @elseif(session('status') === 'user-deleted')
                 <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
                     {{ __('Utilisateur supprimé.') }}
@@ -41,17 +37,12 @@
                     <div>
                         <h3 class="text-lg font-medium text-gray-900">{{ __('Tous les utilisateurs') }}</h3>
                         <p class="mt-1 text-sm text-gray-600">
-                            {{ __('Créez, promouvez ou supprimez des comptes.') }}
+                            {{ __('Promouvez, rétrogradez ou supprimez des comptes. Les nouveaux comptes se créent via les') }}
+                            <a href="{{ route('admin.invitations.index') }}" class="text-orange-600 hover:text-orange-800">{{ __('codes d\'invitation') }}</a>.
                         </p>
                     </div>
-                    <div class="flex items-center gap-4">
-                        <div class="text-sm text-gray-500">
-                            {{ __('Admins') }} : <span class="font-semibold text-gray-900">{{ $adminCount }}</span>
-                        </div>
-                        <a href="{{ route('admin.users.create') }}"
-                           class="inline-flex items-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-md">
-                            {{ __('+ Créer un utilisateur') }}
-                        </a>
+                    <div class="text-sm text-gray-500">
+                        {{ __('Admins') }} : <span class="font-semibold text-gray-900">{{ $adminCount }}</span>
                     </div>
                 </header>
 
