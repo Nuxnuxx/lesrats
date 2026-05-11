@@ -91,14 +91,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
-  // Auto-upload images via native messaging host
-  if (request.action === 'autoUploadImages') {
-    autoUploadViaNativeHost(request.images)
-      .then(result => sendResponse(result))
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true;
-  }
-  
   // Open Etsy with category (saves to storage from service worker)
   if (request.action === 'openEtsyWithCategory') {
     openEtsyWithCategory(request.categoryName, request.isDigital)
@@ -128,28 +120,6 @@ async function openEtsyWithCategory(categoryName, isDigital) {
   await chrome.tabs.create({ url: 'https://www.etsy.com/your/shops/me/listing-editor/create' });
   
   return { success: true };
-}
-
-// Native messaging host name
-const NATIVE_HOST = 'com.lesrats.host';
-
-// Auto-upload images via native messaging host
-async function autoUploadViaNativeHost(images) {
-  try {
-    // Send images to native host
-    const response = await chrome.runtime.sendNativeMessage(NATIVE_HOST, {
-      action: 'autoUpload',
-      images: images
-    });
-    
-    return response;
-  } catch (error) {
-    console.error('🐀 Native messaging error:', error);
-    return { 
-      success: false, 
-      error: 'Native host not installed. Run install.sh in browser-extension/native-host/' 
-    };
-  }
 }
 
 // Fetch product data for Etsy publishing
