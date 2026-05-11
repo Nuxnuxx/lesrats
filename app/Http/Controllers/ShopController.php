@@ -24,6 +24,7 @@ class ShopController extends Controller
     public function create()
     {
         Gate::authorize('create', Shop::class);
+        abort_if(! auth()->user()->canCreateShop(), 403, 'Limite beta : 1 boutique max.');
 
         return view('shops.create');
     }
@@ -34,6 +35,7 @@ class ShopController extends Controller
     public function store(Request $request)
     {
         Gate::authorize('create', Shop::class);
+        abort_if(! auth()->user()->canCreateShop(), 403, 'Limite beta : 1 boutique max.');
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -98,6 +100,11 @@ class ShopController extends Controller
             'pricing_t0' => 'nullable|numeric|min:0',
         ]);
 
+        // Beta testers ne peuvent pas activer le mode expert — on ignore toute valeur soumise.
+        if (! auth()->user()->canEnableExpertMode()) {
+            $validated['expert_mode'] = false;
+        }
+
         // Handle logo removal
         if ($request->boolean('remove_logo') && $shop->logo_path) {
             Storage::disk('public')->delete($shop->logo_path);
@@ -158,6 +165,7 @@ class ShopController extends Controller
             'pricing_k' => 'sometimes|nullable|numeric|min:0.01|max:100',
             'pricing_t' => 'sometimes|nullable|numeric|min:0|max:0.99',
             'pricing_t0' => 'sometimes|nullable|numeric|min:0',
+            // Note : expert_mode est forcé à false plus bas si le user n'est pas admin.
             'promotion_reminder_date' => 'sometimes|nullable|date',
             'ai_description_prompt' => 'sometimes|nullable|string|max:5000',
             'ai_image_prompt' => 'sometimes|nullable|string|max:5000',
@@ -213,6 +221,11 @@ class ShopController extends Controller
             if (! empty($validated['shipping_fees'])) {
                 $validated['shipping_fee'] = $validated['shipping_fees'][0]['value'];
             }
+        }
+
+        // Beta testers ne peuvent pas activer le mode expert — on ignore toute valeur soumise.
+        if (array_key_exists('expert_mode', $validated) && ! auth()->user()->canEnableExpertMode()) {
+            $validated['expert_mode'] = false;
         }
 
         $shop->update($validated);

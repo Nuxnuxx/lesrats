@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Jobs\TransformProductImage;
 use App\Models\Product;
 use App\Models\Shop;
+use App\Models\User;
 use App\Services\AliExpressScraperService;
 use App\Services\ContentOptimizerService;
 use App\Services\FalImageService;
@@ -583,6 +584,13 @@ class ProductController extends Controller
 
         $user = $request->user();
 
+        if (! $user->canGeneratePhotos(1)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Limite beta atteinte ('.User::BETA_PHOTO_LIMIT.' photos).',
+            ], 403);
+        }
+
         try {
             // Get Fal.ai API key
             $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
@@ -630,6 +638,9 @@ class ProductController extends Controller
             $realImages = $product->real_images ?? [];
             $realImages[] = $transformedPath;
             $product->update(['real_images' => $realImages]);
+
+            // Quota lifetime — incrément atomique côté SQL
+            $user->increment('ai_photos_count');
 
             // Remember last used background and logo on the shop
             $shop = $product->shop;
@@ -696,6 +707,14 @@ class ProductController extends Controller
             ], 400);
         }
 
+        $count = count($request->input('image_urls'));
+        if (! $user->canGeneratePhotos($count)) {
+            return response()->json([
+                'success' => false,
+                'message' => "Limite beta : il vous reste {$user->remainingPhotos()}/".User::BETA_PHOTO_LIMIT." photos. Batch refusé ({$count} demandées).",
+            ], 403);
+        }
+
         $backgroundUrl = $onlyLogo ? null : $request->input('background_url');
         $applyLogo = $request->boolean('apply_logo', false);
         $logoPath = $request->input('logo_path') ?: null;
@@ -732,6 +751,7 @@ class ProductController extends Controller
                 onlyLogo: $onlyLogo,
                 model: $model,
                 logoPath: $logoPath,
+                userId: $user->id,
             )
         )->all();
 

@@ -39,6 +39,22 @@
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
+        <!-- Invitation Code -->
+        <div class="mt-4">
+            <x-input-label for="invitation_code" value="Code d'invitation" />
+
+            <x-text-input id="invitation_code" class="block mt-1 w-full uppercase tracking-wider"
+                            type="text"
+                            name="invitation_code"
+                            :value="old('invitation_code')"
+                            required
+                            maxlength="32"
+                            autocomplete="off" />
+
+            <p class="mt-1 text-xs text-gray-500">L'inscription est sur invitation. Demandez un code à un administrateur.</p>
+            <x-input-error :messages="$errors->get('invitation_code')" class="mt-2" />
+        </div>
+
         <div class="flex items-center justify-end mt-4">
             <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
                 {{ __('Already registered?') }}

@@ -175,6 +175,7 @@
                     </div>
 
                     {{-- Mode Expert — Pricing optimal --}}
+                    @php($canExpertMode = auth()->user()->canEnableExpertMode())
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
                          x-data="{
                              expertMode: {{ $shop->expert_mode ? 'true' : 'false' }},
@@ -190,10 +191,18 @@
                             <div>
                                 <h3 class="text-sm font-semibold text-gray-900">Mode expert — Pricing optimal</h3>
                                 <p class="text-xs text-gray-500 mt-0.5">Calcul automatique du prix à l'import AliExpress</p>
+                                @unless($canExpertMode)
+                                    <p class="text-xs text-orange-600 mt-1">Réservé aux administrateurs</p>
+                                @endunless
                             </div>
                             <button type="button"
-                                    @click="expertMode = !expertMode; _shopAutoSave.save({ expert_mode: expertMode })"
-                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                                    @if($canExpertMode)
+                                        @click="expertMode = !expertMode; _shopAutoSave.save({ expert_mode: expertMode })"
+                                    @else
+                                        disabled
+                                        title="Mode expert réservé aux administrateurs"
+                                    @endif
+                                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {{ $canExpertMode ? '' : 'opacity-50 cursor-not-allowed' }}"
                                     :class="expertMode ? 'bg-orange-500' : 'bg-gray-300'">
                                 <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
                                       :class="expertMode ? 'translate-x-6' : 'translate-x-1'"></span>

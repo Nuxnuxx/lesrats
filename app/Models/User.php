@@ -14,6 +14,12 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
 
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_BETA_TESTER = 'beta_tester';
+
+    public const BETA_PHOTO_LIMIT = 75;
+    public const BETA_SHOP_LIMIT = 1;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -24,6 +30,8 @@ class User extends Authenticatable
         'email',
         'password',
         'fal_api_key',
+        'role',
+        'ai_photos_count',
     ];
 
     /**
@@ -48,6 +56,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'fal_api_key' => 'encrypted',
+            'ai_photos_count' => 'integer',
         ];
     }
 
@@ -66,5 +75,61 @@ class User extends Authenticatable
     public function hasAccessToShop(Shop $shop): bool
     {
         return $this->shops()->where('shops.id', $shop->id)->exists();
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN;
+    }
+
+    public function isBetaTester(): bool
+    {
+        return $this->role === self::ROLE_BETA_TESTER;
+    }
+
+    /**
+     * Whether the user can generate $count more AI photos without exceeding their lifetime quota.
+     * Admins are always allowed. Beta testers are capped at BETA_PHOTO_LIMIT lifetime.
+     */
+    public function canGeneratePhotos(int $count = 1): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return ($this->ai_photos_count + $count) <= self::BETA_PHOTO_LIMIT;
+    }
+
+    /**
+     * Whether the user can create another shop.
+     * Admins unlimited; beta testers capped at BETA_SHOP_LIMIT owned shops.
+     */
+    public function canCreateShop(): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        return $this->ownedShops()->count() < self::BETA_SHOP_LIMIT;
+    }
+
+    /**
+     * Whether the user is allowed to enable the pricing expert mode on a shop.
+     */
+    public function canEnableExpertMode(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    /**
+     * Remaining lifetime photos for the user, or null if unlimited (admin).
+     */
+    public function remainingPhotos(): ?int
+    {
+        if ($this->isAdmin()) {
+            return null;
+        }
+
+        return max(0, self::BETA_PHOTO_LIMIT - $this->ai_photos_count);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Product;
+use App\Models\User;
 use App\Services\FalImageService;
 use Illuminate\Bus\Batchable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,6 +28,7 @@ class TransformProductImage implements ShouldQueue
         public bool $onlyLogo = false,
         public string $model = 'v1',
         public ?string $logoPath = null,
+        public ?int $userId = null,
     ) {}
 
     public function handle(): void
@@ -39,6 +41,20 @@ class TransformProductImage implements ShouldQueue
 
         if (! $product) {
             Log::warning('TransformProductImage: product not found', ['product_id' => $this->productId]);
+
+            return;
+        }
+
+        // Garde-fou intra-job : vérifier le quota du user en cas de race entre batchs.
+        // Si le user a dépassé sa limite entre la dispatch et l'exécution, on stoppe net
+        // sans appeler Fal (donc sans coût).
+        $user = $this->userId ? User::find($this->userId) : null;
+        if ($user && ! $user->canGeneratePhotos(1)) {
+            Log::warning('TransformProductImage: user quota exhausted, skipping', [
+                'product_id' => $this->productId,
+                'user_id' => $this->userId,
+                'ai_photos_count' => $user->ai_photos_count,
+            ]);
 
             return;
         }
@@ -99,6 +115,11 @@ class TransformProductImage implements ShouldQueue
         $realImages = $product->real_images ?? [];
         $realImages[] = $transformedPath;
         $product->update(['real_images' => $realImages]);
+
+        // Quota lifetime — incrément atomique côté SQL (safe en parallèle)
+        if ($user) {
+            $user->increment('ai_photos_count');
+        }
 
         Log::info('TransformProductImage: success', [
             'product_id' => $this->productId,
