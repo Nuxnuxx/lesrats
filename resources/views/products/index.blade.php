@@ -27,14 +27,6 @@
                     </div>
                 </div>
             </div>
-            <div class="flex items-center space-x-3">
-                <a href="{{ route('products.create') }}" class="inline-flex items-center px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-medium hover:bg-orange-700">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                    </svg>
-                    Nouveau produit
-                </a>
-            </div>
         </div>
     </x-slot>
 
@@ -113,14 +105,12 @@
 
             {{-- Products Grid --}}
             @if ($products->isEmpty())
-                <x-ui.empty-state 
+                <x-ui.empty-state
                     icon="products"
                     title="Aucun produit"
-                    :description="request('search') || request('source_type') 
-                        ? 'Aucun produit ne correspond a vos filtres.' 
-                        : 'Commencez par ajouter votre premier produit.'"
-                    :actionUrl="!(request('search') || request('source_type')) ? route('products.create') : null"
-                    :actionLabel="!(request('search') || request('source_type')) ? 'Nouveau produit' : null"
+                    :description="request('search') || request('source_type')
+                        ? 'Aucun produit ne correspond a vos filtres.'
+                        : 'Importez vos premiers produits depuis AliExpress ou Printables via l\'extension navigateur LesRats.'"
                     :secondaryActionUrl="request('search') || request('source_type') ? route('products.index', ['shop_id' => $shop->id]) : null"
                     :secondaryActionLabel="request('search') || request('source_type') ? 'Effacer les filtres' : null"
                 />
