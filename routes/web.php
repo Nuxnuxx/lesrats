@@ -69,13 +69,25 @@ Route::middleware('auth')->group(function () {
     Route::patch('/products/{product}', [ProductController::class, 'update']);
     Route::post('/products/{product}/autosave', [ProductController::class, 'autosave'])->name('products.autosave');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
-    Route::post('/products/analyze-aliexpress', [ProductController::class, 'analyzeAliExpress'])->name('products.analyze-aliexpress');
-    Route::post('/products/analyze-printables', [ProductController::class, 'analyzePrintables'])->name('products.analyze-printables');
-    Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])->name('products.optimize-content');
+    // Endpoints qui déclenchent des appels API payants (Firecrawl/Groq) — throttle agressif
+    Route::post('/products/analyze-aliexpress', [ProductController::class, 'analyzeAliExpress'])
+        ->middleware('throttle:20,1')
+        ->name('products.analyze-aliexpress');
+    Route::post('/products/analyze-printables', [ProductController::class, 'analyzePrintables'])
+        ->middleware('throttle:20,1')
+        ->name('products.analyze-printables');
+    Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])
+        ->middleware('throttle:30,1')
+        ->name('products.optimize-content');
     Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
     Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])->name('products.generate-ai-images');
-    Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])->name('products.transform-single-image');
-    Route::post('/products/{product}/dispatch-ai-generation', [ProductController::class, 'dispatchAiGeneration'])->name('products.dispatch-ai-generation');
+    // Throttle AI photo endpoints — coût Fal.ai à $0.039/image, on cape à 30 req/min/user
+    Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])
+        ->middleware('throttle:30,1')
+        ->name('products.transform-single-image');
+    Route::post('/products/{product}/dispatch-ai-generation', [ProductController::class, 'dispatchAiGeneration'])
+        ->middleware('throttle:10,1')
+        ->name('products.dispatch-ai-generation');
     Route::get('/products/{product}/ai-generation-status', [ProductController::class, 'aiGenerationStatus'])->name('products.ai-generation-status');
     Route::post('/products/{product}/toggle-logo', [ProductController::class, 'toggleLogo'])->name('products.toggle-logo');
     Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');

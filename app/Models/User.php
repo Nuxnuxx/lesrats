@@ -25,13 +25,19 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    /**
+     * Mass-assignable. NE PAS ajouter `role` ou `ai_photos_count` ici :
+     *   - role est attribué uniquement par RegisteredUserController (beta_tester)
+     *     ou via la migration / commande artisan (admin).
+     *   - ai_photos_count est uniquement modifié via $user->increment() en backend.
+     * Les laisser fillable ouvrirait une escalade de privilèges si une route faisait
+     * un jour fill($request->all()) ou update($request->all()).
+     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'fal_api_key',
-        'role',
-        'ai_photos_count',
     ];
 
     /**

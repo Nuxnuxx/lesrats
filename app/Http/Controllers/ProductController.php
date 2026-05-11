@@ -575,20 +575,50 @@ class ProductController extends Controller
         Gate::authorize('update', $product->shop);
 
         $request->validate([
-            'image_url' => 'required|string',
+            'image_url' => 'required|url',
             'prompt' => 'required|string|min:10',
-            'background_url' => 'nullable|string',
+            'background_url' => 'nullable|url',
             'apply_logo' => 'nullable|boolean',
-            'logo_url' => 'nullable|string',
+            'logo_url' => 'nullable|url',
         ]);
 
         $user = $request->user();
 
         if (! $user->canGeneratePhotos(1)) {
+            Log::warning('AI photo quota exceeded', [
+                'user_id' => $user->id,
+                'requested' => 1,
+                'remaining' => $user->remainingPhotos(),
+                'endpoint' => $request->path(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Limite beta atteinte ('.User::BETA_PHOTO_LIMIT.' photos).',
             ], 403);
+        }
+
+        // Anti-SSRF : refuser les URLs pointant vers des IPs privées/réservées
+        // (sauf si la cible est notre propre /storage/, autorisé pour les fichiers uploadés).
+        try {
+            $this->assertSafeImageUrl($request->image_url);
+            if ($request->filled('background_url')) {
+                $this->assertSafeImageUrl($request->background_url);
+            }
+            if ($request->filled('logo_url')) {
+                $this->assertSafeImageUrl($request->logo_url);
+            }
+        } catch (\InvalidArgumentException $e) {
+            Log::warning('SSRF attempt blocked', [
+                'user_id' => $user->id,
+                'reason' => $e->getMessage(),
+                'image_url' => $request->image_url,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
 
         try {
@@ -625,8 +655,8 @@ class ProductController extends Controller
             if ($request->boolean('apply_logo', false)) {
                 $logoUrl = $request->input('logo_url');
                 if ($logoUrl) {
-                    $logoPath = preg_replace('#^https?://[^/]+/storage/#', '', $logoUrl);
-                    if ($logoPath !== $logoUrl) {
+                    $logoPath = FalImageService::safeStoragePath($logoUrl);
+                    if ($logoPath) {
                         $falService->applyLogoOverlay($transformedPath, $logoPath);
                     }
                 } elseif ($product->shop->logo_path) {
@@ -644,20 +674,10 @@ class ProductController extends Controller
 
             // Remember last used background and logo on the shop
             $shop = $product->shop;
-            $updates = [];
-            if ($backgroundUrl) {
-                $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
-                $updates['default_ai_background'] = $bgPath !== $backgroundUrl ? $bgPath : null;
-            } else {
-                $updates['default_ai_background'] = null;
-            }
-            $logoUrl = $request->input('logo_url');
-            if ($logoUrl) {
-                $lPath = preg_replace('#^https?://[^/]+/storage/#', '', $logoUrl);
-                $updates['default_ai_logo'] = $lPath !== $logoUrl ? $lPath : null;
-            } else {
-                $updates['default_ai_logo'] = null;
-            }
+            $updates = [
+                'default_ai_background' => FalImageService::safeStoragePath($backgroundUrl),
+                'default_ai_logo' => FalImageService::safeStoragePath($request->input('logo_url')),
+            ];
             $shop->update($updates);
 
             return response()->json([
@@ -687,10 +707,10 @@ class ProductController extends Controller
         $onlyLogo = $request->boolean('only_logo', false);
 
         $request->validate([
-            'image_urls' => 'required|array|min:1',
-            'image_urls.*' => 'required|string',
+            'image_urls' => 'required|array|min:1|max:50',
+            'image_urls.*' => 'required|url',
             'prompt' => $onlyLogo ? 'nullable|string' : 'required|string|min:10',
-            'background_url' => 'nullable|string',
+            'background_url' => 'nullable|url',
             'apply_logo' => 'nullable|boolean',
             'only_logo' => 'nullable|boolean',
             'logo_path' => 'nullable|string',
@@ -709,10 +729,37 @@ class ProductController extends Controller
 
         $count = count($request->input('image_urls'));
         if (! $user->canGeneratePhotos($count)) {
+            Log::warning('AI photo quota exceeded', [
+                'user_id' => $user->id,
+                'requested' => $count,
+                'remaining' => $user->remainingPhotos(),
+                'endpoint' => $request->path(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => "Limite beta : il vous reste {$user->remainingPhotos()}/".User::BETA_PHOTO_LIMIT." photos. Batch refusé ({$count} demandées).",
             ], 403);
+        }
+
+        // Anti-SSRF
+        try {
+            foreach ($request->input('image_urls') as $u) {
+                $this->assertSafeImageUrl($u);
+            }
+            if ($request->filled('background_url')) {
+                $this->assertSafeImageUrl($request->background_url);
+            }
+        } catch (\InvalidArgumentException $e) {
+            Log::warning('SSRF attempt blocked', [
+                'user_id' => $user->id,
+                'reason' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
         }
 
         $backgroundUrl = $onlyLogo ? null : $request->input('background_url');
@@ -722,13 +769,9 @@ class ProductController extends Controller
         // Remember last used background and logo on the shop (only when using AI)
         $shop = $product->shop;
         if (! $onlyLogo) {
-            $updates = [];
-            if ($backgroundUrl) {
-                $bgPath = preg_replace('#^https?://[^/]+/storage/#', '', $backgroundUrl);
-                $updates['default_ai_background'] = $bgPath !== $backgroundUrl ? $bgPath : null;
-            } else {
-                $updates['default_ai_background'] = null;
-            }
+            $updates = [
+                'default_ai_background' => FalImageService::safeStoragePath($backgroundUrl),
+            ];
             if ($logoPath !== null) {
                 $updates['default_ai_logo'] = $logoPath;
             }
@@ -1030,6 +1073,27 @@ class ProductController extends Controller
         $zip->close();
 
         return response()->download($zipPath, $slug.'.zip')->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Anti-SSRF : refuse une URL pointant vers une IP privée/réservée/loopback.
+     * Autorise les URLs servies par notre propre app (APP_URL host) — on les utilise pour
+     * référencer des fichiers stockés localement (logos, backgrounds uploadés via /storage/).
+     *
+     * @throws \InvalidArgumentException si l'URL est dangereuse.
+     */
+    private function assertSafeImageUrl(string $url): void
+    {
+        $appHost = parse_url(config('app.url'), PHP_URL_HOST);
+        $urlHost = parse_url($url, PHP_URL_HOST);
+
+        // Notre propre host : autorisé (cas des URLs /storage/...).
+        if ($appHost && $urlHost && strcasecmp($appHost, $urlHost) === 0) {
+            return;
+        }
+
+        // Délègue à FalImageService qui résout DNS + bloque les plages privées.
+        (new FalImageService(null))->assertSafeRemoteUrl($url);
     }
 
     private function buildEnrichedPrompt(string $basePrompt, Product $product, ?string $backgroundUrl = null): string

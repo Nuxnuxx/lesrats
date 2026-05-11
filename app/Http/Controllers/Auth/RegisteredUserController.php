@@ -54,12 +54,17 @@ class RegisteredUserController extends Controller
                 ]);
             }
 
-            $user = User::create([
+            $user = new User([
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'role' => User::ROLE_BETA_TESTER,
             ]);
+
+            // role n'est volontairement pas $fillable (anti-mass-assignment).
+            // On le pose explicitement ici comme beta_tester — seul moyen de le créer
+            // hors admin manuel via DB / commande.
+            $user->role = User::ROLE_BETA_TESTER;
+            $user->save();
 
             $invitation->update([
                 'used_by' => $user->id,

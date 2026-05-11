@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Shop;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class ShopController extends Controller
@@ -24,7 +25,13 @@ class ShopController extends Controller
     public function create()
     {
         Gate::authorize('create', Shop::class);
-        abort_if(! auth()->user()->canCreateShop(), 403, 'Limite beta : 1 boutique max.');
+        if (! auth()->user()->canCreateShop()) {
+            Log::warning('Shop creation refused (beta limit)', [
+                'user_id' => auth()->id(),
+                'owned_shops' => auth()->user()->ownedShops()->count(),
+            ]);
+            abort(403, 'Limite beta : 1 boutique max.');
+        }
 
         return view('shops.create');
     }
@@ -35,7 +42,13 @@ class ShopController extends Controller
     public function store(Request $request)
     {
         Gate::authorize('create', Shop::class);
-        abort_if(! auth()->user()->canCreateShop(), 403, 'Limite beta : 1 boutique max.');
+        if (! auth()->user()->canCreateShop()) {
+            Log::warning('Shop creation refused (beta limit)', [
+                'user_id' => auth()->id(),
+                'owned_shops' => auth()->user()->ownedShops()->count(),
+            ]);
+            abort(403, 'Limite beta : 1 boutique max.');
+        }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -102,6 +115,12 @@ class ShopController extends Controller
 
         // Beta testers ne peuvent pas activer le mode expert — on ignore toute valeur soumise.
         if (! auth()->user()->canEnableExpertMode()) {
+            if (! empty($validated['expert_mode'])) {
+                Log::warning('Expert mode bypass attempted', [
+                    'user_id' => auth()->id(),
+                    'shop_id' => $shop->id,
+                ]);
+            }
             $validated['expert_mode'] = false;
         }
 
@@ -225,6 +244,12 @@ class ShopController extends Controller
 
         // Beta testers ne peuvent pas activer le mode expert — on ignore toute valeur soumise.
         if (array_key_exists('expert_mode', $validated) && ! auth()->user()->canEnableExpertMode()) {
+            if (! empty($validated['expert_mode'])) {
+                Log::warning('Expert mode bypass attempted (autosave)', [
+                    'user_id' => auth()->id(),
+                    'shop_id' => $shop->id,
+                ]);
+            }
             $validated['expert_mode'] = false;
         }
 

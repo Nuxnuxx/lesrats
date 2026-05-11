@@ -184,11 +184,104 @@ class FalImageService
     }
 
     /**
-     * Check if a URL is a local/localhost URL
+     * Check if a URL points to a local/private/reserved IP range.
+     * Resolves the host via DNS to catch DNS-rebinding & alternative loopback notations
+     * (0.0.0.0, [::1], 169.254.169.254, 10.x, 172.16-31.x, 192.168.x, etc.).
      */
     protected function isLocalUrl(string $url): bool
     {
-        return str_contains($url, 'localhost') || str_contains($url, '127.0.0.1');
+        $host = parse_url($url, PHP_URL_HOST);
+        if (! $host) {
+            return true; // pas d'host → on refuse par défaut
+        }
+
+        $host = trim($host, '[]');
+
+        // Si c'est déjà une IP, valider directement
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return $this->isPrivateOrReservedIp($host);
+        }
+
+        // Sinon résoudre via DNS (IPv4 + IPv6) et vérifier chaque IP
+        $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+        if (! $records) {
+            return true; // résolution échouée → on refuse
+        }
+
+        foreach ($records as $r) {
+            $ip = $r['ip'] ?? $r['ipv6'] ?? null;
+            if ($ip && $this->isPrivateOrReservedIp($ip)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Vrai si l'IP est dans une plage privée, réservée, link-local, loopback, etc.
+     * On utilise FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE pour bloquer
+     * toutes les plages dangereuses (incluant 169.254.169.254 — AWS metadata).
+     */
+    protected function isPrivateOrReservedIp(string $ip): bool
+    {
+        return ! filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        );
+    }
+
+    /**
+     * Vérifie qu'une URL fournie par l'utilisateur est sûre à fetcher côté serveur :
+     * scheme http(s) uniquement et host non privé/local. Lève une exception sinon.
+     */
+    public function assertSafeRemoteUrl(string $url): void
+    {
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+        if (! in_array($scheme, ['http', 'https'], true)) {
+            throw new \InvalidArgumentException('URL refusée : seuls http(s) sont autorisés.');
+        }
+
+        if ($this->isLocalUrl($url)) {
+            throw new \InvalidArgumentException('URL refusée : adresse privée/locale interdite (anti-SSRF).');
+        }
+    }
+
+    /**
+     * Extrait le chemin /storage/ d'une URL et valide qu'il ne sort pas de la racine
+     * du disque public (anti path-traversal). Retourne null si l'URL n'est pas une
+     * URL /storage/ valide ou si le chemin contient `..`, scheme `file://`, etc.
+     *
+     * Exemples :
+     *   "https://app.com/storage/logos/x.png"       → "logos/x.png"
+     *   "https://app.com/storage/../../etc/passwd"  → null
+     *   "file:///etc/passwd"                        → null
+     *   "https://attacker.com/storage/x.png"        → "x.png" (mais inutilisable car
+     *                                                  la verif Storage::exists échouera)
+     */
+    public static function safeStoragePath(?string $url): ?string
+    {
+        if (! is_string($url) || $url === '') {
+            return null;
+        }
+
+        $path = preg_replace('#^https?://[^/]+/storage/#', '', $url);
+        if ($path === null || $path === $url) {
+            return null; // pas une URL /storage/
+        }
+
+        // Path traversal & schemes dangereux
+        if (
+            str_contains($path, '..')
+            || str_starts_with($path, '/')
+            || str_starts_with($path, '\\')
+            || preg_match('#^[a-z]+://#i', $path)
+        ) {
+            return null;
+        }
+
+        return $path;
     }
 
     /**
@@ -200,12 +293,11 @@ class FalImageService
     protected function uploadLocalFileToFal(string $localUrl): ?string
     {
         try {
-            // Extract the storage path from the local URL
-            // e.g., http://localhost:8000/storage/backgrounds/shop_5/file.jpg -> backgrounds/shop_5/file.jpg
-            $path = preg_replace('#^https?://[^/]+/storage/#', '', $localUrl);
+            // Extract & validate the storage path (anti path-traversal)
+            $path = self::safeStoragePath($localUrl);
 
-            if (! $path || $path === $localUrl) {
-                Log::error('Could not extract path from local URL', ['url' => $localUrl]);
+            if (! $path) {
+                Log::warning('Refused unsafe local URL', ['url' => $localUrl]);
 
                 return null;
             }
