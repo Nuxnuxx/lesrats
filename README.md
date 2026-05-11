@@ -16,8 +16,8 @@ A Laravel application for managing Etsy shops with dropshipping (AliExpress) and
 - **Frontend:** Blade, Tailwind CSS, Alpine.js
 - **Database:** SQLite
 - **Charts:** ApexCharts
-- **AI:** OpenAI API (optional, for content optimization)
-- **Scraping:** Firecrawl API (for product import)
+- **AI:** Groq (content optimization) + Fal.ai Nano Banana (image generation)
+- **Product import:** LesRats browser extension (scrapes AliExpress / Printables directly from the user's browser)
 
 ## Installation
 
@@ -66,17 +66,17 @@ Voir [docs/TESTING.md](docs/TESTING.md) pour la documentation complete.
 APP_URL=http://localhost:8000
 ```
 
-### OpenAI (optional, for AI content optimization)
+### Groq (content optimization)
 
 ```env
-OPENAI_API_KEY=sk-your-api-key
+GROQ_API_KEY=gsk_your-api-key
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-### Firecrawl (optional, for AliExpress/Printables scraping)
+### Fal.ai (image generation, Nano Banana model)
 
 ```env
-FIRECRAWL_API_KEY=your-firecrawl-key
-FIRECRAWL_BASE_URL=https://api.firecrawl.dev/v1
+FAL_API_KEY=your-fal-key
 ```
 
 ## Project Structure
@@ -94,9 +94,8 @@ app/
 │   ├── Order.php
 │   └── OrderItem.php
 └── Services/
-    ├── AliExpressScraperService.php
-    ├── PrintablesScraperService.php
-    └── ContentOptimizerService.php
+    ├── ContentOptimizerService.php
+    └── FalImageService.php
 
 resources/views/
 ├── dashboard.blade.php

@@ -65,22 +65,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/shops/{shop}/logos', [ShopController::class, 'uploadLogo'])->name('shops.upload-logo');
     Route::delete('/shops/{shop}/logos', [ShopController::class, 'deleteLogo'])->name('shops.delete-logo');
 
-    // Product management routes
+    // Product management routes — création/import via /api/extension/import uniquement (extension Chrome).
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-    Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
-    Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::get('/products/{product}', [ProductController::class, 'edit'])->name('products.edit');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::patch('/products/{product}', [ProductController::class, 'update']);
     Route::post('/products/{product}/autosave', [ProductController::class, 'autosave'])->name('products.autosave');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
-    // Endpoints qui déclenchent des appels API payants (Firecrawl/Groq) — throttle agressif
-    Route::post('/products/analyze-aliexpress', [ProductController::class, 'analyzeAliExpress'])
-        ->middleware('throttle:20,1')
-        ->name('products.analyze-aliexpress');
-    Route::post('/products/analyze-printables', [ProductController::class, 'analyzePrintables'])
-        ->middleware('throttle:20,1')
-        ->name('products.analyze-printables');
+    // Optimisation de contenu via Groq AI — throttle agressif (appels payants)
     Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])
         ->middleware('throttle:30,1')
         ->name('products.optimize-content');

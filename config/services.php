@@ -44,11 +44,6 @@ return [
         'api_key' => env('GEMINI_API_KEY'),
     ],
 
-    'firecrawl' => [
-        'api_key' => env('FIRECRAWL_API_KEY'),
-        'base_url' => 'https://api.firecrawl.dev/v2',
-    ],
-
     'fal' => [
         'api_key' => env('FAL_API_KEY'),
     ],

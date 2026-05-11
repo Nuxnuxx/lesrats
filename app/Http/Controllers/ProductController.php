@@ -4,12 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Jobs\TransformProductImage;
 use App\Models\Product;
-use App\Models\Shop;
 use App\Models\User;
-use App\Services\AliExpressScraperService;
 use App\Services\ContentOptimizerService;
 use App\Services\FalImageService;
-use App\Services\PrintablesScraperService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Validation\Rule;
@@ -66,53 +63,6 @@ class ProductController extends Controller
         $products = $query->latest()->paginate(24)->withQueryString();
 
         return view('products.index', compact('products', 'shop', 'shops', 'stats'));
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        $shop = Shop::findOrFail(session('active_shop_id'));
-        Gate::authorize('update', $shop);
-
-        return view('products.create', compact('shop'));
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $shop = Shop::findOrFail(session('active_shop_id'));
-        Gate::authorize('update', $shop);
-
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'quantity' => 'required|integer|min:0',
-            'low_stock_threshold' => 'nullable|integer|min:0|max:100',
-            'is_digital' => 'boolean',
-            'aliexpress_url' => ['nullable', 'string', 'regex:/^https?:\/\//'],
-        ]);
-
-        $validated['shop_id'] = $shop->id;
-        $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;
-        $validated['is_digital'] = $validated['is_digital'] ?? false;
-
-        // Auto-fill defaults for virtual shops
-        if ($shop->product_type === 'virtual') {
-            $validated['price'] = $validated['price'] ?: ($shop->default_price ?? 0);
-            $validated['cost_price'] = 0;
-            $validated['is_digital'] = true;
-            $validated['quantity'] = 999;
-        }
-
-        $product = Product::create($validated);
-
-        return redirect()->route('products.edit', $product)
-            ->with('success', 'Produit cree avec succes !');
     }
 
     /**
@@ -274,159 +224,6 @@ class ProductController extends Controller
             'message' => "{$deleted} produit(s) supprime(s)",
             'deleted' => $deleted,
         ]);
-    }
-
-    /**
-     * Analyze AliExpress product URL and return optimized data.
-     */
-    public function analyzeAliExpress(Request $request)
-    {
-        $request->validate([
-            'aliexpress_url' => 'required|url',
-        ]);
-
-        try {
-            $scraper = new AliExpressScraperService;
-            $optimizer = new ContentOptimizerService;
-
-            // Validate URL
-            if (! $scraper->isValidAliExpressUrl($request->aliexpress_url)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid AliExpress URL. Please provide a valid product link.',
-                ], 400);
-            }
-
-            // Scrape product data
-            $productData = $scraper->scrapeProduct($request->aliexpress_url);
-
-            // Check if scraping got any useful data or hit CAPTCHA
-            if (empty($productData['title']) ||
-                stripos($productData['title'], 'captcha') !== false ||
-                stripos($productData['title'], 'recaptcha') !== false ||
-                stripos($productData['title'], 'verification') !== false) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'AliExpress a bloque l\'extraction automatique (protection anti-bot). Passez en mode manuel: copiez le titre du produit depuis AliExpress, collez-le dans le champ titre, puis cliquez sur "Optimiser avec l\'IA".',
-                    'use_manual' => true,
-                    'tip' => 'Astuce: Copiez aussi le prix et les images manuellement depuis AliExpress.',
-                ], 422);
-            }
-
-            // Optimize content
-            $optimizedTitle = $optimizer->optimizeTitle($productData['title']);
-            $optimizedDescription = $optimizer->optimizeDescription(
-                $productData['title'],
-                $productData['description'],
-                $productData['specs']
-            );
-
-            // Generate SEO tags
-            $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription);
-
-            // Calculate suggested price with markup
-            $suggestedPrice = $productData['price']
-                ? $optimizer->calculatePrice($productData['price'], 3)
-                : null;
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'title' => $optimizedTitle,
-                    'description' => $optimizedDescription,
-                    'tags' => $tags,
-                    'tags_string' => implode(', ', $tags),
-                    'price' => $suggestedPrice,
-                    'images' => $productData['images'],
-                    'original_price' => $productData['price'],
-                    'specs' => $productData['specs'],
-                ],
-                'message' => 'Product analyzed successfully!',
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    /**
-     * Analyze Printables product URL and return optimized data.
-     */
-    public function analyzePrintables(Request $request)
-    {
-        $request->validate([
-            'printables_url' => 'required|url',
-        ]);
-
-        try {
-            $scraper = new PrintablesScraperService;
-            $optimizer = new ContentOptimizerService;
-
-            // Validate URL
-            if (! $scraper->isValidPrintablesUrl($request->printables_url)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid Printables URL. Please provide a valid model link (e.g., https://www.printables.com/model/123456).',
-                ], 400);
-            }
-
-            // Scrape product data
-            $productData = $scraper->scrapeProduct($request->printables_url);
-
-            // Check if scraping got any useful data
-            if (empty($productData['title'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Impossible d\'extraire les donnees du modele Printables. Veuillez reessayer ou entrer les details manuellement.',
-                ], 422);
-            }
-
-            // Check license for commercial use
-            $commercialAllowed = $scraper->isCommercialLicenseAllowed($productData['license'] ?? 'Unknown');
-
-            // Optimize content (3D printing context)
-            $optimizedTitle = $optimizer->optimizeTitle($productData['title'], '3D Print');
-            $optimizedDescription = $optimizer->optimizeDescription(
-                $productData['title'],
-                $productData['description'],
-                [],
-                true // is3DPrint flag
-            );
-
-            // Generate SEO tags (3D printing focused)
-            $tags = $optimizer->generateTags($optimizedTitle, $optimizedDescription, true);
-
-            // Generate attribution
-            $attribution = $scraper->generateAttribution($productData);
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'title' => $optimizedTitle,
-                    'description' => $optimizedDescription,
-                    'tags' => $tags,
-                    'tags_string' => implode(', ', $tags),
-                    'images' => $productData['images'],
-                    'author' => $productData['author'],
-                    'license' => $productData['license'],
-                    'commercial_allowed' => $commercialAllowed,
-                    'attribution' => $attribution,
-                    'source_url' => $productData['source_url'],
-                    'downloads' => $productData['downloads'],
-                    'likes' => $productData['likes'],
-                ],
-                'message' => 'Printables model analyzed successfully!',
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 500);
-        }
     }
 
     /**
