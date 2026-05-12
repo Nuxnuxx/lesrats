@@ -33,13 +33,22 @@
                 </div>
 
                 <div id="extension-connected" class="hidden p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div class="flex items-center gap-2">
-                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        <p class="text-sm font-medium text-green-800">{{ __('Extension connectee !') }}</p>
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <p class="text-sm font-medium text-green-800">{{ __('Extension connectee !') }}</p>
+                            </div>
+                            <p class="text-xs text-green-600 mt-1">{{ __('L\'extension est prete a importer.') }}</p>
+                        </div>
+                        <button type="button" id="btn-reconnect-extension"
+                            class="shrink-0 px-3 py-1.5 bg-white border border-green-600 text-green-700 text-xs font-semibold rounded-lg hover:bg-green-50 transition"
+                            title="Genere un nouveau token et le pousse vers l'extension. Utile si l'extension s'est deconnectee ou si vous changez d'appareil.">
+                            {{ __('Reconnecter') }}
+                        </button>
                     </div>
-                    <p class="text-xs text-green-600 mt-1">{{ __('L\'extension est prete a importer.') }}</p>
                 </div>
 
                 <div id="extension-connect-error" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -147,11 +156,14 @@
     // Ask the extension if it's there
     window.postMessage({ type: 'LESRATS_PING' }, '*');
 
-    // Connect button
-    document.getElementById('btn-connect-extension')?.addEventListener('click', async function() {
-        const btn = this;
+    // Shared connect handler — used by both "Connecter" (initial) and "Reconnecter" (refresh).
+    // Le backend (ProfileController::createExtensionToken) révoque automatiquement les
+    // anciens tokens "Extension Auto-Connect" du user avant d'en créer un nouveau,
+    // donc reconnecter = renouveler proprement sans accumuler de tokens.
+    async function performConnect(btn, busyLabel, idleLabel) {
         btn.disabled = true;
-        btn.textContent = 'Connexion...';
+        btn.textContent = busyLabel;
+        document.getElementById('extension-connect-error').classList.add('hidden');
 
         try {
             const response = await fetch(connectUrl, {
@@ -166,7 +178,6 @@
             const data = await response.json();
 
             if (data.success && data.token) {
-                // Send token to the extension via postMessage
                 window.postMessage({
                     type: 'LESRATS_CONNECT',
                     token: data.token,
@@ -180,8 +191,16 @@
             showConnectError('Erreur de connexion au serveur.');
         } finally {
             btn.disabled = false;
-            btn.textContent = 'Connecter';
+            btn.textContent = idleLabel;
         }
+    }
+
+    document.getElementById('btn-connect-extension')?.addEventListener('click', function() {
+        performConnect(this, 'Connexion...', 'Connecter');
+    });
+
+    document.getElementById('btn-reconnect-extension')?.addEventListener('click', function() {
+        performConnect(this, 'Reconnexion...', 'Reconnecter');
     });
 
     function showConnectError(msg) {
