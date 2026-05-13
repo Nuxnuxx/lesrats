@@ -31,17 +31,18 @@
 
     // Dashboard sends token after "Connect" button clicked
     if (event.data?.type === 'LESRATS_CONNECT') {
-      const { token, apiUrl } = event.data;
+      const { token, apiUrl, isAdmin } = event.data;
       if (token && apiUrl) {
         try {
           // Determine if this is a dev URL (localhost / 127.0.0.1)
           const isDev = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+          const isAdminFlag = !!isAdmin;
 
           if (isDev) {
-            await chrome.storage.local.set({ devMode: true, devApiUrl: apiUrl });
+            await chrome.storage.local.set({ devMode: true, devApiUrl: apiUrl, isAdmin: isAdminFlag });
             await SecureStorage.setSecure('devApiToken', token);
           } else {
-            await chrome.storage.local.set({ apiUrl: apiUrl, devMode: false });
+            await chrome.storage.local.set({ apiUrl: apiUrl, devMode: false, isAdmin: isAdminFlag });
             await SecureStorage.setSecure('apiToken', token);
           }
 

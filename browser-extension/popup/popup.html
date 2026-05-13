@@ -47,12 +47,22 @@
       <a href="#" id="link-dashboard" class="action-link" target="_blank">Ouvrir le dashboard</a>
       <span class="action-sep">&middot;</span>
       <a href="#" id="link-profile" class="action-link" target="_blank">Profil / Tokens</a>
-      <span class="action-sep">&middot;</span>
-      <a href="settings.html" class="action-link">Config manuelle</a>
+    </div>
+
+    <!-- Admin-only dev toggle -->
+    <div id="admin-dev-toggle" class="admin-dev-toggle hidden">
+      <label class="toggle-switch">
+        <input type="checkbox" id="dev-mode-checkbox">
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="admin-dev-text">
+        <span class="admin-dev-label">Mode dev (localhost)</span>
+        <span id="admin-dev-hint" class="admin-dev-hint hidden">Connectez-vous depuis localhost d'abord</span>
+      </div>
     </div>
 
     <footer>
-      <p>v2.0.0</p>
+      <p>v2.2.0</p>
     </footer>
   </div>
 

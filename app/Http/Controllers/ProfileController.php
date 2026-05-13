@@ -78,6 +78,7 @@ class ProfileController extends Controller
         return response()->json([
             'success' => true,
             'token' => $token->plainTextToken,
+            'is_admin' => $user->isAdmin(),
         ]);
     }
 

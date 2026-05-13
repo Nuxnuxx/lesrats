@@ -188,6 +188,7 @@
                     type: 'LESRATS_CONNECT',
                     token: data.token,
                     apiUrl: document.querySelector('meta[name="lesrats-api-url"]')?.content || window.location.origin,
+                    isAdmin: !!data.is_admin,
                 }, '*');
             } else {
                 showConnectError('Erreur lors de la creation du token.');
