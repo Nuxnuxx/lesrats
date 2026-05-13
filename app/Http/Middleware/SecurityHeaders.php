@@ -34,13 +34,18 @@ class SecurityHeaders
         // CSP — Alpine + Tailwind nécessitent 'unsafe-inline' pour les directives @click etc.
         // img-src élargi pour autoriser les CDN AliExpress / Etsy / cloud storage publics.
         if (! $response->headers->has('Content-Security-Policy')) {
+            // En dev, Vite sert les assets et le HMR depuis un autre origin (127.0.0.1:5173)
+            $viteDev = app()->environment('local') && file_exists(public_path('hot'))
+                ? ' http://127.0.0.1:5173 http://localhost:5173 ws://127.0.0.1:5173 ws://localhost:5173'
+                : '';
+
             $response->headers->set('Content-Security-Policy', implode('; ', [
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'".$viteDev,
+                "style-src 'self' 'unsafe-inline' https://fonts.bunny.net".$viteDev,
                 "font-src 'self' https://fonts.bunny.net data:",
                 "img-src 'self' data: blob: https:",
-                "connect-src 'self' https:",
+                "connect-src 'self' https:".$viteDev,
                 "frame-ancestors 'self'",
                 "base-uri 'self'",
                 "form-action 'self'",

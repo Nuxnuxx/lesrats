@@ -329,12 +329,11 @@ class ProductController extends Controller
         }
 
         try {
-            // Get Fal.ai API key
-            $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
+            $falApiKey = config('services.fal.api_key');
 
             if (empty($falApiKey)) {
                 return redirect()->back()
-                    ->with('error', 'Cle API Fal.ai non configuree. Ajoutez-la dans votre profil ou dans la configuration.');
+                    ->with('error', 'Cle API Fal.ai non configuree (FAL_API_KEY).');
             }
 
             $falService = new FalImageService($falApiKey);
@@ -435,13 +434,12 @@ class ProductController extends Controller
         }
 
         try {
-            // Get Fal.ai API key
-            $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
+            $falApiKey = config('services.fal.api_key');
 
             if (empty($falApiKey)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cle API Fal.ai non configuree. Ajoutez-la dans votre profil ou dans la configuration.',
+                    'message' => 'Cle API Fal.ai non configuree (FAL_API_KEY).',
                 ], 400);
             }
 
@@ -531,7 +529,7 @@ class ProductController extends Controller
         ]);
 
         $user = $request->user();
-        $falApiKey = $user?->fal_api_key ?? config('services.fal.api_key');
+        $falApiKey = config('services.fal.api_key');
 
         if (empty($falApiKey) && ! app()->environment('local')) {
             return response()->json([

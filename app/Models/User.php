@@ -36,7 +36,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'fal_api_key',
+        'onboarded_at',
     ];
 
     /**
@@ -47,7 +47,6 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'fal_api_key',
     ];
 
     /**
@@ -59,8 +58,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'onboarded_at' => 'datetime',
             'password' => 'hashed',
-            'fal_api_key' => 'encrypted',
             'ai_photos_count' => 'integer',
         ];
     }
@@ -136,5 +135,31 @@ class User extends Authenticatable
         }
 
         return max(0, self::BETA_PHOTO_LIMIT - $this->ai_photos_count);
+    }
+
+    public function hasOwnedShop(): bool
+    {
+        return $this->ownedShops()->exists();
+    }
+
+    public function hasExtensionToken(): bool
+    {
+        return $this->tokens()->where('name', 'Extension Auto-Connect')->exists();
+    }
+
+    public function hasImportedProduct(): bool
+    {
+        return \App\Models\Product::whereIn('shop_id', $this->ownedShops()->pluck('shops.id'))->exists();
+    }
+
+    public function needsOnboarding(): bool
+    {
+        return $this->onboarded_at === null;
+    }
+
+    public function canCompleteOnboarding(): bool
+    {
+        // Etape 3 (import produit) est optionnelle — seules les 2 premieres sont obligatoires.
+        return $this->hasOwnedShop() && $this->hasExtensionToken();
     }
 }

@@ -5,8 +5,12 @@
 (function() {
   'use strict';
 
-  if (!window.location.href.includes('aliexpress.com/item/')) return;
   if (document.getElementById('lesrats-ali-panel')) return;
+
+  // Le panel apparait sur TOUTES les pages AliExpress.
+  // - Sur une fiche produit (/item/xxx.html) : panel d'import complet.
+  // - Ailleurs (accueil, recherche, categories) : FAB + bulle "Cherche un article" pour guider le user.
+  const isProductPage = /aliexpress\.com\/item\/[^\/]+\.html/i.test(window.location.href);
 
   // ============== STATE ==============
   let panelState = {
@@ -810,12 +814,134 @@
     }
   });
 
-  // ============== INIT ==============
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createPanel);
-  } else {
-    createPanel();
+  // ============== HINT-ONLY MODE (pages AliExpress hors fiche produit) ==============
+  function createHintPanel() {
+    const icon48 = chrome.runtime.getURL('icons/icon48.png');
+    const container = document.createElement('div');
+    container.id = 'lesrats-ali-panel';
+    container.innerHTML = `
+      <style>
+        #lesrats-ali-panel {
+          position: fixed;
+          bottom: 20px;
+          right: 20px;
+          z-index: 999999;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        #lesrats-ali-panel * { box-sizing: border-box; }
+        .lesrats-hint-wrap {
+          position: relative;
+          display: flex;
+          align-items: flex-end;
+          gap: 10px;
+        }
+        .lesrats-hint-bubble {
+          background: #1a1a2e;
+          color: #fff;
+          padding: 12px 16px;
+          border-radius: 14px;
+          font-size: 13px;
+          font-weight: 600;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+          max-width: 240px;
+          line-height: 1.4;
+          position: relative;
+          animation: lesrats-hint-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .lesrats-hint-bubble strong {
+          color: #fb923c;
+        }
+        .lesrats-hint-bubble::after {
+          content: '';
+          position: absolute;
+          right: -8px;
+          bottom: 18px;
+          width: 0;
+          height: 0;
+          border-top: 8px solid transparent;
+          border-bottom: 8px solid transparent;
+          border-left: 8px solid #1a1a2e;
+        }
+        .lesrats-hint-bubble.hidden { display: none; }
+        .lesrats-hint-close {
+          position: absolute;
+          top: 4px;
+          right: 6px;
+          background: transparent;
+          border: none;
+          color: #6b7280;
+          font-size: 16px;
+          line-height: 1;
+          cursor: pointer;
+          padding: 2px 4px;
+        }
+        .lesrats-hint-close:hover { color: #fff; }
+        .lesrats-ali-fab {
+          width: 54px;
+          height: 54px;
+          background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 4px 16px rgba(249, 115, 22, 0.5);
+          transition: transform 0.2s, box-shadow 0.2s;
+          user-select: none;
+          animation: lesrats-hint-bounce 2s ease-in-out infinite;
+        }
+        .lesrats-ali-fab:hover {
+          transform: scale(1.1);
+          box-shadow: 0 6px 24px rgba(249, 115, 22, 0.6);
+          animation-play-state: paused;
+        }
+        @keyframes lesrats-hint-pop {
+          0% { opacity: 0; transform: translateY(8px) scale(0.95); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes lesrats-hint-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-4px); }
+        }
+      </style>
+      <div class="lesrats-hint-wrap">
+        <div class="lesrats-hint-bubble" id="lesrats-hint-bubble">
+          <button class="lesrats-hint-close" id="lesrats-hint-close" title="Fermer">×</button>
+          <strong>\u{1F400} Cherche un article</strong><br>
+          puis clique sur moi pour l'importer dans LesRats.
+        </div>
+        <div class="lesrats-ali-fab" id="lesrats-ali-fab" title="LesRats : ouvrez une fiche produit pour importer">
+          <img src="${icon48}" width="32" height="32" style="border-radius:50%;">
+        </div>
+      </div>
+    `;
+    document.body.appendChild(container);
+
+    const bubble = document.getElementById('lesrats-hint-bubble');
+    const dismissedKey = 'lesratsHintDismissed';
+    chrome.storage.local.get([dismissedKey]).then((saved) => {
+      if (saved[dismissedKey]) bubble.classList.add('hidden');
+    });
+
+    document.getElementById('lesrats-hint-close').addEventListener('click', (e) => {
+      e.stopPropagation();
+      bubble.classList.add('hidden');
+      chrome.storage.local.set({ [dismissedKey]: true });
+    });
+
+    document.getElementById('lesrats-ali-fab').addEventListener('click', () => {
+      bubble.classList.remove('hidden');
+      chrome.storage.local.remove([dismissedKey]);
+    });
   }
 
-  console.log('\u{1F400} LesRats AliExpress Panel loaded');
+  // ============== INIT ==============
+  const init = isProductPage ? createPanel : createHintPanel;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  console.log('\u{1F400} LesRats AliExpress Panel loaded (' + (isProductPage ? 'product' : 'hint') + ' mode)');
 })();

@@ -57,6 +57,7 @@ class ShopController extends Controller
             'product_type' => 'required|in:physical,virtual',
             'default_price' => 'nullable|numeric|min:0',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'etsy_categories' => 'nullable|string',
         ]);
 
         // Handle logo upload
@@ -68,10 +69,25 @@ class ShopController extends Controller
         // Remove 'logo' from validated as it's not a model field
         unset($validated['logo']);
 
+        // etsy_categories arrive en JSON depuis le form (string[]) — on nettoie et caste.
+        if (isset($validated['etsy_categories'])) {
+            $raw = json_decode($validated['etsy_categories'], true) ?? [];
+            $validated['etsy_categories'] = collect($raw)
+                ->map(fn ($c) => trim((string) $c))
+                ->filter()
+                ->values()
+                ->all();
+        }
+
         $shop = Shop::create($validated);
 
         // Attach current user as owner
         $shop->users()->attach(auth()->id(), ['role' => 'owner']);
+
+        if (auth()->user()->needsOnboarding()) {
+            return redirect()->route('onboarding.show')
+                ->with('success', 'Boutique creee — continuez l\'onboarding.');
+        }
 
         return redirect()->route('shops.edit', $shop)
             ->with('success', 'Boutique creee avec succes !');

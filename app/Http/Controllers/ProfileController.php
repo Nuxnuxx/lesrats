@@ -113,27 +113,6 @@ class ProfileController extends Controller
     }
 
     /**
-     * Update the user's API keys.
-     */
-    public function updateApiKeys(Request $request): RedirectResponse
-    {
-        $validated = $request->validate([
-            'fal_api_key' => 'nullable|string|max:500',
-        ]);
-
-        $user = $request->user();
-
-        // Only update if a non-empty value is provided
-        // Empty string = keep existing, new value = replace
-        if (! empty($validated['fal_api_key'])) {
-            $user->fal_api_key = $validated['fal_api_key'];
-            $user->save();
-        }
-
-        return Redirect::route('profile.edit')->with('status', 'api-keys-updated');
-    }
-
-    /**
      * Déconnexion globale : invalide TOUTES les sessions web (sauf la courante)
      * + révoque TOUS les tokens API du user. À utiliser en cas de suspicion de
      * compromission ou de perte d'un appareil.

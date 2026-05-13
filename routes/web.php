@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\InvitationCodeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShopController;
@@ -30,14 +31,18 @@ Route::get('/storage/{path}', function (string $path) {
 })->where('path', '.*')->name('storage.serve');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'onboarded'])
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    // Onboarding wizard (must stay outside the 'onboarded' middleware)
+    Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
+    Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
+    Route::get('/onboarding/extension.zip', [OnboardingController::class, 'downloadExtension'])->name('onboarding.download-extension');
+
     // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::patch('/profile/api-keys', [ProfileController::class, 'updateApiKeys'])->name('profile.update-api-keys');
     Route::post('/profile/tokens', [ProfileController::class, 'createToken'])->name('profile.create-token');
     Route::post('/profile/extension-connect', [ProfileController::class, 'createExtensionToken'])->name('profile.extension-connect');
     Route::delete('/profile/tokens/{token}', [ProfileController::class, 'revokeToken'])->name('profile.revoke-token');
@@ -66,34 +71,37 @@ Route::middleware('auth')->group(function () {
     Route::delete('/shops/{shop}/logos', [ShopController::class, 'deleteLogo'])->name('shops.delete-logo');
 
     // Product management routes — création/import via /api/extension/import uniquement (extension Chrome).
-    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-    Route::get('/products/{product}', [ProductController::class, 'edit'])->name('products.edit');
-    Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
-    Route::patch('/products/{product}', [ProductController::class, 'update']);
-    Route::post('/products/{product}/autosave', [ProductController::class, 'autosave'])->name('products.autosave');
-    Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
-    // Optimisation de contenu via Groq AI — throttle agressif (appels payants)
-    Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])
-        ->middleware('throttle:30,1')
-        ->name('products.optimize-content');
-    Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
-    Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])
-        ->middleware('throttle:10,1')
-        ->name('products.generate-ai-images');
-    // Throttle AI photo endpoints — coût Fal.ai à $0.039/image, on cape à 30 req/min/user
-    Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])
-        ->middleware('throttle:30,1')
-        ->name('products.transform-single-image');
-    Route::post('/products/{product}/dispatch-ai-generation', [ProductController::class, 'dispatchAiGeneration'])
-        ->middleware('throttle:10,1')
-        ->name('products.dispatch-ai-generation');
-    Route::get('/products/{product}/ai-generation-status', [ProductController::class, 'aiGenerationStatus'])->name('products.ai-generation-status');
-    Route::post('/products/{product}/toggle-logo', [ProductController::class, 'toggleLogo'])->name('products.toggle-logo');
-    Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');
-    Route::delete('/products/{product}/remove-image', [ProductController::class, 'removeImage'])->name('products.remove-image');
-    Route::post('/products/{product}/restore-real-image', [ProductController::class, 'restoreRealImage'])->name('products.restore-real-image');
-    Route::post('/products/{product}/restore-image', [ProductController::class, 'restoreImage'])->name('products.restore-image');
-    Route::get('/products/{product}/download-images', [ProductController::class, 'downloadImages'])->name('products.download-images');
+    // Gated behind 'onboarded' : pas de produits sans boutique + extension configurees.
+    Route::middleware('onboarded')->group(function () {
+        Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+        Route::get('/products/{product}', [ProductController::class, 'edit'])->name('products.edit');
+        Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
+        Route::patch('/products/{product}', [ProductController::class, 'update']);
+        Route::post('/products/{product}/autosave', [ProductController::class, 'autosave'])->name('products.autosave');
+        Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+        // Optimisation de contenu via Groq AI — throttle agressif (appels payants)
+        Route::post('/products/optimize-content', [ProductController::class, 'optimizeContent'])
+            ->middleware('throttle:30,1')
+            ->name('products.optimize-content');
+        Route::post('/products/bulk-delete', [ProductController::class, 'bulkDelete'])->name('products.bulk-delete');
+        Route::post('/products/{product}/generate-ai-images', [ProductController::class, 'generateAiImages'])
+            ->middleware('throttle:10,1')
+            ->name('products.generate-ai-images');
+        // Throttle AI photo endpoints — coût Fal.ai à $0.039/image, on cape à 30 req/min/user
+        Route::post('/products/{product}/transform-single-image', [ProductController::class, 'transformSingleImage'])
+            ->middleware('throttle:30,1')
+            ->name('products.transform-single-image');
+        Route::post('/products/{product}/dispatch-ai-generation', [ProductController::class, 'dispatchAiGeneration'])
+            ->middleware('throttle:10,1')
+            ->name('products.dispatch-ai-generation');
+        Route::get('/products/{product}/ai-generation-status', [ProductController::class, 'aiGenerationStatus'])->name('products.ai-generation-status');
+        Route::post('/products/{product}/toggle-logo', [ProductController::class, 'toggleLogo'])->name('products.toggle-logo');
+        Route::delete('/products/{product}/remove-real-image', [ProductController::class, 'removeRealImage'])->name('products.remove-real-image');
+        Route::delete('/products/{product}/remove-image', [ProductController::class, 'removeImage'])->name('products.remove-image');
+        Route::post('/products/{product}/restore-real-image', [ProductController::class, 'restoreRealImage'])->name('products.restore-real-image');
+        Route::post('/products/{product}/restore-image', [ProductController::class, 'restoreImage'])->name('products.restore-image');
+        Route::get('/products/{product}/download-images', [ProductController::class, 'downloadImages'])->name('products.download-images');
+    });
 });
 
 Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {

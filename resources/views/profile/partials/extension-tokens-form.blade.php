@@ -125,6 +125,10 @@
 (function() {
     const connectUrl = @json(route('profile.extension-connect'));
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+    // Server-side : does THIS user already have an "Extension Auto-Connect" token ?
+    // L'extension peut signaler connected=true avec un token d'un autre compte ;
+    // dans ce cas on force l'UI sur "a connecter" pour que le user re-paire ce compte.
+    const serverHasToken = @json($user?->hasExtensionToken() ?? false);
 
     // Check if the extension is installed by listening for its ping
     let extensionDetected = false;
@@ -138,8 +142,10 @@
             document.getElementById('extension-not-detected').classList.add('hidden');
             document.getElementById('extension-detected').classList.remove('hidden');
 
-            // If already connected, show that
-            if (event.data.connected) {
+            // Green "connected" UI only if BOTH sides agree : extension has a token AND
+            // the server has an Extension Auto-Connect token for this user. Sinon on garde
+            // le bouton "Connecter" visible pour pairer correctement ce compte.
+            if (event.data.connected && serverHasToken) {
                 document.getElementById('extension-disconnected').classList.add('hidden');
                 document.getElementById('extension-connected').classList.remove('hidden');
             }
