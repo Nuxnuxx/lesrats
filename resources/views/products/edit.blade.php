@@ -493,22 +493,74 @@
                                 <p class="mt-1 text-xs text-gray-500">Separes par des virgules, 20 car max/tag</p>
                             </div>
 
-                            {{-- Etsy Category --}}
-                            @if(count($shopCategories) > 0)
-                            <div>
-                                <label for="etsy_category" class="text-sm font-medium text-gray-700 mb-1 block">Categorie Etsy</label>
-                                <select name="etsy_category" id="etsy_category"
-                                        @change="save({ etsy_category: $el.value })"
-                                        class="block w-full rounded-lg border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
-                                    <option value="">-- Categorie --</option>
-                                    @foreach($shopCategories as $cat)
-                                        <option value="{{ $cat }}" {{ old('etsy_category', $product->etsy_category) == $cat ? 'selected' : '' }}>
-                                            {{ $cat }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                            {{-- Etsy Category — combobox typeahead avec creation inline.
+                                 Toujours rendu (meme si shop->etsy_categories est vide) pour permettre
+                                 de creer la premiere categorie sans quitter la page produit. --}}
+                            <div x-data="categoryCombobox({
+                                    initial: @js(old('etsy_category', $product->etsy_category ?? '')),
+                                    categories: @js($shopCategories),
+                                    shopId: {{ $product->shop_id }},
+                                    csrf: '{{ csrf_token() }}',
+                                 })"
+                                 x-init="$watch('query', () => { highlight = 0 })"
+                                 @click.outside="open = false"
+                                 class="relative">
+                                <label for="etsy_category_input" class="text-sm font-medium text-gray-700 mb-1 block">Categorie Etsy</label>
+
+                                {{-- Champ recherche + selection courante --}}
+                                <input type="text"
+                                       id="etsy_category_input"
+                                       x-model="query"
+                                       maxlength="100"
+                                       @focus="open = true"
+                                       @keydown.escape.prevent="open = false; query = ''"
+                                       @keydown.arrow-down.prevent="moveHighlight(1)"
+                                       @keydown.arrow-up.prevent="moveHighlight(-1)"
+                                       @keydown.enter.prevent="commitHighlight()"
+                                       :placeholder="selected || '-- Categorie --'"
+                                       autocomplete="off"
+                                       :class="selected && !query ? 'border-orange-300 bg-orange-50/30' : 'border-gray-300'"
+                                       class="block w-full rounded-lg shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm">
+
+                                {{-- Champ cache pour fallback form submit traditionnel --}}
+                                <input type="hidden" name="etsy_category" :value="selected">
+
+                                {{-- Panel suggestions --}}
+                                <div x-show="open" x-cloak x-transition.opacity.duration.100ms
+                                     class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto">
+
+                                    <template x-for="(cat, i) in filtered()" :key="cat">
+                                        <button type="button"
+                                                @click="selectCategory(cat)"
+                                                @mouseenter="highlight = i"
+                                                :class="{ 'bg-orange-50': highlight === i, 'font-medium text-orange-700': cat === selected }"
+                                                class="block w-full text-left px-3 py-2 text-sm hover:bg-orange-50">
+                                            <span x-text="cat"></span>
+                                        </button>
+                                    </template>
+
+                                    <template x-if="filtered().length === 0 && !canCreate()">
+                                        <p class="px-3 py-2 text-xs text-gray-400 italic">Aucune correspondance</p>
+                                    </template>
+
+                                    <template x-if="canCreate()">
+                                        <div :class="{ 'border-t border-gray-100': filtered().length > 0 }">
+                                            <button type="button"
+                                                    @click="createCategory()"
+                                                    @mouseenter="highlight = filtered().length"
+                                                    :disabled="busy"
+                                                    :class="{ 'bg-orange-50': highlight === filtered().length }"
+                                                    class="block w-full text-left px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-50 disabled:opacity-50">
+                                                <span x-show="!busy">+ Creer "<span x-text="query.trim()"></span>"</span>
+                                                <span x-show="busy">Creation en cours...</span>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+
+                                {{-- Feedback erreur --}}
+                                <p x-show="error" x-text="error" x-cloak class="mt-1 text-xs text-red-600"></p>
                             </div>
-                            @endif
 
                             {{-- Couleur principale --}}
                             <div>
@@ -997,6 +1049,98 @@
 
                     setTimeout(() => status.classList.add('hidden'), 2000);
                 }
+            };
+        }
+
+        // Combobox catégorie Etsy avec création inline.
+        // - Filtre les catégories de la boutique au fur et à mesure de la saisie.
+        // - Si la saisie ne matche aucune catégorie existante, propose "+ Créer XYZ".
+        // - À la création : persiste dans shop.etsy_categories ET assigne au produit courant.
+        // Vit comme x-data nested dans productAutoSave → accès direct à save() via scope merging.
+        function categoryCombobox({ initial, categories, shopId, csrf }) {
+            return {
+                open: false,
+                query: '',
+                selected: initial || '',
+                categories: [...new Set((categories || []).filter(c => c && String(c).length))],
+                highlight: 0,
+                busy: false,
+                error: '',
+
+                filtered() {
+                    const q = this.query.trim().toLowerCase();
+                    if (!q) return this.categories;
+                    return this.categories.filter(c => c.toLowerCase().includes(q));
+                },
+
+                canCreate() {
+                    const q = this.query.trim();
+                    if (!q || q.length > 100) return false;
+                    return !this.categories.some(c => c.toLowerCase() === q.toLowerCase());
+                },
+
+                moveHighlight(delta) {
+                    this.open = true;
+                    const total = this.filtered().length + (this.canCreate() ? 1 : 0);
+                    if (total === 0) return;
+                    this.highlight = (this.highlight + delta + total) % total;
+                },
+
+                commitHighlight() {
+                    const items = this.filtered();
+                    if (this.highlight < items.length) {
+                        this.selectCategory(items[this.highlight]);
+                    } else if (this.canCreate()) {
+                        this.createCategory();
+                    }
+                },
+
+                selectCategory(cat) {
+                    this.selected = cat;
+                    this.query = '';
+                    this.open = false;
+                    this.highlight = 0;
+                    this.error = '';
+                    // save() vient du parent productAutoSave (Alpine scope merging)
+                    this.save({ etsy_category: cat });
+                },
+
+                async createCategory() {
+                    if (this.busy || !this.canCreate()) return;
+                    const newCat = this.query.trim();
+                    this.busy = true;
+                    this.error = '';
+
+                    // Optimiste : ajouter à la liste locale
+                    const previous = [...this.categories];
+                    this.categories = [...this.categories, newCat];
+
+                    try {
+                        const res = await fetch(`/shops/${shopId}/autosave`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                etsy_categories: JSON.stringify(this.categories),
+                            }),
+                        });
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        const data = await res.json();
+                        if (!data.success) throw new Error('Server refused update');
+
+                        // OK : assigner au produit courant
+                        this.selectCategory(newCat);
+                    } catch (e) {
+                        this.categories = previous;
+                        this.error = 'Impossible de creer la categorie. Reessayez.';
+                        console.error('categoryCombobox.createCategory:', e);
+                    } finally {
+                        this.busy = false;
+                    }
+                },
             };
         }
 
