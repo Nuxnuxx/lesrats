@@ -5,6 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="lesrats-api-url" content="{{ rtrim(config('app.url'), '/') }}">
+        @auth
+            <meta name="ph-user-id" content="{{ auth()->id() }}">
+            <meta name="ph-user-email" content="{{ auth()->user()->email }}">
+            <meta name="ph-user-name" content="{{ auth()->user()->name }}">
+        @endauth
 
         <title>{{ config('app.name', 'Laravel') }}</title>
 

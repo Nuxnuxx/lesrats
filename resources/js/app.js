@@ -1,4 +1,5 @@
 import './bootstrap';
+import './posthog';
 
 import Alpine from 'alpinejs';
 
