@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shop;
+use App\Services\PostHogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -83,6 +84,13 @@ class ShopController extends Controller
 
         // Attach current user as owner
         $shop->users()->attach(auth()->id(), ['role' => 'owner']);
+
+        PostHogService::capture(auth()->id(), 'shop_created', [
+            'shop_id' => $shop->id,
+            'shop_name' => $shop->name,
+            'currency' => $shop->currency,
+            'product_type' => $shop->product_type,
+        ]);
 
         if (auth()->user()->needsOnboarding()) {
             return redirect()->route('onboarding.show')
@@ -176,6 +184,11 @@ class ShopController extends Controller
         }
 
         $shop->update($validated);
+
+        PostHogService::capture(auth()->id(), 'shop_updated', [
+            'shop_id' => $shop->id,
+            'shop_name' => $shop->name,
+        ]);
 
         return redirect()->route('shops.edit', $shop)
             ->with('success', 'Parametres mis a jour avec succes !');

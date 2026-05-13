@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Shop;
 use App\Services\ContentOptimizerService;
+use App\Services\PostHogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -343,6 +344,14 @@ class ExtensionController extends Controller
             Log::info('Product imported via extension', [
                 'product_id' => $product->id,
                 'title' => $product->title,
+            ]);
+
+            PostHogService::capture($user->id, 'product_imported', [
+                'product_id' => $product->id,
+                'shop_id' => $shop->id,
+                'source_type' => $sourceType,
+                'is_digital' => $isDigital,
+                'image_count' => count($images),
             ]);
 
             return response()->json([

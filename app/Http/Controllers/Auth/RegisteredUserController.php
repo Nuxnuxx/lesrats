@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\InvitationCode;
 use App\Models\User;
+use App\Services\PostHogService;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -75,6 +76,15 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         Auth::login($user);
+
+        PostHogService::identify($user->id, [
+            'email' => $user->email,
+            'name' => $user->name,
+            'role' => $user->role,
+        ]);
+        PostHogService::capture($user->id, 'user_registered', [
+            'role' => $user->role,
+        ]);
 
         return redirect(route('dashboard', absolute: false));
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\PostHogService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -54,6 +55,10 @@ class ProfileController extends Controller
 
         Log::info('API token created', [
             'user_id' => $user->id,
+            'token_name' => $validated['token_name'],
+        ]);
+
+        PostHogService::capture($user->id, 'api_token_created', [
             'token_name' => $validated['token_name'],
         ]);
 

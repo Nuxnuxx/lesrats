@@ -7,14 +7,15 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\ContentOptimizerService;
 use App\Services\FalImageService;
+use App\Services\PostHogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -121,6 +122,11 @@ class ProductController extends Controller
 
         $product->update($validated);
 
+        PostHogService::capture($request->user()->id, 'product_updated', [
+            'product_id' => $product->id,
+            'shop_id' => $product->shop_id,
+        ]);
+
         return redirect()->route('products.edit', $product)
             ->with('success', 'Produit mis a jour avec succes !');
     }
@@ -190,7 +196,13 @@ class ProductController extends Controller
     {
         Gate::authorize('delete', $product->shop);
 
+        $userId = auth()->id();
+        $shopId = $product->shop_id;
         $product->delete();
+
+        PostHogService::capture($userId, 'product_deleted', [
+            'shop_id' => $shopId,
+        ]);
 
         return redirect()->route('products.index')
             ->with('success', 'Produit supprime avec succes !');
@@ -217,6 +229,12 @@ class ProductController extends Controller
             } catch (\Exception $e) {
                 // Skip products user can't delete
             }
+        }
+
+        if ($deleted > 0) {
+            PostHogService::capture(auth()->id(), 'products_bulk_deleted', [
+                'deleted_count' => $deleted,
+            ]);
         }
 
         return response()->json([
@@ -268,6 +286,12 @@ class ProductController extends Controller
             $suggestedPrice = $request->price
                 ? $optimizer->calculatePrice(floatval($request->price), 3)
                 : null;
+
+            if ($request->user()) {
+                PostHogService::capture($request->user()->id, 'content_optimized', [
+                    'product_id' => $request->product_id,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -614,6 +638,14 @@ class ProductController extends Controller
             ->name('AI Generation - '.$product->title)
             ->allowFailures()
             ->dispatch();
+
+        PostHogService::capture($user->id, 'ai_images_generation_dispatched', [
+            'product_id' => $product->id,
+            'shop_id' => $product->shop_id,
+            'image_count' => count($jobs),
+            'only_logo' => $onlyLogo,
+            'model' => $model,
+        ]);
 
         return response()->json([
             'success' => true,

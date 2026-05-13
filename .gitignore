@@ -26,3 +26,9 @@ Thumbs.db
 # Extension build artefacts (zip + dossier de staging)
 /dist
 /public/extension
+
+# Claude Code local workspace (settings + skills)
+/.claude
+
+# PostHog wizard one-time setup report (informational, not source)
+/posthog-setup-report.md
