@@ -1,7 +1,3 @@
-@php
-    $latestExtensionVersion = config('extension.latest_version');
-    $extensionDownloadUrl = url(config('extension.download_path'));
-@endphp
 <section>
     <header>
         <h2 class="text-lg font-medium text-gray-900">
@@ -12,47 +8,6 @@
             {{ __('Connectez votre extension Chrome pour importer des produits.') }}
         </p>
     </header>
-
-    {{-- Forced update modal — shown when installed extension version differs from server version --}}
-    <div id="extension-update-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <div class="flex items-start gap-3">
-                <div class="shrink-0 mt-0.5">
-                    <svg class="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M5 19h14a2 2 0 001.84-2.75L13.74 4a2 2 0 00-3.48 0L3.16 16.25A2 2 0 005 19z"></path>
-                    </svg>
-                </div>
-                <div class="flex-1">
-                    <h3 class="text-lg font-semibold text-gray-900">{{ __('Mise a jour de l\'extension requise') }}</h3>
-                    <p class="mt-1 text-sm text-gray-600">
-                        {{ __('Votre extension est obsolete. Mettez-la a jour pour continuer.') }}
-                    </p>
-                    <div class="mt-3 text-xs text-gray-500 space-y-1">
-                        <p><span class="font-medium">{{ __('Version installee :') }}</span> <span id="ext-current-version" class="font-mono">—</span></p>
-                        <p><span class="font-medium">{{ __('Version requise :') }}</span> <span class="font-mono">{{ $latestExtensionVersion }}</span></p>
-                    </div>
-                </div>
-            </div>
-
-            <a href="{{ $extensionDownloadUrl }}" download
-                class="mt-5 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"></path>
-                </svg>
-                {{ __('Telecharger v') }}{{ $latestExtensionVersion }}
-            </a>
-
-            <details class="mt-4 text-xs text-gray-600">
-                <summary class="cursor-pointer font-medium text-gray-700">{{ __('Comment installer la mise a jour') }}</summary>
-                <ol class="mt-2 space-y-1 list-decimal list-inside text-gray-600">
-                    <li>{{ __('Dezippez le fichier telecharge') }}</li>
-                    <li>{{ __('Ouvrez chrome://extensions') }}</li>
-                    <li>{{ __('Cliquez sur l\'icone de recharge de l\'extension LesRats (ou supprimez puis "Charger l\'extension non empaquetee" pointee sur le dossier)') }}</li>
-                    <li>{{ __('Rechargez cette page') }}</li>
-                </ol>
-            </details>
-        </div>
-    </div>
 
     <div class="mt-6 space-y-6">
         {{-- Auto-connect button (detected by lesrats.js content script) --}}
@@ -170,41 +125,22 @@
 (function() {
     const connectUrl = @json(route('profile.extension-connect'));
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-    const latestExtensionVersion = @json($latestExtensionVersion);
     // Server-side : does THIS user already have an "Extension Auto-Connect" token ?
     // L'extension peut signaler connected=true avec un token d'un autre compte ;
     // dans ce cas on force l'UI sur "a connecter" pour que le user re-paire ce compte.
     const serverHasToken = @json($user?->hasExtensionToken() ?? false);
 
-    // Check if the extension is installed by listening for its ping
-    let extensionDetected = false;
-
-    function showUpdateModal(currentVersion) {
-        const modal = document.getElementById('extension-update-modal');
-        const versionEl = document.getElementById('ext-current-version');
-        if (versionEl) versionEl.textContent = currentVersion || '< 2.2.0';
-        modal.classList.remove('hidden');
-        // Hide the connect UI behind the modal so it can't be used
-        document.getElementById('extension-connect-section').classList.add('hidden');
-    }
+    // Note: extension version mismatch is handled by the global gate
+    // (resources/views/layouts/extension-gate.blade.php). This script only
+    // handles the connect/reconnect UI for an up-to-date extension.
 
     window.addEventListener('message', function(event) {
         if (event.source !== window) return;
 
         // Extension announces itself
         if (event.data?.type === 'LESRATS_EXTENSION_PRESENT') {
-            extensionDetected = true;
             document.getElementById('extension-not-detected').classList.add('hidden');
             document.getElementById('extension-detected').classList.remove('hidden');
-
-            // Force update if the installed extension version differs from the server's
-            // expected version. Pre-2.2.0 extensions don't send a version field — those
-            // are treated as outdated as well.
-            const installedVersion = event.data.version;
-            if (installedVersion !== latestExtensionVersion) {
-                showUpdateModal(installedVersion);
-                return;
-            }
 
             // Green "connected" UI only if BOTH sides agree : extension has a token AND
             // the server has an Extension Auto-Connect token for this user. Sinon on garde
