@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
+        "build": "vite build && npm run pack:extension",
         "dev": "vite",
         "pack:extension": "rm -rf public/extension && mkdir -p public/extension && cd browser-extension && zip -r ../public/extension/lesrats-extension-latest.zip . -x '*.DS_Store' '*/.git/*'"
     },
