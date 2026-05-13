@@ -16,6 +16,7 @@
   // Check if we're already connected (have a token)
   const apiToken = await getToken();
   const isConnected = !!apiToken;
+  const extensionVersion = chrome.runtime.getManifest().version;
 
   // Listen for messages from the dashboard page
   window.addEventListener('message', async (event) => {
@@ -26,6 +27,7 @@
       window.postMessage({
         type: 'LESRATS_EXTENSION_PRESENT',
         connected: isConnected,
+        version: extensionVersion,
       }, '*');
     }
 
@@ -72,6 +74,7 @@
     window.postMessage({
       type: 'LESRATS_EXTENSION_PRESENT',
       connected: isConnected,
+      version: extensionVersion,
     }, '*');
   }, 500);
 

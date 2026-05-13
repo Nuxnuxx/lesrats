@@ -25,3 +25,4 @@ Thumbs.db
 
 # Extension build artefacts (zip + dossier de staging)
 /dist
+/public/extension

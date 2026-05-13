@@ -367,6 +367,8 @@ class ExtensionController extends Controller
 
     /**
      * Check extension connection / health check.
+     * Also returns the latest required extension version so the client can
+     * detect outdated installs and prompt a forced update.
      */
     public function ping()
     {
@@ -374,6 +376,8 @@ class ExtensionController extends Controller
             'success' => true,
             'message' => 'LesRats API is running',
             'version' => '1.0.0',
+            'latest_extension_version' => config('extension.latest_version'),
+            'extension_download_url' => url(config('extension.download_path')),
         ]);
     }
 
