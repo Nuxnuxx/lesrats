@@ -60,12 +60,9 @@
             </main>
         </div>
 
-        {{-- Extension gate: locks the whole app if the LesRats extension is missing or outdated.
-             Admins bypass so they can develop the extension itself. --}}
+        {{-- Extension gate: locks the whole app if the LesRats extension is missing or outdated. --}}
         @auth
-            @unless(auth()->user()->isAdmin())
-                @include('layouts.extension-gate')
-            @endunless
+            @include('layouts.extension-gate')
         @endauth
 
         <!-- Page-specific scripts -->
