@@ -58,11 +58,23 @@
                     </div>
 
                     {{-- Source Type Filter --}}
-                    <select name="source_type" class="border border-gray-300 rounded-lg text-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                    <select name="source_type"
+                            onchange="this.form.submit()"
+                            class="border border-gray-300 rounded-lg text-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
                         <option value="">Toutes sources</option>
                         <option value="aliexpress" {{ request('source_type') === 'aliexpress' ? 'selected' : '' }}>AliExpress</option>
                         <option value="printables" {{ request('source_type') === 'printables' ? 'selected' : '' }}>Printables</option>
                         <option value="manual" {{ request('source_type') === 'manual' ? 'selected' : '' }}>Manuel</option>
+                    </select>
+
+                    {{-- Tri --}}
+                    <select name="sort"
+                            onchange="this.form.submit()"
+                            class="border border-gray-300 rounded-lg text-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                        <option value="latest"     {{ request('sort', 'latest') === 'latest' ? 'selected' : '' }}>Plus recents</option>
+                        <option value="oldest"     {{ request('sort') === 'oldest' ? 'selected' : '' }}>Plus anciens</option>
+                        <option value="title_asc"  {{ request('sort') === 'title_asc' ? 'selected' : '' }}>Titre A → Z</option>
+                        <option value="title_desc" {{ request('sort') === 'title_desc' ? 'selected' : '' }}>Titre Z → A</option>
                     </select>
 
                     {{-- Filter Button --}}
@@ -73,7 +85,7 @@
                         Filtrer
                     </button>
 
-                    @if(request('search') || request('source_type'))
+                    @if(request('search') || request('source_type') || (request('sort') && request('sort') !== 'latest'))
                         <a href="{{ route('products.index', ['shop_id' => $shop->id]) }}" class="text-sm text-gray-500 hover:text-gray-700">
                             Effacer
                         </a>

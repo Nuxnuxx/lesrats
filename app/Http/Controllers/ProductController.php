@@ -56,12 +56,21 @@ class ProductController extends Controller
             $query->where('source_type', $sourceType);
         }
 
+        // Tri — whitelist explicite pour eviter toute injection ORDER BY
+        $sort = $request->get('sort', 'latest');
+        match ($sort) {
+            'oldest'     => $query->oldest(),
+            'title_asc'  => $query->orderBy('title', 'asc'),
+            'title_desc' => $query->orderBy('title', 'desc'),
+            default      => $query->latest(),
+        };
+
         // Stats for the current shop
         $stats = [
             'total' => $shop->products()->count(),
         ];
 
-        $products = $query->latest()->paginate(24)->withQueryString();
+        $products = $query->paginate(24)->withQueryString();
 
         return view('products.index', compact('products', 'shop', 'shops', 'stats'));
     }
