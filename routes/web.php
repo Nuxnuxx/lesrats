@@ -38,6 +38,7 @@ Route::middleware('auth')->group(function () {
     // Onboarding wizard (must stay outside the 'onboarded' middleware)
     Route::get('/onboarding', [OnboardingController::class, 'show'])->name('onboarding.show');
     Route::post('/onboarding/complete', [OnboardingController::class, 'complete'])->name('onboarding.complete');
+    Route::post('/onboarding/skip', [OnboardingController::class, 'skip'])->name('onboarding.skip');
     Route::get('/onboarding/extension.zip', [OnboardingController::class, 'downloadExtension'])->name('onboarding.download-extension');
 
     // Profile routes

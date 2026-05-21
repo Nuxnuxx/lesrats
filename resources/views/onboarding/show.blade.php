@@ -30,7 +30,7 @@
 
             <div class="bg-white shadow rounded-lg p-6">
                 <p class="text-sm text-gray-600">
-                    {{ __('Deux etapes obligatoires (boutique + extension) puis un import optionnel pour vous lancer.') }}
+                    {{ __('Creez votre boutique, connectez l\'extension, puis importez un produit. Vous pouvez aussi passer et connecter l\'extension plus tard.') }}
                 </p>
                 <div class="mt-4 flex items-center gap-2 text-sm text-gray-500">
                     <span>{{ $doneSteps }} / {{ $totalSteps }} terminees</span>
@@ -187,7 +187,7 @@
                 </div>
             </div>
 
-            {{-- Complete button — debloque des que les 2 etapes obligatoires sont faites --}}
+            {{-- Complete button — debloque des que les 2 etapes principales sont faites --}}
             <div class="bg-white shadow rounded-lg p-6">
                 <form method="POST" action="{{ route('onboarding.complete') }}">
                     @csrf
@@ -205,6 +205,15 @@
                             {{ __('Astuce : importez un produit maintenant pour aller directement sur sa fiche.') }}
                         </p>
                     @endif
+                </form>
+
+                {{-- Echappatoire : passer sans connecter l'extension (connectable plus tard via le profil) --}}
+                <form method="POST" action="{{ route('onboarding.skip') }}" class="mt-3">
+                    @csrf
+                    <button type="submit"
+                            class="w-full text-center text-sm text-gray-500 hover:text-gray-700 underline">
+                        {{ __('Passer pour l\'instant — je connecterai l\'extension plus tard') }}
+                    </button>
                 </form>
             </div>
 

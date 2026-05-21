@@ -54,6 +54,18 @@ class OnboardingController extends Controller
     }
 
     /**
+     * Passer l'onboarding : marque le user comme onboarded sans exiger l'extension.
+     * L'extension reste connectable plus tard depuis le profil.
+     */
+    public function skip(Request $request): RedirectResponse
+    {
+        $request->user()->forceFill(['onboarded_at' => now()])->save();
+
+        return redirect()->route('dashboard')
+            ->with('success', 'Vous pourrez connecter l\'extension plus tard depuis votre profil.');
+    }
+
+    /**
      * Build and stream a ZIP of the browser-extension folder.
      * Small enough (~340KB, 23 files) to zip on every request without a cache layer.
      */
